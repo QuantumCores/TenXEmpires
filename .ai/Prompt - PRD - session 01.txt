@@ -1,0 +1,29 @@
+1. What “play at work with a few clicks a day” specifically means in session length and action budget (e.g., 1–3 actions, 2–5 minutes, once daily)?
+Recommendation: Define a target loop (e.g., 3–5 meaningful clicks, ≤3 minutes/session) and enforce via turn pacing, optional reminders, and clear “end turn” affordances.
+
+2. Who is the primary MVP user (Civ-likers at work, idle gamers, strategy-curious)?
+Recommendation: Pick 1–2 personas and write 3–5 core user stories (login, start game, move unit, end turn, see AI response, save/load) to anchor scope.
+
+3. What browsers/devices must be supported at launch?
+Recommendation: Commit to Chrome/Edge/Firefox desktop first, no mobile for MVP; set non-functional targets (first load <3s on 10 Mbps, >60 FPS on map interactions, no sound by default).
+
+4. How is the world map created—seeded procedural vs. fixed—and what is “reach” for city resource production?
+Recommendation: Start with deterministic procedural generation (seed per save) and simple city radius (e.g., range 2 hexes) with visible overlays to reduce design ambiguity.
+
+5. What are the unit stats and movement rules (costs, combat resolution, zone of control)?
+Recommendation: Publish a 1-page rules spec with numeric defaults (e.g., Warrior 3 HP/2 ATK, Slinger 2 HP/1 ATK ranged, movement 2, terrain costs 1–2), plus a balance JSON for quick tuning.
+
+6. What does “simple AI with priority list” include (expand, gather, attack, fortify) and how long may it think?
+Recommendation: Define a fixed priority tree (e.g., defend city > harvest > explore > attack if >60% win chance) and cap AI compute to <200ms/turn to protect “few clicks” pacing.
+
+7. How are saves/auth handled (email/password, OAuth, guest), and what data retention rules apply?
+Recommendation: Use passwordless email magic link or OAuth, allow guest → upgrade flow, and clarify save slot policy (3 slots per account, auto-rotate last 5 autosaves server-side for recovery).
+
+8. How will success be measured and instrumented (definitions for “finish their game,” cohort windows, analytics)?
+Recommendation: Implement event logging (start_game, end_turn, ai_turn_done, save_load, session_end) and define exact metrics: D1 retention %, % completing a defined scenario (e.g., 100 turns or “found/defend city for 50 turns”), and funnel for “≥5 turns.”
+
+9. What is the visual/UX style level for MVP (tiles, icons, animations) given work context?
+Recommendation: Ship a clean, low-noise UI (muted palette, minimal effects, no sound), keyboard shortcuts (E to end turn), and a 60-second guided tutorial overlay; defer polish animations.
+
+10. What are timeline, team roles, and risks (pathfinding on hex grid, persistence, AI bugs)?
+Recommendation: Plan a 6–8 week MVP with milestones: Week 1–2 core map/units; Week 3 turns/save-load; Week 4 AI v1; Week 5 UX/tutorial; Week 6 balance/telemetry/QA. Mitigate risks with unit tests for pathfinding, load tests for save I/O, and a feature freeze one week before release.

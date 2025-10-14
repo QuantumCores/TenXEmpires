@@ -1,0 +1,29 @@
+1. Which offset coordinate convention will we use for the pointy-top hexes (odd-r, even-r), and what is the canonical neighbor list for pathfinding?
+   Recommendation: Choose **odd-r** (rows shifted right on odd indices) and publish a short spec with neighbor deltas and a tested distance formula to avoid off-by-one bugs.
+
+2. What is the exact JSON schema for the embedded `map.json` (tile coords, terrain, resource, owner, city, starting units)?
+   Recommendation: Define and freeze a v1 schema now (with `"schemaVersion":1`), publish a sample file, and add a JSON schema validator in CI to prevent accidental breaking changes.
+
+3. How many AI opponents are on the 20×15 map, where do they and the player start, and what starting units/city each gets?
+   Recommendation: For MVP, use **1 AI**, fixed spawns (opposite corners), and start with **1 city + 1 Warrior + 1 Slinger** per side for fast onboarding.
+
+4. What are the city stats and production rules (City HP, City Defense, per-turn resource yields, unit costs)?
+   Recommendation: Set initial numbers and document them: e.g., City HP=50, Defense=10; yields per worked resource tile =1/turn; Warrior cost = **10 iron**, Slinger cost = **10 stone**; production auto-queues when resources ≥ cost (1 unit/turn cap).
+
+5. How are manual saves and up to 5 autosaves rotated and surfaced in UI (naming, timestamps, overwrite policy)?
+   Recommendation: Use a **ring buffer** per game: keep last 5 autosaves (Turn # + ISO timestamp), last-in overwrites oldest; in UI show 3 manual slots plus an “Autosaves” list with restore + delete.
+
+6. What is the exact combat sequencing for multiple units (move-then-attack, 1 action/turn, ranged min/max range, tie handling)?
+   Recommendation: Enforce **move OR attack once per unit per turn**; ranged can attack from 1–2 tiles; if both units would die in the same exchange, attacker wins the tie; DMG rounding = **round half up**, minimum 1.
+
+7. Should the AI ever leave the city tile undefended to chase targets, and can it produce units when the city is under siege?
+   Recommendation: Lock **at least 1 unit** on the city tile if any enemy within 3 tiles; allow production under siege but spawn in the nearest free adjacent tile, or delay if none free.
+
+8. What security/correctness measures apply to turn processing and saves (auth scopes, CSRF/CORS, server-authoritative rules)?
+   Recommendation: Make the server **authoritative** for moves/combat; validate all actions against game state; enable anti-forgery for MVC endpoints, strict CORS to your domain, role “player” scope for game APIs.
+
+9. What deployment shape on DigitalOcean do we target (Droplet size, managed Postgres, SSL/ingress), and how is CI/CD gated?
+   Recommendation: Start with 1× **Basic Droplet (2 vCPU / 4GB RAM)**, **Managed Postgres** (1 vCPU / 1GB), use **GitHub Actions** with `main`→staging, tag→production, migrations via Flyway step, and DO App Platform/NGINX for TLS.
+
+10. What non-functional budgets do we lock (bundle size, SVG/PNG asset guidelines, telemetry sampling) to keep “few clicks at work” fast?
+    Recommendation: Cap initial JS bundle **≤300 KB gzip**, sprite PNGs ≤2× display resolution, reuse SVG symbols for UI icons, AI ≤500 ms, and batch analytics to 1 network call per turn to reduce chatter.

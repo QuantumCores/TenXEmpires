@@ -1,0 +1,29 @@
+1. Do we stick with ASP.NET Identity (email/password) only, or also allow external OIDC providers (Google/GitHub) via Identity?
+   Recommendation: Use ASP.NET Identity with **optional external logins** (Google/GitHub) to reduce registration friction; keep local accounts enabled for users who can’t use external providers at work.
+
+2. Should the 20×15 map fit on-screen without scrolling, or support pan/zoom? What is the target tile pixel size at 100% zoom?
+   Recommendation: Target a **single-screen fit** at 1080p with ~48–56px hex width; add **Ctrl/Cmd + mousewheel zoom** (75–150%) and click-drag pan for smaller/larger displays.
+
+3. Can units pass *through* friendly units during movement (without ending on them), and is diagonal “weaving” across 1UPT chokepoints allowed?
+   Recommendation: Allow **pass-through over friendlies** but forbid ending on an occupied tile; this avoids soft-locks and reduces AI pathfinding edge cases.
+
+4. Do cities/units heal between turns, and do cities regenerate HP while occupied or under attack?
+   Recommendation: Add simple regeneration: **units +1 HP/turn** if they did not attack; **city +2 HP/turn** unless damaged this turn; no regen while the city tile is occupied by enemies.
+
+5. For “ranged can attack without counter,” should adjacent ranged attacks still avoid counters?
+   Recommendation: Keep MVP simple: **ranged never receives counterattacks** (adjacent or not). Document clearly to avoid confusion.
+
+6. What are the exact defeat/capture UX affordances (confirm move/attack, undo, end-turn confirmation)?
+   Recommendation: Provide **optional move confirm** (toggle in settings), **1-step undo** for moves before combat triggers, and show an **end-turn summary toast** listing pending unit actions.
+
+7. What error/edge cases should end the game to avoid stalemates (e.g., no path to enemy city due to 1UPT congestion)?
+   Recommendation: Add a **soft stalemate rule**: if no capture or unit loss occurs for **30 consecutive turns**, surface a “Call it a draw?” dialog; log the outcome for analytics.
+
+8. What is the content and license status of provided PNG assets (ownership, attribution, redistribution)?
+   Recommendation: Ensure assets are **owned or properly licensed** for redistribution; store a short **ASSETS.md** with licenses and attributions to de-risk public hosting.
+
+9. Do we need basic privacy/cookie notices and user data export/delete flows for the 3-month retention?
+   Recommendation: Add a minimal **Privacy page**, cookie notice, and a **Delete my account** action that purges saves/metrics per retention policy; log these actions in metrics.
+
+10. When the JSON map schema is finalized, how will we validate it and keep server/client in sync?
+    Recommendation: Define a **versioned JSON schema** and validate at build time plus on load; include `"schemaVersion"` in files and implement a **server-side schema gate** to reject incompatible maps.

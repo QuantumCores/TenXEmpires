@@ -1,0 +1,39 @@
+1. Choose odd-r (rows shifted right on odd indices). For distance follow this algorithm
+ - map from offset to cube coordinates
+ - caclulate distance using cube coordinates
+ 
+ exemplary algorithms
+ ```
+public static CubeCoord ConvertOddrToCube(int X, int Y)
+{
+	var x = X - (Y - (Y & 1)) / 2;
+	var z = Y;
+	var y = -x - z;
+	return new CubeCoord(x, y, z);
+}
+
+public static int GetCubeDistance(CubeCoord a, CubeCoord b)
+{
+    return (Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y) + Math.Abs(a.Z - b.Z)) / 2;
+}
+```
+
+2. JSON schema will be decided later after database schemas are ready
+
+3. For MVP, use 1 AI, fixed spawns (opposite corners), and start with 1 city + 1 Warrior + 1 Slinger per side for fast onboarding.
+
+4. Set initial numbers and document them: e.g., City HP=50, Defense=10; yields per worked resource tile =1/turn; Warrior cost = 10 iron, Slinger cost = 10 stone; production auto-queues when resources ≥ cost (1 unit/turn cap).
+
+5. Use a ring buffer per game: keep last 5 autosaves (Turn # + ISO timestamp), last-in overwrites oldest; in UI show 3 manual slots plus an “Autosaves” list with restore + delete.
+
+6. Enforce move OR attack once per unit per turn; ranged can attack from 1–2 tiles; if both units would die in the same exchange, attacker wins the tie; DMG rounding = round half up, minimum 1.
+
+7. Lock at least 1 unit on the city tile if any enemy within 3 tiles; allow production under siege but only those tiles that are not occupied by enemy unist, spawn new unist in the nearest free adjacent tile, or delay if none is free.
+
+8. Make the server authoritative for moves/combat; validate all actions against game state; enable anti-forgery for MVC endpoints, strict CORS to your domain, role “player” scope for game APIs.
+
+9. We will make this decision later while working on deployment pipeline
+
+10. Cap initial JS bundle ≤300 KB gzip, sprite PNGs ≤2× display resolution, reuse SVG symbols for UI icons, AI ≤500 ms, and batch analytics to 1 network call per turn to reduce chatter.
+
+If you have more questions please rmemebr that some decisions can be made later while working on speciffic features. Their result can be than ket in correspoding technical design files. If you have all neccessary answer just write `Yes`. If you don't then ask few more question in the last question round.

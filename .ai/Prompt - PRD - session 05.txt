@@ -1,0 +1,29 @@
+1. Can we confirm TailwindCSS is acceptable within the .NET 8 MVC + React template, and how will asset bundling work (Vite/Webpack/ESBuild)?
+   Recommendation: Add Tailwind via PostCSS in the React app within the MVC solution, using Vite for the SPA assets and ASP.NET static file middleware to serve the built bundle; document the build pipeline in the repo README.
+
+2. How will the fixed 20×15 hex map be authored and stored (hand-crafted JSON, CSV, or embedded resource), and who maintains it?
+   Recommendation: Create a simple offline “map.json” (axial or cube coords) with tile type, resource, and city positions; version it in Git and load at game start to avoid scope creep from an editor.
+
+3. Which hex orientation and coordinate system will we use (pointy-top vs flat-top; axial vs cube), and what pathfinding rules apply?
+   Recommendation: Use pointy-top axial coordinates with A* pathfinding and uniform movement cost (1 per tile) for MVP; document neighbors and distance formula to keep AI deterministic.
+
+4. What are stacking and occupancy rules (units per tile, city tile occupancy, zone-of-control), and can units swap places?
+   Recommendation: Enforce one unit per tile (1UPT), city counts as a tile that may hold one unit, no zone-of-control for MVP, and disallow swaps to simplify movement and AI.
+
+5. How is “winning chance > 60%” computed for AI decisions—single-round damage exchange, simulated rounds to death, or heuristic?
+   Recommendation: Define a deterministic evaluator: simulate alternating attacks until one unit’s HP ≤ 0 using the provided DMG formula (clarify rounding), no randomness, and compare survival outcomes to derive win probability (1.0 or 0.0 for deterministic 1v1).
+
+6. How are combat turns resolved (initiative, counterattacks, ranged rules, line-of-sight), and how is damage rounding handled?
+   Recommendation: Use “attacker strikes first, defender counterattacks if alive”; ranged units attack without counter if outside Range 0, no line-of-sight blocking in MVP, and round DMG to nearest integer (min 1) before HP subtraction.
+
+7. With city management possibly omitted, how are units produced and cities captured (city HP, garrison, capture condition)?
+   Recommendation: Allow cities to “train” a unit every N turns without resources; give cities a fixed HP and Defense; capture when a melee unit ends a turn on the city tile after reducing city HP to 0; on capture, transfer ownership and despawn enemy units per your rule.
+
+8. Which OAuth providers will be supported at launch, and what session policy/rate limits apply (idle timeout, autosave frequency already given)?
+   Recommendation: Start with Google and GitHub OAuth; set 30-minute idle session timeout, rate-limit API (e.g., 60 req/min per user), and store only minimal profile data for 3 months post last end-turn per your retention policy.
+
+9. What analytics event schema and dashboards are required to measure starts, turns, saves/loads, and finishes, and how will we QA data quality?
+   Recommendation: Define a minimal event list (game_start, turn_end, autosave, manual_save, manual_load, game_finish) with properties (user_id hash, game_id, turn_no, timestamp); create a daily Looker/Metabase chart for “% reaching ≥5 turns” and “finish rate,” and add a data validation job to flag missing sequences.
+
+10. What performance and UX targets should we lock (load time, input latency, AI cap, keyboard/mouse affordances, accessibility)?
+    Recommendation: Set first interactive ≤3s on 10 Mbps, AI ≤500ms/turn as stated, input-to-render ≤100ms for moves, support mouse + E to end turn with visible focus states, and ensure scalable SVG UI with readable text at 100–125% zoom for workplace monitors.

@@ -1,0 +1,30 @@
+1. Don't worry about the developer. He will learn. But to keep everything oin one solution I want to go with .net 8 web api (mvc) with React in it. I know it's is possible to create MVC roject like this. I'm not sure if we can use TailwindCss in this setup?
+
+2. Use .NET 8 minimal APIs with PostgreSQL for game state and metrics; expose REST endpoints for login (OAuth), save/load, and analytics events.
+
+3. We will use deterministic formulas presented below
+  DMG = Attack * (1 + (Attack - Defence)/Defence)* 0.5
+   
+  DMG is then subtracted from Health. Unit is deafeated (is dissapears from map) if the health reaches 0 or less. 
+  Show simple UI feedback (e.g., text overlay: “Warrior defeated Slinger”). if unit was defeted or "Warrior took {x} damage from Slinger".
+  
+4. Maintain a strict “player → AI → player” loop with capped AI compute <500ms and immediate visual update to preserve perceived responsiveness.
+
+5. City defenders are only used by AI to manage city defence and it's priorities. Player has no konwledge of that mechanics. Each player unit when selected should have it's reach printed as an svg colred border overaly. Same goes for player cities. Their reach is always presented as colored outline in svg. Fog of war is not part of the MVP. Whole map is visible to player.
+
+6. Use JSON serialization of world state (tiles, units, cities, turn number, RNG seed, AI states) compressed before storage; ensure schema versioning for future compatibility.
+
+7. Add automatic retry for failed saves and user alerts (“Save failed, retry?”) to prevent progress loss. No fallback to local save as it is not part of the MVP
+
+8. Things that are essenatial and non negotiable
+ - login oauth mechanism
+ - database persistance (postgres)
+ - moving units on tiles
+ 
+ Things that can be simplified
+ - AI meachanics can be simplified to just create units and attack oponent cities
+ - city management can be ommited entirely
+  
+9. I will add automated unit tests for backend logic Playwright for minimal E2E tests. These will be added later
+
+10. Project should be dockerized and hosted on the DigitalOcean platform with github CI/CD pipelines for tests and deployment. Use environment variables for OAuth and database secrets.

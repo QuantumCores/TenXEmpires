@@ -1,0 +1,19 @@
+1. Add Tailwind via PostCSS in the React app within the MVC solution, using Vite for the SPA assets and ASP.NET static file middleware to serve the built bundle; document the build pipeline in the repo README.
+
+2. This will be a handcrafted JSON file stored as an embeded resource
+
+3. pointy-top and use offset coordinates as these are easier to read by human. Implement A* pathfinding and uniform movement cost (1 per tile) for MVP; document neighbors and distance formula to keep AI deterministic.
+
+4. Enforce one unit per tile (1UPT), city counts as a tile that may hold one unit, no zone-of-control for MVP, and disallow swaps to simplify movement and AI.
+
+5. Use single-round damage exchange for simplicity. Remember that ranged units can attack without counter attack.
+
+6. Use “attacker strikes first, defender counterattacks if alive”; ranged units attack without counter if outside Range 0, no line-of-sight blocking in MVP, and round DMG to nearest integer (min 1) before HP subtraction.
+
+7. In simplified version a city can produce all resources in its reach every turn without need to do it manually by a player. For example if's working iron mine then one iron ore will be added to players resources. Of enough Iron is gathered a warior is produced. Cities have a fixed HP and Defense; capture when a melee unit ends a turn on the city tile after reducing city HP to 0; on capture, transfer ownership and despawn enemy units per your rule.
+
+8. Use .net mvc built in Identity mechanizm to register and authenticate user. Set 30-minute idle session timeout, rate-limit API (e.g., 60 req/min per user), and store only minimal profile data for 3 months post last end-turn per my retention policy.
+
+9. Store metrics in database. Minimal event list stored is game_start, turn_end, autosave, manual_save, manual_load, game_finish) with properties (user_id hash, game_id, turn_no, timestamp). Queries and data management will be performed manually in MVP.
+
+10. We should keep it simple for MVP thus AI turn should take less than 500ms as stated, support mouse + E to end turn with visible focus states, and ensure scalable SVG UI with readable text at 100–125% zoom for workplace monitors.

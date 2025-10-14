@@ -1,0 +1,50 @@
+1. It means that game is simple to understand for player that already have expirience with 4x games like civ 6 or humanking. Game hosuld require few simple actions lagin, manage city, move units, end trun, see AI response, save or load if required.
+
+2. Primary MVP users are civ-likers and strategy-curious players who know haw 4x games work.
+
+3. At launch only chrome and firefox desktop browser are supported. Game won't have sound effects and animations in MVP. Tile, building and unit graphics will be provided by the game author in png format. UI hase to be created using css and svg.
+
+4. World map is 20x15 hexagonal tiles. Procedural generation is not in scope of MVP. City reach means those tiles that are no further than 2 hex radius from town. City reach has to be visible on map by drawing city max reach border.
+
+5. Unit stats are as follows
+
+ Name: Warior
+ Attack: 11
+ Defence: 11
+ Health: 11
+ Range: 0
+ Type: melee
+ MovementSpeed: 2
+ 
+ Name: Slinger
+ Attack: 8
+ Defence: 8
+ Health: 11
+ Range: 2 hex radius
+ Type: ranged
+ MovementSpeed: 2
+ 
+ All units have 2 movement speed on map.
+ 
+6. AI algorithm has to be deterministick. It's priority list is as follows
+
+ - defend city  
+ - attack if winning chance is > 60% 
+ - explore 
+ - manage city (expand city reach)
+ - manage city (work resource tiles in reach)
+ - produce new units
+ 
+ defend city means that
+  - at any time at least 3 units are always closer to city than any enemy unit
+  - those 3 units that defend city are marked as city defenders
+  - if any enenemy unit is closer to town move 3 city defenders units closer to town
+  - if total attack power of enenmy units is more then total attack power of 3 units that defend city then move more units closer to town, mark them as city defenders and city defenders total attack power should be at least equal to enemy total power attack
+  
+7. We will use OAuth. Guests are not allowed to play the game but they can read about page, see game gallery. Logged in users can have up to 3 saves, and no more than 5 autosaves which are performed at the end of the turn (right after user click 'end turn' button). Data are saved for up to 3 months since last end turn.
+
+8. We will measure how many games were started, how many truns per game were played, how many games were manually saved and manually loaded. Game is finished when all enemy cities are captured. Enemy units don't have to be defeated. They will dissapear once last city is taken over. These data should be sotred in database.
+
+9. Tile, building and unit graphics will be provided by the game author in png format. UI hase to be created using css and svg. No sound effects and animations in this MVP. There will be no guided tutorial in MVP. Keybord shortcut to end turn should be E.
+
+10. Timeline is to finish MVP in 6 weeks using AI help to manage the project and write the code. There is only one person in the team a .net backend developer with minimal knowledge of React and frontend. 

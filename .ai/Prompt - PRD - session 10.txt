@@ -1,0 +1,22 @@
+1. In MVP we stick with ASP.NET Identity (email/password) only
+
+2. Target a single-screen fit at 1080p with ~48–56px hex width; add Ctrl/Cmd + mousewheel zoom (75–150%) and click-drag pan for smaller/larger displays.
+
+3. Allow pass-through over friendly units but forbid ending on an occupied tile; this avoids soft-locks and reduces AI pathfinding edge cases.
+
+4. Units don't heal in MVP. City +4 HP/turn. When under siege only +2HP/turn.
+
+5. Keep MVP simple: ranged never receives counterattacks (adjacent or not).
+
+6. Undo movement as well as movement confirmation is not available in MVP. When user selects a tile draw a path to that tile. When the same tile is clicked again move the unit. Show an end-turn summary toast listing pending unit actions.
+
+7. We don't care about stalemates in MVP.
+
+8. All assets are owned. 
+
+9. Add a minimal Privacy page, cookie notice, and a Delete my account action that purges saves/metrics per retention policy; log these actions in metrics.
+
+10. Define a versioned JSON schema. Add unit tests to verify schema compatibility with code. Include "schemaVersion" in files and implement a server-side schema gate to reject incompatible maps.
+
+
+This was the last round of questions. Please do not ask more question. To confirm answer with one simple 'Confirmed'.

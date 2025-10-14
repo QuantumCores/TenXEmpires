@@ -1,0 +1,83 @@
+You are an experienced product manager tasked with helping to create a comprehensive Product Requirements Document (PRD) based on the information provided. Your goal is to generate a list of questions and recommendations that will be used in the next prompt to create a complete PRD.
+
+Please carefully review the following information:
+
+<project_description>
+
+# App TenXEmpires (MVP)
+
+## Main problem
+ There are no web based 4x games like civilization or humankind that people can play at work, that takes only few klick a day.
+
+## MVP 
+Deliver a simple, playable single-player prototype that demonstrates:
+
+ - player login/logout mechanism
+ - A basic 20x15 hexagonal tile-based world map 
+ - simple AI - takes moves based on simple priority list
+ - Turn-based play - player turn -> NPC turn -> repeat
+ - Basic units - warior, slinger
+ - Unit movement on map 
+ - Basic resources on map - wheat, wood, stone, iron
+ - City management - city can produce resources that are in its reach
+ - Game state is saved in backend and loaded on player demand (max 3 game save slots per player)
+ 
+## What is not part of MVP
+
+ - No tech tree
+ - no diplomacy
+ - no complex city management
+
+## Success criteria
+ - Game runs fully in browser
+ - Player can move units, end turn, see AI respond
+ - Turn loop fully functional
+ - Player can can save and load game (max 3 game save slots)
+ - 75% of players finish their game
+ - 90% of players finish at least 5 turns
+
+
+</project_description>
+
+Analyze the provided information, focusing on aspects relevant to creating the PRD. Consider the following points:
+<prd_analysis>
+
+Identify the main problem the product is intended to solve.
+
+Define the key functionalities of the MVP.
+
+Consider potential user stories and user flows.
+
+Think about success criteria and how they can be measured.
+
+Assess project constraints and their impact on product development.
+</prd_analysis>
+
+Based on the analysis, generate a list of 10 combined questions and recommendations (question + recommendation). These should address any ambiguities, potential issues, or areas where more information is needed to create an effective PRD. Consider questions related to:
+
+Details of the user's problem
+
+Prioritization of functionalities
+
+Expected user experience
+
+Measurable success metrics
+
+Potential risks and challenges
+
+Timeline and resources
+
+<pytania> List your questions and recommendations here, numbered for clarity:
+
+Example:
+
+Do you plan to introduce paid subscriptions from the start of the project?
+
+Recommendation: The first stage of the project could focus on free features to attract users, with paid features introduced at a later stage.
+</pytania>
+
+Continue this process by generating new questions and recommendations based on the user's responses until the user explicitly asks for a summary.
+
+Remember to focus on clarity, relevance, and accuracy of the output. Do not include any additional comments or explanations beyond the specified output format.
+
+The analytical work should be conducted in a thinking block. The final output should consist solely of questions and recommendations and should not duplicate or repeat any work done in the prd_analysis section.

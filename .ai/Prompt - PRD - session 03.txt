@@ -1,0 +1,33 @@
+1. Given that the single developer has limited React experience, what is the preferred frontend framework setup and structure (pure React + Vite, or a minimal template)?
+   Recommendation: Use a lightweight React + Vite + TailwindCSS setup with TypeScript to maximize productivity and maintain readability while leveraging AI code generation for boilerplate UI.
+
+2. What backend stack and database technology will be used for save/load, authentication, and analytics storage?
+   Recommendation: Use .NET 8 minimal APIs with PostgreSQL for game state and metrics; expose REST endpoints for login (OAuth), save/load, and analytics events.
+
+3. How will combat resolution and city capture be handled—deterministic or RNG-based—and how are results communicated to the player?
+   Recommendation: Define deterministic formulas (Attack vs. Defense → HP loss per round until one reaches 0) and simple UI feedback (e.g., text overlay: “Warrior defeated Slinger”).
+
+4. Should AI and player take alternating full turns or simultaneous resolution, and how long should a full turn last (including AI processing)?
+   Recommendation: Maintain a strict “player → AI → player” loop with capped AI compute <300ms and immediate visual update to preserve perceived responsiveness.
+
+5. Will there be any in-game feedback or visual indication for city defenders, reach borders, and explored tiles?
+   Recommendation: Implement simple visual cues—colored outlines (e.g., green for reach, blue for defenders, gray fog for unexplored)—using SVG overlays to improve clarity without animation.
+
+6. What is the desired save file format and data granularity (per turn, per map tile, per unit)?
+   Recommendation: Use JSON serialization of world state (tiles, units, cities, turn number, RNG seed, AI states) compressed before storage; ensure schema versioning for future compatibility.
+
+7. How should error handling and recovery be designed (e.g., failed save, lost connection, corrupted data)?
+   Recommendation: Add automatic retry for failed saves, fallback local save (browser IndexedDB), and user alerts (“Save failed, retry?”) to prevent progress loss.
+
+8. Given the 6-week solo timeline, which non-essential features can be cut or simplified if delays occur (e.g., AI expansion, autosaves, full analytics)?
+   Recommendation: Define a tiered priority:
+
+   * P1: map, unit movement, turn loop, save/load
+   * P2: AI defense/attack, OAuth login
+   * P3: autosaves, analytics, city resource management.
+
+9. How will testing and validation be managed, given the one-person team and limited frontend experience?
+   Recommendation: Use automated unit tests for backend logic (AI, combat, save/load) and Cypress or Playwright for minimal E2E tests (start game, move, end turn, save/load); weekly milestone reviews using AI-based code audits.
+
+10. What is the plan for deployment and hosting (local, cloud, or web platform)?
+    Recommendation: Host backend and static frontend on a simple Azure App Service or Render.com deployment with CI/CD from GitHub; use environment variables for OAuth and database secrets.
