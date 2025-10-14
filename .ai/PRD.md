@@ -19,7 +19,7 @@ Audience
 Scope Summary
 
 - Authentication: ASP.NET Identity (email/password). No guest play; public About/Gallery only.
-- Frontend: React + TailwindCSS (PostCSS) + Vite; CSS + SVG UI.
+- Frontend: React 19 + TailwindCSS 4 (PostCSS) + Vite + TypeScript 5; CSS + SVG UI.
 - Backend: .NET 8 MVC Web API; PostgreSQL persistence; server authoritative.
 - Board: Fixed 20×15 hex grid, pointy-top, odd-r offset; full visibility.
 - Units: Warrior (melee), Slinger (ranged); one unit per tile (1UPT); move or attack per turn.
@@ -27,7 +27,7 @@ Scope Summary
 - AI: Deterministic priority list; completes turn < 500 ms.
 - Saves: 3 manual slots + 5 autosaves (ring buffer on end-turn); retention 3 months.
 - Analytics: Minimal event set with per-turn batching.
-- Deployment: Dockerized, CI/CD to DigitalOcean (sizing and ingress TBD).
+- Deployment: Github actions, Dockerized, CI/CD to DigitalOcean (sizing and ingress TBD).
 
 Constraints and Non-functional Targets
 
@@ -56,6 +56,7 @@ Pain Points Addressed
 - Lost progress: server-side saves with retention and slot management.
 - Complex onboarding: fixed content, full visibility, simple two-unit roster.
 - Privacy and control: delete account purges saves/metrics; data retention is limited.
+
 ## 3. Functional Requirements
 
 3.1 Authentication and Access
@@ -195,47 +196,35 @@ Open Questions / TBD
 - Error handling copy for save/load/network failures.
 ## 5. User Stories
 
-US-001: Register with email/password
-
-Description
-
-As a new user, I want to register with my email and a password so I can access the game and saves.
-
+US-001: Register with email/password \
+Description \
+As a new user, I want to register with my email and a password so I can access the game and saves. \
 Acceptance Criteria
 
 - Valid email and password create an account and sign me in.
 - Invalid inputs show specific errors; no account is created.
 - Endpoint adheres to 60 req/min rate limit.
 
-US-002: Log in
-
-Description
-
-As a returning user, I want to log in with my email and password so I can continue my game.
-
+US-002: Log in 
+Description \
+As a returning user, I want to log in with my email and password so I can continue my game. \
 Acceptance Criteria
 
 - Correct credentials authenticate and navigate to the hub.
 - Incorrect credentials show an error; remain unauthenticated.
 - Idle timeout set to 30 minutes from last activity.
 
-US-003: Log out
-
-Description
-
-As an authenticated user, I want to log out so my session ends.
-
+US-003: Log out \
+Description \
+As an authenticated user, I want to log out so my session ends. \
 Acceptance Criteria
 
 - Logging out invalidates session and redirects to public area.
 - Authenticated endpoints are rejected until I log in again.
 
-US-004: Session idle timeout
-
-Description
-
-As a user, I want idle sessions to expire after 30 minutes to protect my account.
-
+US-004: Session idle timeout \
+Description \
+As a user, I want idle sessions to expire after 30 minutes to protect my account. \
 Acceptance Criteria
 
 - After 30 minutes of inactivity, next authenticated request is rejected.
