@@ -1,0 +1,13 @@
+Installed latest Node for Windows from official website https://nodejs.org/en/download
+Created a React + Net Core + TypeScript project in VisualStudio 2022 using templates (type react in search bar when creating a new project)
+Installed WSL 2.6.1 to run docker desktop and test application docker images
+Run `dotnet new gitignore`to create gitignore file specific to .net projects
+Add node.js ignore from 10xWarmup project
+EsLint configuration for React can be copied from here https://github.com/przeprogramowani/10x-astro-starter/blob/master/eslint.config.js
+Add <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> in <PropertyGroup> to Server project
+Add .editorconfig file. Preferences taken from COC but can be found here https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/code-style-rule-options
+Add rules from https://cursor.directory and https://10xrules.ai/. For .net review enerate one with GPT5 with following pormpt
+```
+Please write me an AI rule for Cursor IDE for pull request code review of C# web APi code. Rule should apply to all web api file formats (mainly .cs files). Modern coding standards and language features should be used. Add whatever you think necessary
+```
+Generate README
