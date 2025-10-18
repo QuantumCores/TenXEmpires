@@ -1,0 +1,27 @@
+1. How should we represent turn order to support multiple AIs now and multiplayer later? Recommendation: Add `participants.turn_index smallint not null` unique per `(game_id, turn_index)` and `games.active_participant_id bigint not null references participants(id)`; increment `games.turn_no` and advance `active_participant_id` in a single transaction.
+Should we persist a deterministic RNG seed for AI and any randomized tie-breakers?
+Recommendation: Yes—store games.rng_seed bigint not null (or bytea for wider seeds); include it in snapshots and analytics context to ensure reproducibility.
+
+Do we need DB-level guarantees that each city occupies a single tile within the correct map and game?
+Recommendation: Yes—cities(game_id, tile_id unique per game) with UNIQUE (game_id, tile_id) and a trigger validating tile_id belongs to games.map_id; also CHECK (hp > 0 AND max_hp >= hp).
+
+How do we avoid ambiguity when resetting unit actions at owner turn start?
+Recommendation: Store both user_units.has_acted boolean not null and user_units.last_action_turn int not null; reset all units for games.active_participant_id on turn increment inside the same transaction.
+
+Should saves be deduplicated to handle client retries safely?
+Recommendation: Add saves.dedup_key uuid null and a partial unique index UNIQUE (game_id, kind, dedup_key) WHERE dedup_key IS NOT NULL; also UNIQUE (game_id, kind, turn_no) WHERE kind='autosave' for idempotent autosaves.
+
+Do we want strict domain constraints for unit_definitions to prevent invalid configurations?
+Recommendation: Yes—CHECK (attack > 0 AND defence > 0 AND move_points > 0), CHECK (range_min >= 1 AND range_max >= range_min), and code text unique not null as the stable natural key.
+
+Should we enforce one city per participant per starting setup, or allow multiple cities per side?
+Recommendation: Allow multiple cities; enforce only per-tile uniqueness and ownership via cities(participant_id not null); no limit per participant to stay future-proof.
+
+What minimum constraints ensure user_units rows are consistent with map and ownership?
+Recommendation: user_units(game_id not null, participant_id not null, type_id not null, tile_id not null, hp > 0), UNIQUE (game_id, tile_id) for 1UPT, FKs to participants, unit_definitions, and a trigger verifying map_tiles.map_id = games.map_id.
+
+Who executes retention purges and account-deletion cascades with RLS in place?
+Recommendation: Run both with the app_admin role (BYPASSRLS) via stored procedures: app.purge_inactive_games(cutoff timestamptz) and app.delete_user(u uuid); procedures wrap deletes in one transaction.
+
+Do analytics events need additional context fields to stay self-contained after game purges?
+Recommendation: Yes—persist map_code, map_schema_version, rng_seed, game_started_at, game_finished_at, and participant_count alongside game_key, plus user_key with salt_version for privacy-preserving joins.

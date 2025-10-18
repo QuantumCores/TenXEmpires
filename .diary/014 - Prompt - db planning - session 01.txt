@@ -1,0 +1,27 @@
+1. Should ASP.NET Identity live in the same PostgreSQL database/schema as game data to enable FK and cascade behaviors? Recommendation: Yes—store Identity tables in the same database and use `uuid` user IDs with `ON DELETE CASCADE` to enforce delete-account purges across saves and analytics.
+Do we model a distinct “games” entity to represent each started run and link saves and analytics to it?
+Recommendation: Yes—add a games table (id, user_id, status, turn_no, started_at, finished_at, last_turn_at) and reference game_id from saves and analytics_events.
+
+Should save data be normalized (units/cities/tiles tables) or persisted as a JSON snapshot?
+Recommendation: For MVP, store full snapshots as jsonb with a schema_version and minimal typed columns (e.g., turn_no, is_finished) to support queries; add a GIN index only if needed.
+
+How do we represent manual vs. autosaves and enforce per-user limits (3 manual slots, 5 autosaves)?
+Recommendation: Use one saves table with kind enum (manual,autosave), slot (1..3 for manual, null for autosave), label, created_at, state jsonb; add a partial unique index on (user_id, slot) where kind='manual' and a trigger to keep only the latest 5 autosaves per (user_id, game_id).
+
+Should analytics events be strongly typed or primarily JSON payloads?
+Recommendation: Use typed columns for event_type enum, user_id, game_id, turn_no, occurred_at, plus payload jsonb; index (user_id, occurred_at) and (game_id, turn_no); optionally add a partial unique index to prevent duplicate event inserts.
+
+How will Row-Level Security identify the current user inside Postgres?
+Recommendation: Enable RLS on games, saves, and analytics_events; set app.current_user_id per connection from the backend; define policies like USING (user_id = app.current_user_id()); create an admin DB role with BYPASSRLS for maintenance/reporting.
+
+Should retention and delete-account be hard deletes vs. soft deletes?
+Recommendation: Use hard deletes to satisfy purge requirements; enforce ON DELETE CASCADE from users to games → saves/analytics_events; implement a scheduled job to remove data older than 3 months based on games.last_turn_at.
+
+Do we require concurrency control to avoid lost updates during end-turn autosaves?
+Recommendation: Add an optimistic concurrency column (version bigint or rely on xmin) on games; update with WHERE id=? AND version=? and increment on success; wrap end-turn state transition + autosave insert in a single transaction.
+
+What identifier types do we want for primary keys and references?
+Recommendation: Use uuid (or time-ordered ulid) for users, games, saves, analytics_events; use timestamptz for all timestamps; implement Postgres enums for small fixed sets (save_kind, event_type); add CHECK constraints (e.g., slot between 1 and 3 when kind='manual').
+
+How should we gate loads by schemaVersion from map/save files without redeploying?
+Recommendation: Store schema_version on saves and games, and maintain an allowed_schema_versions table referenced by a FK or validated via trigger; reject loads when version not allowed and log via a dedicated audit entry or event.

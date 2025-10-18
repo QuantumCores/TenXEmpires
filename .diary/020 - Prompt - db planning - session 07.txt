@@ -1,0 +1,29 @@
+<pytania> 1. Should ownership be modeled via a unified participants entity instead of sprinkling user_id across cities/units? Recommendation: Yes—add `participants(id bigint, game_id bigint, kind enum('human','ai'), user_id uuid null)` and reference `participant_id` from `cities` and `units` to unify ownership and avoid null/user mismatches.
+Should the fixed 20x15 map be materialized in DB to back city_tiles and unit positions?
+Recommendation: Yes—create maps(id, code, schema_version) and map_tiles(id bigint, map_id, row int, col int, terrain, resource_type, resource_amount); load from map.json during migrations to provide stable tile_id FKs.
+
+Which coordinate system should tables use for positions and distance rules?
+Recommendation: Store row int and col int (odd‑r) with CHECK (0 <= row < 15 AND 0 <= col < 20) and UNIQUE(map_id, row, col); optionally add generated columns cube_q/cube_r/cube_s for distance calculations if needed later.
+
+Should city_tiles be precomputed per game/city or derived on the fly each turn?
+Recommendation: Precompute and persist city_tiles(id, game_id, city_id, tile_id) at game start; recompute only if city position changes (not expected in MVP); simplifies harvest queries and future expansion of city borders.
+
+Where do we store city resource inventories and enforce “max 1 produced per city per turn”?
+Recommendation: Add city_resources(city_id, iron int, stone int, updated_at) and city_production(city_id, last_produced_turn int); enforce one-per-turn in application logic and validate in a single transaction.
+
+How do we enforce 1UPT at the database level for normalized unit positions?
+Recommendation: Add UNIQUE (game_id, tile_id) on units to prevent two units ending on the same tile; keep path-through logic in application rules.
+
+What is the normalized representation of unit runtime state (HP, moves remaining, acted flag)?
+Recommendation: Store in units(id bigint, game_id, participant_id, type_id, tile_id, hp int, moves_remaining int, has_acted boolean, updated_at timestamptz); keep static stats in unit_definitions.
+
+How will manual/autosaves interact with normalized tables during load/restore?
+Recommendation: Keep normalized tables as source of truth; store saves as saves(id, game_id, kind, slot, turn_no, created_at, state jsonb) derived from tables; on load, wrap a transaction that clears per‑game mutable rows and re‑inserts from the snapshot.
+
+With analytics retained after account deletion, how do we avoid FK cascades and preserve privacy?
+Recommendation: Replace FK with analytics_events(user_key char(64) not null) storing a salted hash of user_id; expose admin views that join via a server-held salt; remove direct FK to auth.users and keep RLS off for analytics.
+
+Should RLS on child tables (cities, units, city_tiles, saves) duplicate user_id or rely on the games link?
+Recommendation: Rely on games: define policies like USING (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) and matching WITH CHECK, minimizing duplication and easing maintenance.
+
+</pytania>

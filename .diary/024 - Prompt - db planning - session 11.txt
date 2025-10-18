@@ -1,0 +1,27 @@
+1. For MVP, should we allow multiple AI participants per game but restrict to at most one human participant? Recommendation: Yes—enforce `UNIQUE (game_id) WHERE kind='human'` and no limit for `kind='ai'`; keep `participants(game_id, kind, user_id uuid null)` with `CHECK ((kind='ai' AND user_id IS NULL) OR (kind='human' AND user_id IS NOT NULL))`.
+Should analytics_events keep a foreign key to games(id) given we retain analytics after account deletion and save purges?
+Recommendation: No—store game_key bigint not null (copy of games.id) without FK plus user_key char(64) not null and salt_version; this avoids orphaned FKs while preserving game linkage for analysis.
+
+Should we store map dimensions to enforce tile bounds and coordinate validity?
+Recommendation: Yes—add maps(width int, height int) and enforce CHECK (0 <= row AND row < maps.height AND 0 <= col AND col < maps.width) via a trigger or generated checks; keep UNIQUE(map_id, row, col).
+
+Should city_tiles enforce radius-2 membership and uniqueness per city?
+Recommendation: Yes—persist city_tiles(id, game_id, city_id, tile_id) with UNIQUE (game_id, city_id, tile_id); compute once at game start; validate radius-2 in application logic for simplicity.
+
+How do we guarantee user_units.tile_id belongs to the game’s map to prevent cross-map references?
+Recommendation: Add a BEFORE INSERT/UPDATE trigger on user_units that verifies map_tiles.map_id = (SELECT map_id FROM games WHERE id = user_units.game_id) for the given tile_id.
+
+What is the deterministic tie-breaker for “nearest free” spawning and equal-cost path choices?
+Recommendation: Use ascending map_tiles.id as the stable tie-breaker; document and apply consistently in queries and application logic (no extra DB columns required).
+
+Should we guard end-turn processing against concurrent requests even with low traffic?
+Recommendation: Yes—wrap end-turn in one transaction and acquire pg_advisory_xact_lock(game_id) to serialize per-game mutations (harvest, production, moves, saves).
+
+Which tables must be included in save snapshots to fully restore normalized state?
+Recommendation: Include participants, cities, user_units, city_tiles, city_resources, and city_production; serialize stable IDs and restore with OVERRIDING SYSTEM VALUE and DEFERRABLE FKs in a single transaction.
+
+On retention purge, should the games row be retained or removed when deleting saves older than 3 months?
+Recommendation: Retain games and mark status='archived' when all saves are purged; keep games.id stable for analytics correlation while allowing users to start new games.
+
+Do we rely solely on primary/unique indexes for MVP and defer additional indexes?
+Recommendation: Yes—accept only PK/UNIQUE-backed indexes now (e.g., UNIQUE (game_id, tile_id) on user_units, UNIQUE (user_id, game_id, slot) on saves) and revisit query indexes once traffic and profiling justify them.

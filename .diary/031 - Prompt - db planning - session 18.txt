@@ -1,0 +1,20 @@
+0. Yes—add `participants.is_eliminated boolean not null default false` and set it when the last enemy city falls; use it to drive unit despawn and victory checks in one transaction.
+
+1. No
+
+2.  Add turns(id, game_id, turn_no, participant_id, committed_at, duration_ms, summary jsonb); keep small and append-only to aid ops without retaining full combat logs.
+
+3. Yes—games.turn_in_progress boolean not null default false; set true at start of end-turn transaction and false on commit; reject concurrent end-turns based on this flag.
+
+4. Yes—set ON DELETE CASCADE from participants, cities, user_units, city_tiles, city_resources, city_production, and saves to games(id); run purges via DELETE FROM games WHERE id = $1. I thought we already decided that
+
+5. No. Only in app.
+
+6.  Yes—use unit_definitions(code text unique not null) and reference by type_id FK; keep code stable (“warrior”, “slinger”) to ease seeding and joins.
+
+
+7. Add games.settings jsonb not null default '{}' to capture knobs used at game start; include in snapshots and analytics.
+
+8. Yes—store only gameplay-affecting fields in map_tiles (terrain, resource_type, resource_amount); keep any cosmetic metadata out of DB.
+
+9. No. We will make sure on app level and unit tests that consistency is valid.

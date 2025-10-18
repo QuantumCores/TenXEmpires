@@ -1,0 +1,19 @@
+0. Order by unique identifier in app. First human then AI.
+
+1. Yes—store games.rng_seed bigint not null, include it in snapshots and analytics context to ensure reproducibility.
+
+2. No. We dont want that validation. We will validate in app
+
+3. Store user_units.has_acted boolean not null; reset all units for games.active_participant_id.
+
+4. No.
+
+5. No.
+
+6. Allow multiple cities; In app enforce only per-tile uniquness.
+
+7.  user_units(game_id not null, participant_id not null, type_id not null, tile_id not null, hp > 0), UNIQUE (game_id, tile_id) for 1UPT, FKs to participants, unit_definitions, and a trigger verifying map_tiles.map_id = games.map_id.
+
+8. Run both with the app_admin role (BYPASSRLS) via stored procedures: app.purge_inactive_games(cutoff timestamptz) and app.delete_user(u uuid); procedures wrap deletes in one transaction.
+
+9. Yes—persist map_code, map_schema_version, rng_seed, game_started_at, game_finished_at, and participant_count alongside game_key, plus user_key with salt_version for privacy-preserving joins.

@@ -1,0 +1,19 @@
+0. Use `SET LOCAL app.user_id = '...'` right after `BEGIN`; wrap each request in a transaction so the GUC resets automatically on commit/rollback.
+
+1.  Create app_user (RLS-enabled read/write on app.*), app_admin (BYPASSRLS via maintenance procs only), and app_migrator (DDL + seeds on app/auth); revoke PUBLIC on both schemas.
+
+2. Add idempotent migrations: upsert maps(code,width,height,schema_version) and bulk insert map_tiles via COPY from embedded files; units_definitions by stable code with ON CONFLICT (code) DO UPDATE.
+
+3. Plain text
+
+4.  Use REPEATABLE READ for snapshot reads to ensure a consistent cut without locks; perform restore at READ COMMITTED.
+
+5. No we don't wan't views. We will read in steps in app.
+
+6. Yes—add UNIQUE (game_id, turn_no) and keep only PK/UNIQUE-backed indexes to align with the MVP indexing policy.
+
+7. We will do it in app
+
+8. Yes—store schema_version int not null and map_code text not null to validate compatibility before restore and support future migrations.
+
+9. Execute with app_migrator using SET ROLE app_migrator; (no BYPASSRLS) and run data changes through stored procedures where needed; reserve BYPASSRLS strictly for app_admin maintenance tasks.

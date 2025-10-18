@@ -1,0 +1,27 @@
+1. Should we use plain text or Postgres enums for `participants.kind` and `analytics_events.event_type` to keep types consistent with terrain/resources? Recommendation: Use plain text (`text`) with application-side validation to match your “plain text” decision and avoid migration friction.
+Should city_resources stay as fixed columns (iron, stone) or be normalized to one row per resource type for extensibility?
+Recommendation: Normalize to city_resources(city_id, resource_type text, amount int not null default 0) with UNIQUE (city_id, resource_type) to add new resources without schema changes.
+
+Do we still need move_points in unit_definitions given MVP’s “move or attack once per turn” rule?
+Recommendation: Drop move_points for MVP; keep only fields used by rules (e.g., is_ranged, attack, defence, range_min, range_max) and reintroduce later if needed.
+
+Should user_units track last_action_turn in addition to has_acted for audit/debugging?
+Recommendation: Keep only has_acted boolean not null to minimize writes; rely on the turns ledger for auditing.
+
+Do we want a hard database limit on snapshot size to prevent oversized saves.state payloads?
+Recommendation: Enforce in app with a configurable max (e.g., 256–512 KB) and optionally add CHECK (octet_length(state) <= 1048576) if you want a DB guardrail.
+
+When production is blocked (no free spawn tile), should resource deduction occur at threshold or at successful spawn?
+Recommendation: Deduct on successful spawn; model with city_production_queue(city_id, type_id, enqueued_at) so delayed spawns don’t prematurely consume resources.
+
+Do we want lightweight concurrency detection beyond turn_in_progress for writes to games and user_units?
+Recommendation: Configure EF to use Postgres xmin as a concurrency token on these tables to catch lost updates without extra columns.
+
+Should app_user have read-only access to global catalog tables (maps, map_tiles) and no writes?
+Recommendation: Yes—grant SELECT only on auth.* and app.maps, app.map_tiles; restrict DML on these to app_migrator.
+
+Do we need a guard to ensure participants.user_id always belongs to the same tenant context as games.user_id?
+Recommendation: Add a trigger on participants that validates, for kind='human', the user_id equals the owning games.user_id, preventing cross-user contamination.
+
+Should analytics be stored per-turn as batches to mirror the “1 call/turn” contract?
+Recommendation: Add analytics_batches(id bigint, game_key bigint, turn_no int, user_key char(64), salt_version int, occurred_at timestamptz, events jsonb) and write one row per turn; derive per-event views later if needed.

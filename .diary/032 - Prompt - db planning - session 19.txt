@@ -1,0 +1,27 @@
+1. Should the app set `app.user_id` per transaction or per session to avoid cross-request leakage with pooling? Recommendation: Use `SET LOCAL app.user_id = '...'` right after `BEGIN`; wrap each request in a transaction so the GUC resets automatically on commit/rollback.
+Do we define explicit DB roles and grants to contain privileges across schemas?
+Recommendation: Create app_user (RLS-enabled read/write on app.*), app_admin (BYPASSRLS via maintenance procs only), and app_migrator (DDL + seeds on app/auth); revoke PUBLIC on both schemas.
+
+How should map and unit seeds be loaded deterministically across environments?
+Recommendation: Add idempotent migrations: upsert maps(code,width,height,schema_version) and bulk insert map_tiles via COPY from embedded files; seed unit_definitions by stable code with ON CONFLICT (code) DO UPDATE.
+
+Should terrain and resource_type be enums or plain text?
+Recommendation: Use Postgres enums (terrain_type, resource_type) to prevent typos and enforce allowed values; migrate carefully when expanding sets.
+
+What isolation level should we use when generating a save snapshot from normalized tables?
+Recommendation: Use REPEATABLE READ for snapshot reads to ensure a consistent cut without locks; perform restore at READ COMMITTED.
+
+Do we need read-friendly SQL views to reduce join complexity without duplicating data?
+Recommendation: Create views like app.v_game_state (cities/units/resources joined) and app.v_user_games (games with timestamps) and let RLS filter them.
+
+Should the turns ledger enforce uniqueness per game and turn number?
+Recommendation: Yes—add UNIQUE (game_id, turn_no) and keep only PK/UNIQUE-backed indexes to align with the MVP indexing policy.
+
+How do we ensure stable ordering for “first human then AI” without storing turn indices?
+Recommendation: Provide a view app.v_turn_order that orders participants by (kind='human' first, id asc) so DB and app share the same deterministic ordering.
+
+Should saves include a minimal header even though state is normalized?
+Recommendation: Yes—store schema_version int not null and map_code text not null to validate compatibility before restore and support future migrations.
+
+How will migrations/seeds run under RLS safely?
+Recommendation: Execute with app_migrator using SET ROLE app_migrator; (no BYPASSRLS) and run data changes through stored procedures where needed; reserve BYPASSRLS strictly for app_admin maintenance tasks.

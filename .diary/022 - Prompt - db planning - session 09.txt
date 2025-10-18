@@ -1,0 +1,27 @@
+ 1. Should each game enforce exactly two participants (one human linked to user_id, one AI) and prevent multiple humans or AIs? Recommendation: Yes—add `UNIQUE (game_id, kind)` and a partial unique `UNIQUE (game_id, user_id) WHERE kind='human'`; set `CHECK ((kind='ai' AND user_id IS NULL) OR (kind='human' AND user_id IS NOT NULL))`; use a Postgres enum `participant_kind`.
+Should each game reference a specific map and freeze the version used at game start?
+Recommendation: Yes—add games.map_id FK to maps(id) and store games.map_schema_version; validate on load that the game’s map/version matches and reject inconsistent loads.
+
+Do we want precomputed tile adjacency to speed radius checks, siege detection, and nearest‑free spawn?
+Recommendation: Yes—seed map_adjacencies(map_id, tile_id, neighbor_tile_id) from map.json; optionally add a materialized view for radius‑2 sets to simplify city reach and siege queries.
+
+During restore from a snapshot, should we preserve original row IDs for deterministic behavior and FK stability?
+Recommendation: Yes—serialize IDs in the snapshot and restore with OVERRIDING SYSTEM VALUE inside a transaction; make relevant FKs DEFERRABLE and clear per‑game rows via DELETE ... WHERE game_id = $1 before reinsert.
+
+Should FKs from per‑game tables be DEFERRABLE to ease bulk restore and slot loads?
+Recommendation: Yes—define FKs from cities, user_units, city_tiles, city_resources, city_production, and saves to games(id) as DEFERRABLE INITIALLY DEFERRED.
+
+To avoid naming confusion, should we rename static units to unit_definitions and formalize its schema?
+Recommendation: Yes—use unit_definitions(id, code text unique, is_ranged bool, attack int check > 0, defence int check > 0, range_min int, range_max int, move_points int); reference via user_units.type_id.
+
+Where should 1UPT be enforced given runtime state lives in user_units?
+Recommendation: Enforce in user_units with UNIQUE (game_id, tile_id) and non‑null tile_id; perform moves/spawns in a single transaction that validates destination availability.
+
+Should child table RLS policies rely solely on game ownership via games?
+Recommendation: Yes—define USING/WITH CHECK (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) for cities, user_units, city_tiles, saves, city_resources, and city_production.
+
+How will we manage analytics hashing salt to allow retention without FKs and enable admin joins?
+Recommendation: Store a single analytics_salt with version in app.settings; add salt_version to analytics_events; compute user_key = sha256(user_id || salt) at write time; rotate by incrementing version for new events.
+
+How is games.last_turn_at maintained to drive save purges while keeping analytics intact?
+Recommendation: Update games.last_turn_at in the end‑turn transaction and optionally add a trigger on analytics_events for event_type='turn_end' to set it; purge saves by games.last_turn_at < now() - interval '3 months' while leaving analytics untouched.

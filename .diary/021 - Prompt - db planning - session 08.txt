@@ -1,0 +1,22 @@
+0.  Yes—add `participants(id bigint, game_id bigint, kind enum('human','ai'), user_id uuid null)` and reference `participant_id` from `cities` and `units` to unify ownership and avoid null/user mismatches.
+
+1. es—create maps(id, code, schema_version) and map_tiles(id bigint, map_id, row int, col int, terrain, resource_type, resource_amount); load from map.json during migrations to provide stable tile_id FKs.
+
+
+2. Store row int and col int (odd‑r) with CHECK (0 <= row < 15 AND 0 <= col < 20) and UNIQUE(map_id, row, col); optionally add generated columns cube_q/cube_r/cube_s for distance calculations if needed later.
+
+3. Precompute and persist city_tiles(id, game_id, city_id, tile_id) at game start; recompute only if city position changes (not expected in MVP); simplifies harvest queries and future expansion of city borders.
+
+4. Add city_resources(city_id, iron int, stone int, updated_at) and city_production(city_id, last_produced_turn int); enforce one-per-turn in application logic and validate in a single transaction.
+
+5. Add UNIQUE (game_id, tile_id) on units to prevent two units ending on the same tile; keep path-through logic in application rules>.
+
+6. Keep static unit stats in `units` table. Unit runtime state (HP, moves remaining, acted flag, position on map) should be kept in `user_units` table
+
+7. Keep normalized tables as source of truth; store saves as saves(id, game_id, kind, slot, turn_no, created_at, state jsonb) derived from tables; on load, wrap a transaction that clears per‑game mutable rows and re‑inserts from the snapshot.
+
+8.  Replace FK with analytics_events(user_key char(64) not null) storing a salted hash of user_id; expose admin views that join via a server-held salt; remove direct FK to auth.users and keep RLS off for analytics.
+
+9. Rely on games: define policies like USING (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) and matching WITH CHECK, minimizing duplication and easing maintenance.
+
+BTW Your qetsion formatting is off. I can see two questions numbered as 1 and there is no line brake after <pytania> tag. Please fix this and keep fixed format from now on.

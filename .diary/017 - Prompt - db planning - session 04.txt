@@ -1,0 +1,19 @@
+0. Keep slot-based manual saves to match UX; enforce UNIQUE (user_id, game_id, slot) with CHECK (slot between 1 and 3) and reserve the ring buffer for autosaves only.
+
+1. Prefer uuid (ideally time-ordered v7) for seamless EF/Npgsql support; 
+
+2. Configure Identity to use a matching key type (e.g., string ULID or Guid), and ensure generation occurs in the app so DB FKs and cascades align cleanly.
+
+3. Yes—use bigint generated always as identity for games, saves, and analytics_events, cities, units (for warior, slinger stats), user_units (user and unit joint table with map position, health and moves) tables to avoid rollover risk; keep user_id as the ULID/uuid type consistently across references.
+
+4. Use a session GUC (e.g., SET app.user_id = '...') and a SECURITY DEFINER function app.current_user_id(); define RLS USING (user_id = app.current_user_id()) and an admin role with BYPASSRLS.
+
+5. application logic
+
+6. Store a FK user_id for integrity and cascades; Also use it in views
+
+7. Not required we will handle this application logic
+
+8. Allow multiple active games for flexibility
+
+9. For now we will skip indexes. We will have very low trafic in the beginning. We will think about this later

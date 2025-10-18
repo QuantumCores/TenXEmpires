@@ -11,3 +11,21 @@ Add rules from https://cursor.directory and https://10xrules.ai/. For .net revie
 Please write me an AI rule for Cursor IDE for pull request code review of C# web APi code. Rule should apply to all web api file formats (mainly .cs files). Modern coding standards and language features should be used. Add whatever you think necessary
 ```
 Generate README
+
+Had some issues with Docker and did that 
+https://www.reddit.com/r/docker/comments/1mk86o7/docker_desktop_virtualization_support_not/
+```
+Uninstall Docker Desktop. Remove the Windows features completely (Hyper-V, WSL and both platforms). Reboot. Add the features again. Reboot. Install Docker Desktop. 
+```
+
+Then I dwodnladed PostgreSql database images from here
+```
+https://hub.docker.com/_/postgres
+```
+
+To run I have to setup a password (damn I'm tired). Container name is `PosgreSQL` because typos are for real developers xD
+```
+$ docker run --name some-postgres -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+```
+
+Started db planning session.

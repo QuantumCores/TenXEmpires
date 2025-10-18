@@ -1,0 +1,21 @@
+0. No. We will want to add multiple AI players in the future. And multiplaer games later. 
+
+1. Yes—add games.map_id FK to maps(id) and store games.map_schema_version; validate on load that the game’s map/version matches and reject inconsistent loads.
+
+2. No. We will compute adjacent tile ids in app. And then query DB with these ids. This is cheap and fast operation we dont't have stor this information in DB.
+
+3. Yes—serialize IDs in the snapshot and restore with OVERRIDING SYSTEM VALUE inside a transaction; make relevant FKs DEFERRABLE and clear per‑game rows via DELETE ... WHERE game_id = $1 before reinsert.
+
+4. Yes—define FKs from cities, user_units, city_tiles, city_resources, city_production, and saves to games(id) as DEFERRABLE INITIALLY DEFERRED.
+
+5. Yes—use unit_definitions(id, code text unique, is_ranged bool, attack int check > 0, defence int check > 0, range_min int, range_max int, move_points int); reference via user_units.type_id.
+
+6. Enforce in user_units with UNIQUE (game_id, tile_id) and non‑null tile_id; perform moves/spawns in a single transaction that validates destination availability.
+
+7. Yes—define USING/WITH CHECK (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) for cities, user_units, city_tiles, saves, city_resources, and city_production.
+
+8. Store a single analytics_salt with version in app.settings; add salt_version to analytics_events; compute user_key = sha256(user_id || salt) at write time; rotate by incrementing version for new events.
+
+9. Update games.last_turn_at in the end‑turn transaction and optionally add a trigger on analytics_events for event_type='turn_end' to set it; purge saves by games.last_turn_at < now() - interval '3 months' while leaving analytics untouched.
+
+Please fix questions numbering in your responses. There are two questions with number 1.

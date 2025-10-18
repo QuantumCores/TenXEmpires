@@ -1,0 +1,27 @@
+1. Should we enforce that the “human” participant’s `user_id` always matches `games.user_id` to keep RLS and ownership consistent? Recommendation: Yes—add a constraint or trigger validating `participants.kind='human' AND participants.user_id = games.user_id` for the same `game_id`.
+Since games rows are purged, should analytics events persist minimal game context for long‑term analysis (e.g., map_code, map_schema_version, game_started_at, game_finished_at)?
+Recommendation: Yes—add these fields to analytics_events alongside game_key, so queries remain self‑contained after purges.
+
+How do we keep map_tiles.id stable across migrations so city_tiles and snapshots don’t break?
+Recommendation: Keep UNIQUE(map_id, row, col) as the natural key; avoid dropping/reseeding tiles; if regeneration is needed, remap by (map_id,row,col) rather than id.
+
+Do we want a helper to resolve (map_id,row,col) -> tile_id to simplify inserts/validations?
+Recommendation: Yes—create a stable SQL function app.tile_id(map_id int, row int, col int) that SELECTs by the natural key; it centralizes validation and errors.
+
+Should snapshot restore run under normal RLS (user context) or admin?
+Recommendation: Use normal user context with SET app.user_id so WITH CHECK policies validate ownership; keep FKs DEFERRABLE INITIALLY DEFERRED and use OVERRIDING SYSTEM VALUE for stable IDs.
+
+Where do we track turn state to enforce “move or attack once per turn”?
+Recommendation: Store games.turn_no and in user_units keep has_acted boolean and/or last_action_turn int; reset flags atomically at turn increment.
+
+How do we represent city durability and siege for regen/harvest rules?
+Recommendation: Add cities(hp int not null, max_hp int not null) and compute siege in app using city_tiles + enemy occupancy; persist results via the end‑turn transaction only.
+
+Should we hard‑enforce 1UPT at rest while allowing pass‑through during pathing?
+Recommendation: Yes—add UNIQUE (game_id, tile_id) on user_units; keep pass‑through validation in app; never persist intermediate path tiles.
+
+On retention purge, do we cascade delete all per‑game state while leaving analytics intact?
+Recommendation: Yes—hard delete participants, cities, user_units, city_tiles, city_resources, city_production, saves, then delete games; keep analytics_events with game_key and context fields.
+
+Should we add a games.status enum (active,won,lost,abandoned) and timestamps to guide loading and purge logic?
+Recommendation: Yes—persist status, started_at, finished_at, last_turn_at; update in end‑turn and on victory; improves UX and simplifies purge eligibility checks.

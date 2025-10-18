@@ -1,0 +1,19 @@
+0. Yes—add a constraint validating `participants.kind='human' AND participants.user_id = games.user_id` for the same `game_id`.
+
+1. Yes—add these fields to analytics_events alongside game_key, so queries remain self-contained after purges.
+
+2.  Keep UNIQUE(map_id, row, col) as the natural key; avoid dropping/reseeding tiles; if regeneration is needed, remap by (map_id,row,col) rather than id.
+
+3. Yes—create a stable SQL function app.tile_id(map_id int, row int, col int) that SELECTs by the natural key; it centralizes validation and errors.
+
+4. Use normal user context with SET app.user_id so WITH CHECK policies validate ownership; keep FKs DEFERRABLE INITIALLY DEFERRED and use OVERRIDING SYSTEM VALUE for stable IDs
+
+5. Store games.turn_no and in user_units keep has_acted boolean
+
+6. Add cities(hp int not null, max_hp int not null) and compute siege in app using city_tiles + enemy occupancy; persist results via the end-turn transaction only.
+
+7. Yes—add UNIQUE (game_id, tile_id) on user_units; keep pass-through validation in app; never persist intermediate path tiles.
+
+8. Yes—hard delete participants, cities, user_units, city_tiles, city_resources, city_production, saves, then delete games; keep analytics_events with game_key and context fields.
+
+9. Yes—persist status, started_at, finished_at, last_turn_at; update in end-turn and on victory; improves UX and simplifies purge eligibility checks.

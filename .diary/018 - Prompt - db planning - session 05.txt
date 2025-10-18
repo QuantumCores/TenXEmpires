@@ -1,0 +1,28 @@
+0. Should dynamic per-game state (cities, units on map, HP, moves) be stored only inside `saves.state` JSONB or also normalized into `cities`/`user_units` tables? Recommendation: For MVP, keep all mutable game state inside `saves.state` JSONB; use a small normalized `unit_definitions` table for static Warrior/Slinger stats to reduce schema surface and migrations.
+
+1. Where will UUID v7 values be generated and how will EF/Npgsql map them across Identity and FK columns?
+Recommendation: Generate UUID v7 in the app (e.g., Guid.CreateVersion7 in .NET 8), store as Postgres uuid, and configure EF so Identity and all user_id FKs share the same CLR/DB types.
+
+2. Should ASP.NET Identity tables be protected by RLS or kept separate?
+Recommendation: Place Identity in an auth schema without RLS; apply RLS to app tables (games, saves, analytics_events) only to avoid accidental lockouts and simplify admin operations.
+
+3. Do we need both USING and WITH CHECK RLS clauses and a reliable way to set the session GUC with connection pooling?
+Recommendation: Yes—define both USING (user_id = app.current_user_id()) and WITH CHECK (...); set app.user_id on every pooled connection via Npgsql data source interceptor/middleware to avoid leakage.
+
+4. How will delete-account cascades run under RLS without policy conflicts?
+Recommendation: Use a dedicated app_admin role with BYPASSRLS to execute DELETE FROM auth.users WHERE id = $1 in one transaction so cascades remove games/saves/analytics reliably.
+
+5. Even if ring buffers and limits are enforced in application logic, which minimal DB constraints should guard invariants?
+Recommendation: Add UNIQUE (user_id, game_id, slot) and CHECK (slot BETWEEN 1 AND 3) for manual saves; optionally add a partial unique index to prevent duplicate autosaves per (game_id, turn_no).
+
+6. How will we record and audit save schema migrations (1 -> 2 -> 3) performed by the backend?
+Recommendation: Create save_migrations table to log save_id, game_id, from_version, to_version, performed_at, app_version/commit, and outcome for supportability.
+
+7. Should the 3-month retention purge include manual saves and analytics for inactive games?
+Recommendation: Yes—purge per-game where games.last_turn_at < now() - interval '3 months'; remove associated saves (manual and autosave) and analytics_events; run as a scheduled job with dry-run mode.
+
+8. What concurrency guard will we use for end-turn + autosave transactions to avoid lost updates?
+Recommendation: Add an optimistic version bigint (or use xmin) on games; update with WHERE id = ? AND version = ? and increment on success; keep isolation at READ COMMITTED.
+
+9. What naming and schema conventions should we adopt for EF Core to avoid quoting and drift?
+Recommendation: Use app schema with snake_case table/column names and UseSnakeCaseNamingConvention(); keep Identity in auth schema; default all timestamps to timestamptz with DEFAULT now().

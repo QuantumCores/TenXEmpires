@@ -1,0 +1,27 @@
+1. Should we persist participant elimination state to simplify end-game logic and purge steps? Recommendation: Yes—add `participants.is_eliminated boolean not null default false` and set it when the last enemy city falls; use it to drive unit despawn and victory checks in one transaction.
+Should we store a minimal game summary row to accelerate hub listings (without querying multiple tables)?
+Recommendation: Yes—extend games with city_count int, unit_count int, last_action_at timestamptz; update in end-turn to avoid expensive joins on the hub screen.
+
+Do we need a minimal “turn ledger” for debugging and dispute resolution (one row per committed turn)?
+Recommendation: Add turns(id, game_id, turn_no, participant_id, committed_at, duration_ms, summary jsonb); keep small and append-only to aid ops without retaining full combat logs.
+
+Should we persist a “pending actions” flag to avoid double-processing end-turn if the UI retries?
+Recommendation: Yes—games.turn_in_progress boolean not null default false; set true at start of end-turn transaction and false on commit; reject concurrent end-turns based on this flag.
+
+Do we want an invariant that all per-game tables cascade on games deletion to keep purges simple?
+Recommendation: Yes—set ON DELETE CASCADE from participants, cities, user_units, city_tiles, city_resources, city_production, and saves to games(id); run purges via DELETE FROM games WHERE id = $1.
+
+Should we enforce nonnegative resource balances and integer bounds at the DB level?
+Recommendation: Add CHECK (iron >= 0 AND stone >= 0) on city_resources and CHECK (hp > 0) on user_units and cities; keep logic in app but guard against accidental negatives.
+
+Do we want a stable natural key for unit types to avoid ID coupling in seeds/migrations?
+Recommendation: Yes—use unit_definitions(code text unique not null) and reference by type_id FK; keep code stable (“warrior”, “slinger”) to ease seeding and joins.
+
+Where should we store per-game options that may affect rules (e.g., difficulty, AI parameters)?
+Recommendation: Add games.settings jsonb not null default '{}' to capture knobs used at game start; include in snapshots and analytics.
+
+Should we separate “map content” from “map presentation” to keep DB schema stable if visuals change?
+Recommendation: Yes—store only gameplay-affecting fields in map_tiles (terrain, resource_type, resource_amount); keep any cosmetic metadata out of DB or in a separate optional table.
+
+Do we need a lightweight health check to validate consistency after snapshot restore?
+Recommendation: Yes—after restore, run a stored function app.validate_game(game_id) that checks FK presence, 1UPT uniqueness, tile-map consistency, and participant ownership; fail fast if violations are detected.

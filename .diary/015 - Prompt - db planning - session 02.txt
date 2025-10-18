@@ -1,0 +1,20 @@
+0. Yes—store Identity tables in the same database and use `uuid` user IDs with `ON DELETE CASCADE` to enforce delete-account purges across saves and analytics.
+
+1. Yes—add a games table (id, user_id, status, turn_no, started_at, finished_at, last_turn_at) and reference game_id from saves and analytics_events.
+
+2. For MVP, store full snapshots as jsonb with a schema_version and minimal typed columns (e.g., turn_no, is_finished) to support queries; add a GIN index only if needed.
+
+3. Use one saves table with kind enum (manual,autosave), label, created_at, state jsonb; add a trigger to keep only the latest 5 autosaves per (user_id, game_id) and latest 3 manual saves per (user_id, game_id)
+
+4. Use typed columns for event_type enum, user_id, game_id, turn_no, occurred_at, plus payload jsonb; index ais just incremental integer or long.
+
+5. Enable RLS on all tables where urows are user related; set app.current_user_id per connection from the backend; define policies like USING (user_id = app.current_user_id()); create an admin DB role with BYPASSRLS for maintenance/reporting.
+
+6. Use hard deletes to satisfy purge requirements; enforce ON DELETE CASCADE from users to games → saves/analytics_events; implement a scheduled job to remove data older than 3 months based on games.last_turn_at.
+
+7. No we want to keep it simple but wrap end-turn state transition + autosave insert in a single transaction. If transaction fails we will retry.
+
+8. Use time-ordered ulid for users, for other tables use intiger or long e.g. games, saves, analytics_events; use timestamptz for all timestamps; implement Postgres enums for small fixed sets (save_kind, event_type);
+
+9. Schemas should be loaded to backend and there should always be a map between odler version and current version e.g. if we have 3 varsion where 1 is oldest and 3 is newest then if user loads save in version 1 it should be mapped to version 2 and then to version 3 e.g.
+1 -> 2 -> 3. This will make maintanance seasier as there is always one map between versions.

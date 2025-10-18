@@ -1,0 +1,19 @@
+0.  Recommendation: Yes—enforce `UNIQUE (game_id) WHERE kind='human'` and no limit for `kind='ai'`; keep `participants(game_id, kind, user_id uuid null)` with `CHECK ((kind='ai' AND user_id IS NULL) OR (kind='human' AND user_id IS NOT NULL))`.
+
+1. No—store game_key bigint not null (copy of games.id) without FK plus user_key char(64) not null and salt_version; this avoids orphaned FKs while preserving game linkage for analysis.
+
+2. Yes—add maps(width int, height int) and enforce CHECK (0 <= row AND row < maps.height AND 0 <= col AND col < maps.width) via a trigger or generated checks; keep UNIQUE(map_id, row, col).
+
+3. es—persist city_tiles(id, game_id, city_id, tile_id) with UNIQUE (game_id, city_id, tile_id); compute once at game start; validate radius-2 in application logic for simplicity.
+
+4. let's add `game_id` FK to user_units table. This willallow faster and easier data retrieval from database
+
+5. Use ascending map_tiles.id as the stable tie-breaker; document and apply consistently in queries and application logic (no extra DB columns required).
+
+6. No. On turn end we will block UI for that game. 
+
+7. Include participants, cities, user_units, city_tiles, city_resources, and city_production; serialize stable IDs and restore with OVERRIDING SYSTEM VALUE and DEFERRABLE FKs in a single transaction.
+
+8. Remove games rows. We won't need them.
+
+9. Yes—accept only PK/UNIQUE-backed indexes now (e.g., UNIQUE (game_id, tile_id) on user_units, UNIQUE (user_id, game_id, slot) on saves) and revisit query indexes once traffic and profiling justify them.

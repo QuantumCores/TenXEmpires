@@ -1,0 +1,22 @@
+
+0. Normalized into `cities`/`user_units` tables. Enything that's going into per-game state JSON has to come from DB tabels. This has many benefits like easier debuging. State readbility directly from DB. Easy to test and run player ticket analysis. Also versioning is much simpler. So everyting should have it's own table representation in DB.
+
+1. Generate UUID v7 in the app (e.g., Guid.CreateVersion7 in .NET 8), store as Postgres uuid, and configure EF so Identity and all user_id FKs share the same CLR/DB types.
+
+2. Place Identity in an auth schema without RLS; apply RLS to app tables (games, saves, analytics_events, cities, user_units etc) only to avoid accidental lockouts and simplify admin operations.
+
+3. Yes—define both USING (user_id = app.current_user_id()) and WITH CHECK (...); set app.user_id on every pooled connection via Npgsql data source interceptor/middleware to avoid leakage.
+
+4. Use a dedicated app_admin role with BYPASSRLS to execute DELETE FROM auth.users WHERE id = $1 in one transaction so cascades remove games/saves/cities/user_units etc reliably. Do NOT REMOVE analytics. They are VERY IMPORTANT for historical analysis, player retention trends and so on. 
+
+5. Add UNIQUE (user_id, game_id, slot) and CHECK (slot BETWEEN 1 AND 3) for manual saves; optionally add a partial unique index to prevent duplicate autosaves per (game_id, turn_no)
+
+6. We wont audit schema migrations. They will happen on the fly when user loads a game from state in version 1 and new schema is version 3 then migration will happen in app an then when user saves the game it will be saved in new schema. Same goes for autosaves.
+
+7. Yes—purge per-game where games.last_turn_at < now() - interval '3 months'; remove associated saves (manual and autosave) but do NOT REMOVE analytics. They are VERY IMPORTANT for historical analysis, player retention trends and so on. 
+
+8. None. We don't expecet much traffic in the beginning.
+
+9. Use app schema with snake_case table/column names and UseSnakeCaseNamingConvention(); keep Identity in auth schema; default all timestamps to timestamptz with DEFAULT now().
+
+Like I wrote I want everyting to be normalized when it comes to game state. That is everything shoud be kept in tables. Also I want to elaborate more on city table and map. Since map is kept as static JSON file with tiles and cities locations we need one mare table in the DB. This will be a citiy_tiles table which will hold city identifier and tile identifier. There are tiles that can be worked by a city. This will make easier end turn processing and reasource harvesting. Also in the future it will be easier to improve city management by adding possibility to increase tiles owned by a city.
