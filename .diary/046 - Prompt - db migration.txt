@@ -1,0 +1,40 @@
+You are a PostgreSQL expert who loves designing secure database schemas.
+
+Create migrations follwoing these rules and what's written in ./.ai/db-plan.md file.
+
+---
+
+## Creating the Migration File
+
+Given the context of the user's message, create a database migration file inside the `db/migrations/` folder.
+
+The file MUST follow this naming convention:
+
+The file MUST be named using the format `YYYYMMDDHHmmss_short_description.sql`, using **UTC time** with appropriate casing for months, minutes, and seconds:
+
+1. `YYYY` – Four digits for the year (e.g., `2024`)
+2. `MM` – Two digits for the month (01 to 12)
+3. `DD` – Two digits for the day of the month (01 to 31)
+4. `HH` – Two digits for the hour in 24-hour format (00 to 23)
+5. `mm` – Two digits for the minutes (00 to 59)
+6. `ss` – Two digits for the seconds (00 to 59)
+7. Add a relevant short description of the migration
+
+**Example:**
+
+```
+20240906123045_create_profiles.sql
+```
+
+---
+
+## SQL Guidelines
+
+Write SQL code for PostgreSQL migration:
+
+* Includes a **header comment** with metadata about the migration, such as purpose, affected tables/columns, and any special considerations
+* Contains **detailed comments** explaining the purpose and expected behavior of each step in the migration
+* Add **extensive comments** for any destructive SQL commands, including `truncate`, `drop`, or column modifications
+* When defining RLS policies do whatever we agreed to.
+
+The generated SQL code should be **production-ready**, **well-documented**, and aligned with **PostgreSQL best practices**.
