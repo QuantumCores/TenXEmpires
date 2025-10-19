@@ -56,6 +56,7 @@ Pain Points Addressed
 - Lost progress: server-side saves with retention and slot management.
 - Complex onboarding: fixed content, full visibility, simple two-unit roster.
 - Privacy and control: delete account purges saves/metrics; data retention is limited.
+ - Privacy and control: delete account purges saves; analytics are retained in pseudonymous form (salted user_key). Save retention is limited (3 months).
 
 ## 3. Functional Requirements
 
@@ -65,7 +66,7 @@ Pain Points Addressed
 - No guest play; unauthenticated users may view About and Gallery.
 - Session idle timeout of 30 minutes; enforced client- and server-side.
 - Rate limit 60 requests/min per client identity.
-- Delete account purges user profile, save slots, and analytics events.
+- Delete account purges user profile and save slots; analytics events are retained in pseudonymous form (salted user_key).
 - Minimal profile data; retention 3 months from last end-turn.
 
 3.2 Game Loop and Turn System
@@ -116,7 +117,7 @@ Pain Points Addressed
 - PostgreSQL storage; 3 manual save slots and 5 autosaves (ring buffer per end-turn).
 - Manual save to a chosen slot; delete/overwrite with confirmation.
 - Manual load and autosave load restore exact state.
-- Retention: saves and analytics kept for 3 months from last end-turn.
+- Retention: saves kept for 3 months from last end-turn; analytics are retained (pseudonymous) and not subject to this purge.
 - Map JSON is a versioned resource with server-side schema gate; incompatible loads blocked.
 
 3.8 Analytics and Telemetry
@@ -137,7 +138,7 @@ Pain Points Addressed
 
 - Strict CORS; anti-forgery; role scoping for admin-only endpoints if any.
 - API rate limit 60 req/min.
-- Delete-account purges saves and analytics.
+- Delete-account purges saves; analytics are retained in pseudonymous form (salted user_key). Privacy and Cookie pages state analytics retention and hashing approach.
 - Privacy and cookie notices accessible.
 
 3.11 Non-functional Requirements
@@ -250,7 +251,8 @@ As a visitor, I want to view privacy and cookie information.
 Acceptance Criteria
 
 - Privacy and Cookie pages are accessible without auth.
-- Pages state retention and delete-account policies.
+ - Privacy and Cookie pages are accessible without auth.
+ - Pages clearly state retention policies: saves retained 3 months; analytics retained in pseudonymous form (salted user_key) and not deleted on account removal; delete-account behavior is documented.
 
 US-007: Delete my account
 
@@ -261,7 +263,7 @@ As a user, I want to permanently delete my account and data.
 Acceptance Criteria
 
 - Confirmation flow states irreversibility.
-- Profile, saves, and analytics for my user are purged; I am logged out.
+- Profile and saves for my user are purged; analytics are retained in pseudonymous form (salted user_key); I am logged out.
 
 US-008: Rate limit feedback
 
@@ -366,12 +368,12 @@ US-019: Retention purge
 
 Description
 
-As a system, I want to purge saves and analytics older than 3 months from last end-turn.
+As a system, I want to purge saves older than 3 months from last end-turn (analytics retained in pseudonymous form).
 
 Acceptance Criteria
 
-- Data older than policy window is eligible for purge.
-- Purge jobs remove targeted records and log actions.
+- Saves older than the policy window are eligible for purge.
+- Purge jobs remove targeted save records and log actions; analytics are not purged.
 
 US-020: Render fixed map 20×15
 
@@ -796,7 +798,7 @@ Reliability and Data
 
 - Save/load success rate ≥ 99% for valid requests.
 - Schema gate blocks 100% of incompatible loads; zero corrupt loads.
-- Delete-account and retention purges complete within SLA and remove targets.
+- Delete-account and retention purges complete within SLA and remove targeted game data and saves; analytics are excluded by design.
 
 Security and Compliance
 

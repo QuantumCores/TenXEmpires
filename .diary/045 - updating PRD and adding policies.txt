@@ -1,0 +1,2 @@
+GPT asked if he can update PRD file regarding saves, data retnetion and policies so I said sure.
+He also created policy files that will come in handy in the future
