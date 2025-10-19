@@ -1,0 +1,2 @@
+GPT remcomended adding migration project and testing scripts. Alos insisted on adding github actions that will run migration script.
+I agreed since these are strictly related to our context and will be helpful later.

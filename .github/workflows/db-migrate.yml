@@ -1,0 +1,67 @@
+# Runs SQL migrations in db/migrations using the DbUp runner
+name: Database Migrate
+
+on:
+  workflow_dispatch:
+    inputs:
+      preview:
+        description: "Preview only (no apply)"
+        required: false
+        default: false
+        type: boolean
+      ensure_database:
+        description: "Create database if it does not exist"
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [ main ]
+    paths:
+      - 'db/migrations/**'
+      - 'tools/DbMigrate/**'
+      - '.github/workflows/db-migrate.yml'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: db-migrations-prod
+      cancel-in-progress: false
+    env:
+      # Provide a connection string via repo/org/environment secrets
+      TENX_DB_CONNECTION: ${{ secrets.TENX_DB_CONNECTION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore tools/DbMigrate/DbMigrate.csproj
+
+      - name: Build
+        run: dotnet build --configuration Release tools/DbMigrate/DbMigrate.csproj
+
+      - name: Preview migrations
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.preview == true }}
+        run: |
+          if [ -z "${TENX_DB_CONNECTION}" ]; then
+            echo "TENX_DB_CONNECTION secret is not set" >&2; exit 2; fi
+          dotnet run --project tools/DbMigrate -- \
+            --connection "$TENX_DB_CONNECTION" \
+            --scripts db/migrations \
+            --preview
+
+      - name: Apply migrations
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.preview != true }}
+        run: |
+          if [ -z "${TENX_DB_CONNECTION}" ]; then
+            echo "TENX_DB_CONNECTION secret is not set" >&2; exit 2; fi
+          dotnet run --project tools/DbMigrate -- \
+            --connection "$TENX_DB_CONNECTION" \
+            --scripts db/migrations \
+            ${{ inputs.ensure_database && '--ensure-database' || '' }}
+
