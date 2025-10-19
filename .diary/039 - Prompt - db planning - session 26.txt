@@ -1,0 +1,23 @@
+0. Yes—add the FK and validate `participants.game_id = games.id` in application logic during end-turn updates.
+
+1. No. It's going to be in app validation
+
+2. It can't be nullable. Yes—use text. We will enforce user to give his in game name. We will generate names for Ai in app.
+
+3. Yes—validate in the app within the snapshot transaction; reject saves if headers don’t match to avoid inconsistent restores.
+
+
+4. Yes—add UNIQUE (game_id, city_id, tile_id); compute membership in the app and let the constraint guard duplicates.
+
+5. Yes—apply USING/WITH CHECK (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) and keep UNIQUE (game_id, tile_id) on units.
+
+6. Yes—perform all steps atomically after the capture check to prevent partially applied outcomes.
+
+7. Just use int.
+
+8. No. this will be updated in app whenever required.
+
+9. I don't care. Lets leave it.
+
+
+You are asking question that desn't matter that much. We are after db models. Almost all validatuion will happen in app. Ask me only very important questions from now on. If all important topics are covered lats wrap up. 

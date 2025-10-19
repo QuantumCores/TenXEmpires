@@ -1,0 +1,61 @@
+0. Yes—update PRD and legal copy to document retention and pseudonymous hashing to align design and compliance.
+
+1. Yes—freeze: auth.users (Identity), app.games, app.participants, app.maps, app.map_tiles, app.unit_definitions, app.units, app.cities, app.city_tiles, app.city_resources, app.saves, app.turns, app.analytics_events, app.settings.
+
+2. Yes—use uuid (v7) for users; bigint generated always as identity for games, participants, units, cities, city_tiles, city_resources, saves, turns, analytics_events, settings.
+
+3. Yes—implement exactly this RLS scheme and keep analytics tables outside RLS.
+
+4. Yes—enforce only the agreed invariants in DB; keep all other rules in app logic.
+
+5. Yes—include those headers and restore atomically as specified.
+
+6. Yes—create app.turns with that uniqueness and keep payload minimal.
+
+7. Yes—commit to idempotent upserts to keep environments consistent.
+
+8. Yes—finalize this layout to keep analytics self-contained post-purge and dedupe retries when provided.
+
+9. Not yet. First we have to preapre summary.
+
+---
+
+You are an AI assistant tasked with summarizing a conversation about database planning for an MVP and preparing a concise summary for the next stage of development. In the conversation history, you will find the following information:
+
+1. Product Requirements Document (PRD)
+2. Technology stack information
+3. Conversation history containing questions and answers
+4. Model recommendations
+
+Your tasks are:
+
+1. Summarize the conversation history, focusing on all decisions related to database planning.
+2. Match the model's recommendations to the responses provided in the conversation. Identify which recommendations are relevant based on the discussion.
+3. Prepare a detailed summary of the conversation that includes:
+   a. Key requirements for the database schema
+   b. Main entities and their relationships
+   c. Important security and scalability concerns
+   d. Any unresolved issues or areas that require further clarification
+4. Format the output as follows:
+
+```markdown
+<conversation_summary>
+<decisions>
+[List the decisions made by the user, numbered].
+</decisions>
+
+<matched_recommendations>
+[List the most relevant recommendations matched to the conversation, numbered].
+</matched_recommendations>
+
+<database_planning_summary>
+[Provide a detailed summary of the conversation, including the elements listed in step 3].
+</database_planning_summary>
+
+<unresolved_issues>
+[List any unresolved issues or areas requiring further clarification, if any].
+</unresolved_issues>
+</conversation_summary>
+```
+
+The final output should consist only of content in markdown format. Make sure your summary is clear, concise, and provides valuable information for the next stage of database planning.

@@ -1,0 +1,76 @@
+<conversation_summary>
+<decisions>
+1. Use PostgreSQL with .NET 8, EF Core, and ASP.NET Identity in the same database; Identity resides in schema auth (no RLS).
+2. User IDs are UUID v7 generated in the app; all other primary keys use BIGINT identity.
+3. Normalize all gameplay state into tables; saves are JSONB snapshots derived from tables (not the source of truth).
+4. Maps and tiles are stored in DB: app.maps and app.map_tiles with UNIQUE (map_id, row, col); adjacency is computed in the application (no DB table).
+5. Ownership uses app.participants (supports multiple AIs and future multiplayer); “one human per game” is enforced in the application (no DB partial unique).
+6. Units use app.units (renamed from user_units) with 1UPT enforced by UNIQUE (game_id, tile_id); app.unit_definitions holds static stats including health (max HP) and move_points.
+7. Cities use app.cities (hp, max_hp, tile_id) and app.city_tiles includes the city’s own tile; radius/siege logic runs in the application.
+8. City resources are normalized: app.city_resources(city_id, resource_type text, amount int not null default 0) with UNIQUE (city_id, resource_type); plain text fields for kinds/types (no enums).
+9. Saves: manual slots (1..3) with UNIQUE (user_id, game_id, slot) and CHECK (slot BETWEEN 1 AND 3); autosave ring buffer enforced in the application; each save stores headers (turn_no, active_participant_id, schema_version, map_code) and state JSONB.
+10. Turns ledger app.turns is append-only with UNIQUE (game_id, turn_no) and a small summary JSONB.
+11. Games track turn and determinism: app.games includes turn_no, active_participant_id (FK to participants), turn_in_progress (boolean), rng_seed (bigint), rng_version ('v1'), status (text), started_at, finished_at, last_turn_at, settings JSONB.
+12. RLS (Row-Level Security) applies to app.* tables and is tied to app.games.user_id; the app sets SET LOCAL app.user_id per transaction and uses app.current_user_id(); analytics tables are outside RLS.
+13. Roles and grants: app_user (RLS-enabled read/write on app.*), app_admin (BYPASSRLS via maintenance procedures), app_migrator (DDL/seeds on app/auth); PUBLIC revoked on schemas; seeds are idempotent.
+14. Deletion and retention: account deletion cascades remove games and per‑game state but not analytics; retention purges inactive games/saves (>3 months by games.last_turn_at); analytics are retained.
+15. Analytics is per-event (no per-turn batching table): app.analytics_events stores event_type (text), occurred_at, game_key (copy of games.id, no FK), user_key (salted hash), salt_version, map_code, map_schema_version, rng_seed, game_started_at, game_finished_at, participant_count, and optional client_request_id (globally unique when present).
+16. Concurrency: end-turn UI is blocked in the app; optimistic concurrency uses PostgreSQL xmin; no advisory locks.
+17. Indexing policy: only PK/UNIQUE-backed indexes for MVP; revisit secondary indexes later based on profiling.
+18. Legal and PRD updates: document analytics retention after account deletion and pseudonymous hashing (user_key) in Privacy/Cookie pages and PRD.
+19. Finalize app.games DDL fields and nullability as proposed; active_participant_id has an FK to participants and is set immediately after participants are created.
+20. Validation location: keep validations strictly in the application unless explicitly agreed for DB (DB enforces only PK/UNIQUE, agreed FKs, 1UPT, RLS).
+</decisions>
+
+<matched_recommendations>
+1. Normalize gameplay state into tables; use saves as snapshots with DEFERRABLE FKs and OVERRIDING SYSTEM VALUE on restore. Accepted.
+2. UUID v7 for users; BIGINT identity for other tables. Accepted.
+3. Participants entity for ownership; support multiple AIs and future multiplayer. Accepted.
+4. Store maps/map_tiles in DB and compute adjacency in the application; natural key (map_id, row, col). Accepted.
+5. Enforce 1UPT via UNIQUE (game_id, tile_id) on units; keep static stats in unit_definitions. Accepted.
+6. Normalize city resources into (city_id, resource_type, amount); use plain text for domains. Accepted.
+7. Include city tile in city_tiles; radius/siege logic in the application. Accepted.
+8. Saves with minimal headers and slot/auto policies; manual slots unique; autosave ring buffer enforced in app. Accepted.
+9. RLS via SET LOCAL app.user_id and app.current_user_id() with policies referencing games.user_id; analytics excluded from RLS. Accepted.
+10. Analytics retention with salted user_key and contextual fields; optional global client_request_id for idempotency. Accepted.
+</matched_recommendations>
+
+<database_planning_summary>
+a) Key requirements
+- Single database with auth (Identity) and app schemas; EF Core (Entity Framework Core) manages migrations.
+- Deterministic, server-authoritative state with normalized tables; reproducible runs via rng_seed and rng_version.
+- Saves must be robust, schema-gated, and restorable atomically using stable IDs.
+- Minimal DB constraints beyond core invariants; most gameplay and validation logic in the application.
+- Privacy-compliant analytics retained after deletion, pseudonymized with salted hashing.
+
+b) Main entities and relationships
+- auth.users (uuid v7) → app.games(user_id uuid FK ON DELETE CASCADE).
+- app.games(id): user_id, map_id, map_schema_version, turn_no, active_participant_id (FK), turn_in_progress, rng_seed, rng_version, status, started_at, finished_at, last_turn_at, settings.
+- app.participants(id): game_id FK, kind text ('human'/'ai'), user_id (for human), display_name text not null, is_eliminated boolean.
+- app.unit_definitions(id): code unique, is_ranged, attack, defence, range_min, range_max, move_points, health.
+- app.units(id): game_id FK, participant_id FK, type_id FK, tile_id FK, hp int, has_acted boolean; UNIQUE (game_id, tile_id).
+- app.cities(id): game_id FK, participant_id FK, tile_id FK, hp, max_hp.
+- app.city_tiles(id): game_id FK, city_id FK, tile_id FK; UNIQUE (game_id, city_id, tile_id).
+- app.city_resources: (city_id, resource_type) unique, amount int not null default 0.
+- app.maps(id): code, width, height, schema_version.
+- app.map_tiles(id): map_id FK, row, col, terrain text, resource_type text, resource_amount; UNIQUE (map_id, row, col).
+- app.saves(id): user_id, game_id, kind text (manual/autosave), slot int (manual only), turn_no, active_participant_id, schema_version, map_code, state jsonb, created_at.
+- app.turns(id): game_id, turn_no unique, participant_id, committed_at, duration_ms, summary jsonb.
+- app.analytics_events(id): per-event fields including game_key (no FK), user_key, salt_version, context fields, client_request_id.
+
+c) Security and scalability
+- RLS on app.* with per-transaction user context via SET LOCAL; analytics excluded from RLS.
+- Roles: app_user, app_admin (BYPASSRLS via stored procs), app_migrator; schemas locked down (PUBLIC revoked).
+- Data lifecycle: account deletion cascades game data; retention purges after inactivity; analytics retained and pseudonymized.
+- Concurrency: optimistic via xmin; end-turn guarded at app/UI; minimal indexing for MVP with room to scale by adding targeted indexes later.
+
+d) Notes on DDL (Data Definition Language)
+- app.games fields/constraints are finalized as above; active_participant_id FK is DEFERRABLE to support snapshot restores.
+- Only agreed invariants are enforced in DB (PK, UNIQUE, key FKs, 1UPT, RLS); all other validations remain in the application.
+
+</database_planning_summary>
+
+<unresolved_issues>
+None.
+</unresolved_issues>
+</conversation_summary>

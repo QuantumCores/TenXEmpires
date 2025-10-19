@@ -1,0 +1,27 @@
+1. Should we persist `games.active_participant_id` to avoid recomputing the current actor each request? Recommendation: Yes—add `active_participant_id bigint not null` and update it atomically with `turn_no` during end-turn.
+Do participants need a stable display name for hub lists and analytics attribution?
+Recommendation: Yes—add participants.display_name text null (e.g., “Human”, “AI #1”); default sensibly in app.
+
+Should saves include minimal headers to validate compatibility before restore?
+Recommendation: Yes—store turn_no int not null, active_participant_id bigint not null, alongside schema_version int and map_code text.
+
+Should the city’s own tile be part of city_tiles for harvest/siege evaluation?
+Recommendation: Yes—include the city tile in city_tiles; it simplifies “radius-2” and siege checks.
+
+Is user_units the right name if rows represent both human and AI units?
+Recommendation: Rename to units to reflect participant-owned units and reduce confusion.
+
+On final capture, should enemy unit despawn be hard deletes or soft flags?
+Recommendation: Use hard deletes for units in the victory transaction to keep state minimal and consistent.
+
+Should we centralize tile-to-game validation in a reusable SQL function for triggers?
+Recommendation: Yes—create app.ensure_tile_in_game(game_id bigint, tile_id bigint) and call it from BEFORE INSERT/UPDATE triggers on cities and units.
+
+Do we need max_hp in unit_definitions to bound units.hp?
+Recommendation: Yes—add max_hp int not null and keep enforcement in app; DB stores the ceiling for future validations.
+
+Should we persist an RNG algorithm/version tag alongside games.rng_seed?
+Recommendation: Yes—add rng_version text not null default 'v1' to ensure reproducible upgrades if the RNG changes.
+
+Do analytics writes need an idempotency key to avoid duplicates on client retries?
+Recommendation: Yes—add client_request_id uuid null with a unique constraint (client_request_id) where not null to make inserts idempotent without per-turn batching.

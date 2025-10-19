@@ -1,0 +1,19 @@
+0.  Use plain text (`text`) with application-side validation to match your “plain text” decision and avoid migration friction.
+
+1. Normalize to city_resources(city_id, resource_type text, amount int not null default 0) with UNIQUE (city_id, resource_type) to add new resources without schema changes.
+
+2. Keep `move_points`
+
+3. Keep only has_acted boolean not null to minimize writes;
+
+4. No. For now we won't do that.
+
+5. Deduct on successful spawn; Handle in app
+
+6. Configure EF to use Postgres xmin as a concurrency token on these tables to catch lost updates without extra columns.
+
+7. Yes—grant SELECT only on auth.* and app.maps, app.map_tiles; restrict DML on these to app_migrator.
+
+8. No guard.
+
+9. No per-turn analytics.

@@ -1,0 +1,60 @@
+Question to unresolved issues no 2.
+What is DDL. Please describe this issue a bit more. If you use any acornyms plpease add full name in brackets
+------------------
+
+What Is DDL (Data Definition Language)
+
+DDL (Data Definition Language) is the subset of SQL used to define and change database structure: CREATE TABLE, ALTER TABLE, CREATE INDEX, DROP TABLE, etc.
+It differs from DML (Data Manipulation Language) which reads/writes data (SELECT, INSERT, UPDATE, DELETE), and from DCL (Data Control Language) which manages permissions (GRANT, REVOKE).
+“At DDL time” means when we author the initial schema and constraints. Changing these later requires migrations and coordination, so we aim to finalize key columns and constraints up front.
+What The Issue Means (Unresolved Issue #2)
+
+We need to lock the exact columns, nullability, defaults, and key constraints for app.games in the first migration so:
+RLS (Row‑Level Security) policies can reference them reliably.
+Other tables (via FK [Foreign Key]) and the app logic (EF [Entity Framework] models) won’t need churn.
+Retention, purge, and analytics logic have the fields they depend on from day one.
+Proposed Final app.games Fields To Approve Now
+
+Keys and ownership
+id bigint (PK [Primary Key], identity)
+user_id uuid (FK to auth.users, ON DELETE CASCADE)
+Map and versioning
+map_id bigint (FK to app.maps)
+map_schema_version int not null
+Turn and turn owner
+turn_no int not null default 1
+active_participant_id bigint null (FK to app.participants, set right after creating participants; keep NULLABLE to avoid circular insert, then app guarantees non‑null before first turn)
+turn_in_progress boolean not null default false
+Determinism
+rng_seed bigint not null
+rng_version text not null default 'v1'
+Lifecycle
+status text not null default 'active' (values in app logic, e.g., active/won/lost/abandoned)
+started_at timestamptz not null default now()
+finished_at timestamptz null
+last_turn_at timestamptz null (used for retention purge)
+Config
+settings jsonb not null default '{}' (Binary JSON [JSONB] for per‑game options)
+Constraints and notes:
+
+FKs (Foreign Keys) to participants should be DEFERRABLE to ease snapshot restore; NOT NULL on active_participant_id is impractical at insert time due to circular dependency, so keep it nullable and set immediately after participants are created.
+Only PK/UNIQUE indexes per current policy; no additional secondary indexes now.
+If you approve this field list and nullability, I’ll treat it as final for DDL (Data Definition Language) and proceed to reflect it in the first migration together with the agreed RLS (Row‑Level Security) and relationships.
+
+------------------
+I approve.
+For the issue no 1 I recomend to keep all such validations strictly in app only if we didn't agree to have some in DB in this conversation
+
+---------------------
+Acknowledged. We’ll keep validations in the application unless explicitly agreed for the database.
+
+DB-side guarantees we will implement:
+
+PK/UNIQUE keys, required FKs (Foreign Keys; DEFERRABLE where noted), 1UPT via UNIQUE (game_id, tile_id) on units
+RLS (Row-Level Security) tied to games.user_id via SET LOCAL app.user_id and app.current_user_id()
+Saves headers, participants, maps/map_tiles, units, cities, city_tiles, city_resources, turns, analytics_events per the approved schema
+Minimal indexes: only PK/UNIQUE for MVP
+Would you like me to draft the initial DDL (Data Definition Language) now, or generate EF Core (Entity Framework Core) entities + the first migration? If DDL, I’ll place it at db/001_init.sql; if EF, I’ll add entity classes and an initial migration in your .NET project.
+
+-----------------
+We will do that in a moment. Please update the summary markdown first

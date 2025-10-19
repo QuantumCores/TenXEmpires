@@ -1,0 +1,27 @@
+1. Should `games.active_participant_id` have a strict FK to `participants(id)` with `ON DELETE RESTRICT` to guarantee it always points to a participant in the same game? Recommendation: Yes—add the FK and validate `participants.game_id = games.id` in application logic during end-turn updates.
+Do we need a partial uniqueness rule to ensure only one human participant per game while allowing multiple AIs?
+Recommendation: Yes—add a partial unique index UNIQUE (game_id) WHERE kind = 'human'; keep no limit for kind='ai'.
+
+Should participants.display_name be nullable but constrained in length to prevent abuse in analytics and UI?
+Recommendation: Yes—use text with a CHECK (length(display_name) <= 100); default to “Human”/“AI #n” in the app when null.
+
+When saving, should we verify saves.turn_no and saves.active_participant_id match the current games row before snapshotting?
+Recommendation: Yes—validate in the app within the snapshot transaction; reject saves if headers don’t match to avoid inconsistent restores.
+
+Should city_tiles enforce uniqueness per city and tile to avoid duplicates when recomputing (e.g., after capture)?
+Recommendation: Yes—add UNIQUE (game_id, city_id, tile_id); compute membership in the app and let the constraint guard duplicates.
+
+Given we renamed user_units to units, do we need to update RLS policies and 1UPT constraints accordingly?
+Recommendation: Yes—apply USING/WITH CHECK (EXISTS (SELECT 1 FROM app.games g WHERE g.id = game_id AND g.user_id = app.current_user_id())) and keep UNIQUE (game_id, tile_id) on units.
+
+Should victory handling occur in a single transaction that sets participants.is_eliminated, deletes enemy units, and updates games.status?
+Recommendation: Yes—perform all steps atomically after the capture check to prevent partially applied outcomes.
+
+For units.hp, do we store as smallint and validate (in app) that 0 < hp <= unit_definitions.health?
+Recommendation: Yes—use smallint for compactness and enforce bounds in application logic; DB type helps prevent excessive values.
+
+Should we keep a rolling “last_action_at timestamptz” on games to help the hub sort and purge decisions without extra joins?
+Recommendation: Yes—update games.last_action_at on any state-changing write (move, attack, end-turn) inside existing transactions.
+
+For analytics_events.client_request_id, should the uniqueness be global or scoped per user/game?
+Recommendation: Make it globally unique via UNIQUE (client_request_id) WHERE client_request_id IS NOT NULL to deduplicate retries across any context while keeping the column optional.

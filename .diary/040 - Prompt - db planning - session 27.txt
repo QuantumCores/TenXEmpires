@@ -1,0 +1,27 @@
+1. Do we formally update the PRD and privacy/cookie pages to reflect retaining analytics after account deletion (with salted user_key hashing)? Recommendation: Yes—update PRD and legal copy to document retention and pseudonymous hashing to align design and compliance.
+Can we freeze the final table set for DDL authoring now?
+Recommendation: Yes—freeze: auth.users (Identity), app.games, app.participants, app.maps, app.map_tiles, app.unit_definitions, app.units, app.cities, app.city_tiles, app.city_resources, app.saves, app.turns, app.analytics_events, app.settings.
+
+Are primary key types finalized as uuid v7 for auth.users and bigint identity for all other tables?
+Recommendation: Yes—use uuid (v7) for users; bigint generated always as identity for games, participants, units, cities, city_tiles, city_resources, saves, turns, analytics_events, settings.
+
+Is the RLS approach locked: app schema, per-transaction SET LOCAL app.user_id, app.current_user_id() function, and USING/WITH CHECK policies based on games.user_id?
+Recommendation: Yes—implement exactly this RLS scheme and keep analytics tables outside RLS.
+
+Are we proceeding with minimal DB constraints (PK/UNIQUE, DEFERRABLE FKs, 1UPT on units) and leaving other validations (slots, city radius, spawn rules) to the application?
+Recommendation: Yes—enforce only the agreed invariants in DB; keep all other rules in app logic.
+
+Should saves store the agreed minimal headers (turn_no, active_participant_id, schema_version, map_code) and snapshots restore with stable IDs (DEFERRABLE FKs + OVERRIDING SYSTEM VALUE)?
+Recommendation: Yes—include those headers and restore atomically as specified.
+
+Is the turns ledger scope finalized as append-only (UNIQUE (game_id, turn_no)) with a small JSON summary for ops?
+Recommendation: Yes—create app.turns with that uniqueness and keep payload minimal.
+
+Are map seeds and unit definitions loaded idempotently (maps by code/version, map_tiles by (map_id,row,col), unit_definitions by code) via app_migrator?
+Recommendation: Yes—commit to idempotent upserts to keep environments consistent.
+
+Do we confirm analytics schema (game_key bigint, user_key char(64), salt_version, map_code, map_schema_version, rng_seed, game_started_at, game_finished_at, participant_count) with optional client_request_id unique when present?
+Recommendation: Yes—finalize this layout to keep analytics self-contained post-purge and dedupe retries when provided.
+
+Are we ready to proceed to writing the initial PostgreSQL DDL and EF Core migration based on the above?
+Recommendation: Yes—proceed to schema authoring and first migration generation now.
