@@ -34,7 +34,10 @@ namespace TenX.DbMigrate
 
             if (ensureDb)
             {
-                try { DbUp.EnsureDatabase.For.PostgresqlDatabase(conn); }
+                try
+                {
+                    DbUp.EnsureDatabase.For.PostgresqlDatabase(conn);
+                }
                 catch (Exception e)
                 {
                     Console.Error.WriteLine($"EnsureDatabase failed: {e.Message}");
@@ -71,8 +74,10 @@ namespace TenX.DbMigrate
                     Console.WriteLine("Note: Database does not exist yet - all scripts will be marked as pending.");
                 }
                 
-                var scriptFiles = Directory.GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly)
+                var scriptFiles = Directory
+                    .GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly)
                     .OrderBy(Path.GetFileName);
+                    
                 foreach (var f in scriptFiles.Select(Path.GetFileName))
                 {
                     var marker = executed.Contains(f) ? "[ applied ]" : "[ pending ]";

@@ -264,7 +264,7 @@ do $$ begin
     alter table app.games
       add constraint fk_games_users
       foreign key (user_id)
-      references auth.users(id)
+      references auth."AspNetUsers"("Id")
       on delete cascade
       not valid;
   end if;

@@ -18,10 +18,10 @@ From repo root (recommended):
 
 ```bash
 # Preview which scripts would run
-dotnet run --project tools/DbMigrate -- --connection "Host=localhost;Port=5432;Database=tenx;Username=postgres;Password=postgres;SslMode=Prefer;" --preview --scripts db/migrations
+dotnet run --project tools/DbMigrate --connection "Host=localhost;Port=5432;Database=tenx;Username=postgres;Password=postgres;SslMode=Prefer;" --preview --scripts db/migrations
 
 # Apply migrations
-dotnet run --project tools/DbMigrate -- --connection "Host=localhost;Port=5432;Database=tenx;Username=postgres;Password=postgres;SslMode=Prefer;" --scripts db/migrations
+dotnet run --project tools/DbMigrate --ensure-database --connection "Host=localhost;Port=5432;Database=tenx;Username=postgres;Password=postgres;SslMode=Prefer;" --scripts db/migrations
 ```
 
 Flags:
