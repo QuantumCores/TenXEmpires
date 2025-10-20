@@ -3,3 +3,6 @@ I agreed since these are strictly related to our context and will be helpful lat
 
 Installed posgreSQL from thsi site https://www.postgresql.org/download/
 Following this instruction https://www.youtube.com/watch?v=GpqJzWCcQXY
+
+Had to make minor changes to migration script
+Added Identity schema migration script preceding the initial migration. This is beacuse initial migration requires identity tables to make FK constraint in one table

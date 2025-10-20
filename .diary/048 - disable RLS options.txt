@@ -1,0 +1,90 @@
+Absolutely! There are several ways to disable RLS for development. Let me show you the options:
+
+## Option 1: Use a Role with BYPASSRLS (Recommended for Dev)
+
+The easiest way is to use the `app_admin` role that's already defined in your migration with `BYPASSRLS`:
+
+[1 tool called]
+
+Perfect! I can see `app_admin` already has `BYPASSRLS`. Here are your options:
+
+## Option 1: Grant Your Dev User the app_admin Role (Easiest)
+
+Create a development login user and grant it the `app_admin` role:
+
+```sql
+-- Connect as postgres
+psql -U postgres -d tenx
+
+-- Create a dev user (or use your existing user)
+CREATE USER dev_user WITH PASSWORD 'dev_password';
+
+-- Grant the BYPASSRLS role to your dev user
+GRANT app_admin TO dev_user;
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA auth, app TO dev_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth, app TO dev_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth, app TO dev_user;
+```
+
+Then use this connection string in development:
+```json
+"Host=localhost;Port=5432;Database=tenx;Username=dev_user;Password=dev_password;"
+```
+
+## Option 2: Temporarily Disable RLS on Tables
+
+Create a script to toggle RLS on/off:
+
+[2 tools called]
+
+## Option 3: Use Environment-Based Configuration
+
+Add this to your `appsettings.Development.json`:
+
+[2 tools called]
+
+Perfect! Now here's a summary of your options:
+
+## 🎯 Recommended Approach (Option 1)
+
+**Use a dev user with BYPASSRLS privileges:**
+
+1. **Create the dev user** (run once):
+```bash
+psql -U postgres -d tenx -c "
+CREATE USER dev_user WITH PASSWORD 'dev_password';
+GRANT app_admin TO dev_user;
+GRANT USAGE ON SCHEMA auth, app TO dev_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA auth, app TO dev_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA auth, app TO dev_user;
+"
+```
+
+2. **Use this connection string in development** (already added to `appsettings.Development.json`):
+```
+Host=localhost;Port=5432;Database=tenx;Username=dev_user;Password=dev_password;SslMode=Prefer;
+```
+
+3. **That's it!** RLS is automatically bypassed for users with the `app_admin` role.
+
+## 📝 Alternative: Toggle RLS Manually
+
+I created two helper scripts:
+
+```bash
+# Disable RLS for debugging
+psql -U postgres -d tenx -f db/testing/disable-rls-dev.sql
+
+# Re-enable RLS when done
+psql -U postgres -d tenx -f db/testing/enable-rls-dev.sql
+```
+
+## ⚠️ Important Notes
+
+- **Development only**: Never use BYPASSRLS in production
+- **Production config**: Use `app_user` role (subject to RLS) in production
+- **Testing RLS**: You already have `db/testing/rls-smoke.sql` for testing RLS when you need it
+
+Which approach would you like to use?
