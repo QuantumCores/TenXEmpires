@@ -1,4 +1,4 @@
-namespace TenXEmpires.Server.Domain.Entities.App;
+namespace TenXEmpires.Server.Domain.Entities;
 
 /// <summary>
 /// Defines the static properties and stats for a unit type

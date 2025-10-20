@@ -1,4 +1,4 @@
-namespace TenXEmpires.Server.Domain.Entities.App;
+namespace TenXEmpires.Server.Domain.Entities;
 
 /// <summary>
 /// Represents a game map with its dimensions and metadata

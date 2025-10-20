@@ -1,4 +1,4 @@
-namespace TenXEmpires.Server.Domain.Entities.App;
+namespace TenXEmpires.Server.Domain.Entities;
 
 /// <summary>
 /// Represents the tiles that belong to a city (including the city tile itself)

@@ -1,4 +1,4 @@
-namespace TenXEmpires.Server.Domain.Entities.App;
+namespace TenXEmpires.Server.Domain.Entities;
 
 /// <summary>
 /// Represents resources stored in a city

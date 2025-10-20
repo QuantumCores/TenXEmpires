@@ -1,4 +1,4 @@
-namespace TenXEmpires.Server.Domain.Entities.App;
+namespace TenXEmpires.Server.Domain.Entities;
 
 /// <summary>
 /// Represents a city in a game
