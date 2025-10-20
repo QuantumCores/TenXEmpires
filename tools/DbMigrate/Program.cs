@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using DbUp;
 using DbUp.Engine.Output;
-using DbUp.Helpers;
 
 namespace TenX.DbMigrate
 {
@@ -43,11 +42,7 @@ namespace TenX.DbMigrate
                 }
             }
 
-            var scripts = Directory.GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly)
-                .OrderBy(Path.GetFileName) // UTC timestamp prefix ensures order
-                .ToArray();
-
-            if (scripts.Length == 0)
+            if (!Directory.GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly).Any())
             {
                 Console.WriteLine($"No scripts found in {scriptsPath}");
                 return 0;
@@ -56,7 +51,7 @@ namespace TenX.DbMigrate
             var log = new ConsoleUpgradeLog();
             var upgrader = DeployChanges.To
                 .PostgresqlDatabase(conn)
-                .WithScripts(scripts.Select(File.ReadAllText))
+                .WithScriptsFromFileSystem(scriptsPath)
                 .LogTo(log)
                 // Use public schema for the journal to avoid bootstrap dependency
                 // on the app schema before the first migration creates it.
@@ -66,10 +61,21 @@ namespace TenX.DbMigrate
             if (preview)
             {
                 Console.WriteLine("-- Preview mode: listing pending scripts --");
-                var executed = upgrader.GetExecutedScripts().ToHashSet(StringComparer.OrdinalIgnoreCase);
-                foreach (var f in scripts.Select(Path.GetFileName))
+                var executed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                try
                 {
-                    var marker = executed.Contains(f) ? "[applied ]" : "[pending ]";
+                    executed = upgrader.GetExecutedScripts().ToHashSet(StringComparer.OrdinalIgnoreCase);
+                }
+                catch (Exception ex) when (ex.Message.Contains("does not exist") || ex.Message.Contains("database"))
+                {
+                    Console.WriteLine("Note: Database does not exist yet - all scripts will be marked as pending.");
+                }
+                
+                var scriptFiles = Directory.GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly)
+                    .OrderBy(Path.GetFileName);
+                foreach (var f in scriptFiles.Select(Path.GetFileName))
+                {
+                    var marker = executed.Contains(f) ? "[ applied ]" : "[ pending ]";
                     Console.WriteLine($"{marker} {f}");
                 }
                 return 0;

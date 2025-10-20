@@ -1,2 +1,5 @@
 GPT remcomended adding migration project and testing scripts. Alos insisted on adding github actions that will run migration script.
 I agreed since these are strictly related to our context and will be helpful later.
+
+Installed posgreSQL from thsi site https://www.postgresql.org/download/
+Following this instruction https://www.youtube.com/watch?v=GpqJzWCcQXY

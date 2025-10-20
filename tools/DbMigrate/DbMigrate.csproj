@@ -3,10 +3,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DbUp.Postgresql" Version="6.0.5" />
+    <PackageReference Include="dbup-postgresql" Version="6.0.3" />
   </ItemGroup>
 </Project>
 
