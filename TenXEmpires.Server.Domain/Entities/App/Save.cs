@@ -1,0 +1,45 @@
+namespace TenXEmpires.Server.Domain.Entities.App;
+
+/// <summary>
+/// Represents a game save (snapshot of game state)
+/// </summary>
+public class Save
+{
+    public long Id { get; set; }
+    
+    /// <summary>
+    /// User ID (duplicated from game for convenience)
+    /// </summary>
+    public Guid UserId { get; set; }
+    
+    public long GameId { get; set; }
+    
+    /// <summary>
+    /// Type of save: 'manual' or 'autosave'
+    /// </summary>
+    public string Kind { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Slot number for manual saves (1-3), null for autosave
+    /// </summary>
+    public int? Slot { get; set; }
+    
+    public int TurnNo { get; set; }
+    
+    public long ActiveParticipantId { get; set; }
+    
+    public int SchemaVersion { get; set; }
+    
+    public string MapCode { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// JSONB state stored as string
+    /// </summary>
+    public string State { get; set; } = string.Empty;
+    
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    
+    // Navigation properties
+    public Game Game { get; set; } = null!;
+}
+
