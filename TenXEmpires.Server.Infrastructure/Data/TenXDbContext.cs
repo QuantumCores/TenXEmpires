@@ -265,6 +265,7 @@ public class TenXDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.GameId).HasColumnName("game_id");
             entity.Property(e => e.Kind).HasColumnName("kind").IsRequired();
+            entity.Property(e => e.Name).HasColumnName("name");
             entity.Property(e => e.Slot).HasColumnName("slot");
             entity.Property(e => e.TurnNo).HasColumnName("turn_no");
             entity.Property(e => e.ActiveParticipantId).HasColumnName("active_participant_id");

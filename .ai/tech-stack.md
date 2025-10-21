@@ -22,3 +22,7 @@ DigitalOcean: for hosting application docker images
 
 Migrations: DbUp runs on application startup or as a CI step prior to deployment to ensure the target database is on the expected schema version.
 
+## Related Docs
+
+- Project Structure (overview): README.md#project-structure
+- Project Structure (detailed): docs/architecture/project-structure.md

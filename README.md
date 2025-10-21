@@ -12,6 +12,7 @@
 - [Tech stack](#tech-stack)
   - [React client](#react-client)
   - [Web API](#web-api)
+- [Project structure](#project-structure)
 - [Getting started locally](#getting-started-locally)
   - [Prerequisites](#prerequisites)
   - [Install dependencies](#install-dependencies)
@@ -60,6 +61,28 @@ Key files:
 - `TenXEmpires.Server/Program.cs` (middleware, controllers, Swagger)
 - `TenXEmpires.Server/Controllers` (e.g., sample `WeatherForecastController.cs`)
 - `TenXEmpires.Server/Properties/launchSettings.json` (dev URLs and profiles)
+
+## Project structure
+
+- `tenxempires.client` — React app (Vite, TypeScript)
+- `TenXEmpires.Server` — ASP.NET Core Web API host (serves SPA in prod)
+- `TenXEmpires.Server.Domain` — domain entities and interfaces (no infra deps)
+- `TenXEmpires.Server.Infrastructure` — EF Core DbContext, mappings, repositories
+- `db/migrations` — SQL-first DbUp migrations (DDL, RLS, grants)
+- `db/testing` — RLS helpers and dev-only scripts
+- `tools/DbMigrate` — DbUp migration runner CLI
+- `.ai` — planning docs (prd, db-plan, api-plan, tech-stack)
+- `.cursor/rules` — repository coding/review rules
+- `.diary` — internal dev notes
+- `.github` — GitHub Actions workflows
+
+Design notes
+
+- Layering: `Domain <- Infrastructure <- Server` (one-way references)
+- Add entities in `TenXEmpires.Server.Domain/Entities`, map them in `TenXEmpires.Server.Infrastructure/Data/TenXDbContext.cs`, expose via controllers in `TenXEmpires.Server`.
+- Add schema changes as SQL files under `db/migrations` and apply via DbUp (see `tools/DbMigrate`).
+
+More details: see `docs/architecture/project-structure.md`.
 
 ## Getting started locally
 

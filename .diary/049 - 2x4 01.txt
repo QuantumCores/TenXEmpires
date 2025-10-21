@@ -1,2 +1,6 @@
 Added db entities
 Added reposirotries with UnitOfWork pattern
+
+Generated api plan.
+Editesd save entity, db scripts and so on.
+Added folder structure and architecture info files for cleaner and smoother AI workflows
