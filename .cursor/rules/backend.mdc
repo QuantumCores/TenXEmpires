@@ -13,10 +13,12 @@ globs: **/*.cs
   - Prefer LINQ and lambda expressions for collection operations.
   - Use descriptive variable and method names (e.g., 'IsUserSignedIn', 'CalculateTotal').
   - Structure files according to .NET conventions (Controllers, Models, Services, etc.).
+  - Follow project architecture structure
 
   ## Naming Conventions
   - Use PascalCase for class names, method names, and public members.
-  - Use camelCase for local variables and private fields.
+  - Use camelCase for local variables 
+  - Use camelCase prefixed with underscore (_) for private fields.
   - Use UPPERCASE for constants.
   - Prefix interface names with "I" (e.g., 'IUserService').
 

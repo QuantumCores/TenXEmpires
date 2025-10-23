@@ -9,6 +9,7 @@ Tailwind 4 (PostCSS): quick to ship functional UI; purge keeps bundle tiny.
 
 ## Backend
 .NET 8: great perf, minimal APIs available, good testing story.
+Serilog as a logging library, greate integrations and configurable sinks.
 
 Server-authoritative: exactly what I want for deterministic rules.
 

@@ -6,3 +6,6 @@ Editesd save entity, db scripts and so on.
 Added folder structure and architecture info files for cleaner and smoother AI workflows
 
 Generating DTOs and CommandModels for .Net API
+
+23.10 
+Generated endpoint implementation plans with one modified prompt
