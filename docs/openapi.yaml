@@ -1,0 +1,657 @@
+openapi: 3.0.1
+info:
+  title: TenX Empires API
+  version: '1.0'
+  description: |
+    REST API for the TenX Empires strategy game MVP.
+    
+    ## Features
+    - Rate limiting (300 req/min for public endpoints, 60 req/min for authenticated)
+    - CORS enabled for configured origins
+    - API versioning (URL path-based)
+    - HTTP caching with ETag support
+    - Response compression
+    
+    ## Authentication
+    Most endpoints require authentication using ASP.NET Identity cookies.
+    Public lookup endpoints (maps, unit definitions) do not require authentication.
+    
+  contact:
+    name: TenX Empires Support
+    email: support@tenxempires.example
+  license:
+    name: Proprietary
+servers:
+  - url: https://api.tenxempires.example/v1
+    description: Production server
+  - url: https://localhost:5000/v1
+    description: Development server
+
+tags:
+  - name: Maps
+    description: Map metadata and tile lookups
+  - name: Unit Definitions
+    description: Static game rules and unit data
+
+paths:
+  /maps/{code}:
+    get:
+      tags:
+        - Maps
+      summary: Get map metadata by code
+      description: |
+        Returns metadata for a specific map including dimensions and schema version.
+        Used by clients to validate map compatibility and size before loading tiles.
+        
+        ## Caching
+        - Response includes ETag header based on map metadata
+        - Supports conditional requests with If-None-Match header
+        - Cache-Control: public, max-age=600 (10 minutes)
+        - Server-side caching via IMemoryCache (10 minutes)
+        
+      operationId: GetMapByCode
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Unique map code identifier
+          schema:
+            type: string
+            example: map-01
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag from previous response for conditional request
+          schema:
+            type: string
+            example: '"abc123def456"'
+      responses:
+        '200':
+          description: Map metadata retrieved successfully
+          headers:
+            ETag:
+              description: Entity tag for cache validation
+              schema:
+                type: string
+                example: '"abc123def456"'
+            Cache-Control:
+              description: Cache directives
+              schema:
+                type: string
+                example: 'public, max-age=600'
+            X-Api-Version:
+              description: API version used
+              schema:
+                type: string
+                example: '1.0'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MapDto'
+              example:
+                id: 1
+                code: map-01
+                schemaVersion: 1
+                width: 20
+                height: 30
+        '304':
+          description: Not Modified - cached version is still valid
+          headers:
+            ETag:
+              description: Entity tag matching the request
+              schema:
+                type: string
+        '400':
+          description: Bad request - invalid code parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INVALID_CODE
+                message: The 'code' path parameter must be provided.
+        '404':
+          description: Map not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: MAP_NOT_FOUND
+                message: Map with code 'map-01' was not found.
+        '429':
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until rate limit resets
+              schema:
+                type: integer
+                example: 60
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while retrieving the map.
+
+  /maps/{code}/tiles:
+    get:
+      tags:
+        - Maps
+      summary: Get map tiles for rendering
+      description: |
+        Returns a paginated list of map tiles for a specific map.
+        Tiles contain terrain type, resource information, and position data.
+        Used by clients to render the game map.
+        
+        ## Pagination
+        - Default page size: 20 tiles
+        - Maximum page size: 100 tiles
+        - Tiles are ordered by row, then column for stable pagination
+        - Total count is only included on first page (performance optimization)
+        
+        ## Caching
+        - Response includes ETag header based on map code, pagination, and tile count
+        - ETag varies by page and pageSize parameters
+        - Supports conditional requests with If-None-Match header
+        - Cache-Control: public, max-age=600 (10 minutes)
+        - Server-side caching via IMemoryCache per pagination combination (10 minutes)
+        
+      operationId: GetMapTiles
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Unique map code identifier
+          schema:
+            type: string
+            example: map-01
+        - name: page
+          in: query
+          required: false
+          description: 1-based page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+        - name: pageSize
+          in: query
+          required: false
+          description: Number of tiles per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag from previous response for conditional request
+          schema:
+            type: string
+            example: '"xyz789abc123"'
+      responses:
+        '200':
+          description: Map tiles retrieved successfully
+          headers:
+            ETag:
+              description: Entity tag for cache validation (varies by pagination)
+              schema:
+                type: string
+                example: '"xyz789abc123"'
+            Cache-Control:
+              description: Cache directives
+              schema:
+                type: string
+                example: 'public, max-age=600'
+            X-Api-Version:
+              description: API version used
+              schema:
+                type: string
+                example: '1.0'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedResultMapTileDto'
+              example:
+                items:
+                  - id: 1
+                    row: 0
+                    col: 0
+                    terrain: grassland
+                    resourceType: wheat
+                    resourceAmount: 2
+                  - id: 2
+                    row: 0
+                    col: 1
+                    terrain: plains
+                    resourceType: null
+                    resourceAmount: 0
+                  - id: 3
+                    row: 1
+                    col: 0
+                    terrain: hills
+                    resourceType: iron
+                    resourceAmount: 3
+                page: 1
+                pageSize: 20
+                total: 400
+        '304':
+          description: Not Modified - cached version is still valid
+          headers:
+            ETag:
+              description: Entity tag matching the request
+              schema:
+                type: string
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCode:
+                  value:
+                    code: INVALID_CODE
+                    message: The 'code' path parameter must be provided.
+                invalidPage:
+                  value:
+                    code: INVALID_PAGE
+                    message: The 'page' parameter must be >= 1.
+                invalidPageSize:
+                  value:
+                    code: INVALID_PAGE_SIZE
+                    message: The 'pageSize' parameter must be between 1 and 100.
+        '404':
+          description: Map not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: MAP_NOT_FOUND
+                message: Map with code 'map-01' was not found.
+        '429':
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until rate limit resets
+              schema:
+                type: integer
+                example: 60
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while retrieving the map tiles.
+
+  /unit-definitions:
+    get:
+      tags:
+        - Unit Definitions
+      summary: Get all unit definitions
+      description: |
+        Returns static game rules data for all unit types.
+        Used by clients to display unit stats and validate game rules.
+        
+        ## Caching
+        - Response includes ETag header based on unit definitions data
+        - Supports conditional requests with If-None-Match header
+        - Cache-Control: public, max-age=600 (10 minutes)
+        - Server-side caching via IMemoryCache (10 minutes)
+        
+      operationId: GetUnitDefinitions
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag from previous response for conditional request
+          schema:
+            type: string
+            example: '"def456ghi789"'
+      responses:
+        '200':
+          description: Unit definitions retrieved successfully
+          headers:
+            ETag:
+              description: Entity tag for cache validation
+              schema:
+                type: string
+                example: '"def456ghi789"'
+            Cache-Control:
+              description: Cache directives
+              schema:
+                type: string
+                example: 'public, max-age=600'
+            X-Api-Version:
+              description: API version used
+              schema:
+                type: string
+                example: '1.0'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemsResultUnitDefinitionDto'
+              example:
+                items:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 5
+                    rangeMin: 2
+                    rangeMax: 3
+                    movePoints: 2
+                    health: 80
+        '304':
+          description: Not Modified - cached version is still valid
+          headers:
+            ETag:
+              description: Entity tag matching the request
+              schema:
+                type: string
+        '429':
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              description: Seconds until rate limit resets
+              schema:
+                type: integer
+                example: 60
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateLimitError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    MapDto:
+      type: object
+      description: Map metadata DTO
+      required:
+        - id
+        - code
+        - schemaVersion
+        - width
+        - height
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique map identifier
+          example: 1
+        code:
+          type: string
+          description: Unique map code
+          example: map-01
+        schemaVersion:
+          type: integer
+          format: int32
+          description: Map schema version for compatibility
+          example: 1
+        width:
+          type: integer
+          format: int32
+          description: Map width in tiles
+          example: 20
+        height:
+          type: integer
+          format: int32
+          description: Map height in tiles
+          example: 30
+
+    MapTileDto:
+      type: object
+      description: Map tile DTO with terrain and resource data
+      required:
+        - id
+        - row
+        - col
+        - terrain
+        - resourceAmount
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique tile identifier
+          example: 1
+        row:
+          type: integer
+          format: int32
+          description: Tile row position (0-based)
+          example: 0
+        col:
+          type: integer
+          format: int32
+          description: Tile column position (0-based)
+          example: 0
+        terrain:
+          type: string
+          description: Terrain type code
+          example: grassland
+          enum:
+            - grassland
+            - plains
+            - hills
+            - mountain
+            - desert
+            - tundra
+            - ocean
+            - forest
+        resourceType:
+          type: string
+          nullable: true
+          description: Resource type on this tile (null if no resource)
+          example: wheat
+          enum:
+            - wheat
+            - rice
+            - fish
+            - iron
+            - gold
+            - stone
+            - oil
+        resourceAmount:
+          type: integer
+          format: int32
+          description: Amount of resource available (0 if no resource)
+          example: 2
+          minimum: 0
+
+    PagedResultMapTileDto:
+      type: object
+      description: Paginated result containing map tiles
+      required:
+        - items
+        - page
+        - pageSize
+      properties:
+        items:
+          type: array
+          description: Array of map tiles for the current page
+          items:
+            $ref: '#/components/schemas/MapTileDto'
+        page:
+          type: integer
+          format: int32
+          description: Current page number (1-based)
+          example: 1
+          minimum: 1
+        pageSize:
+          type: integer
+          format: int32
+          description: Number of items per page
+          example: 20
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          format: int32
+          nullable: true
+          description: Total number of tiles (only included on first page)
+          example: 400
+
+    UnitDefinitionDto:
+      type: object
+      description: Unit definition DTO with combat stats and movement
+      required:
+        - id
+        - code
+        - isRanged
+        - attack
+        - defence
+        - rangeMin
+        - rangeMax
+        - movePoints
+        - health
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique unit definition identifier
+          example: 1
+        code:
+          type: string
+          description: Unique unit type code
+          example: warrior
+        isRanged:
+          type: boolean
+          description: Whether the unit can attack at range
+          example: false
+        attack:
+          type: integer
+          format: int32
+          description: Attack strength
+          example: 20
+        defence:
+          type: integer
+          format: int32
+          description: Defence strength
+          example: 10
+        rangeMin:
+          type: integer
+          format: int32
+          description: Minimum attack range (0 for melee)
+          example: 0
+        rangeMax:
+          type: integer
+          format: int32
+          description: Maximum attack range (0 for melee)
+          example: 0
+        movePoints:
+          type: integer
+          format: int32
+          description: Movement points per turn
+          example: 2
+        health:
+          type: integer
+          format: int32
+          description: Maximum health points
+          example: 100
+
+    ItemsResultUnitDefinitionDto:
+      type: object
+      description: Wrapper for list of unit definitions
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          description: Array of unit definitions
+          items:
+            $ref: '#/components/schemas/UnitDefinitionDto'
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code for client handling
+          example: MAP_NOT_FOUND
+        message:
+          type: string
+          description: Human-readable error message
+          example: Map with code 'map-01' was not found.
+
+    RateLimitError:
+      type: object
+      description: Rate limit exceeded error
+      required:
+        - code
+        - message
+        - retryAfterSeconds
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: RATE_LIMIT_EXCEEDED
+        message:
+          type: string
+          description: Human-readable error message
+          example: Too many requests. Please try again later.
+        retryAfterSeconds:
+          type: integer
+          format: int32
+          description: Seconds to wait before retrying
+          example: 60
+
+  securitySchemes:
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: .AspNetCore.Identity.Application
+      description: ASP.NET Identity authentication cookie
+
+security:
+  - CookieAuth: []
+
+x-rate-limits:
+  public-api:
+    limit: 300
+    window: 60
+    description: Rate limit for public endpoints (maps, unit definitions)
+  authenticated-api:
+    limit: 60
+    window: 60
+    description: Rate limit for authenticated user-specific endpoints
+  global:
+    limit: 100
+    window: 60
+    description: Global rate limit for all other endpoints
+

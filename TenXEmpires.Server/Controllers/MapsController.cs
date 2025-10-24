@@ -1,6 +1,4 @@
 using Asp.Versioning;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TenXEmpires.Server.Domain.DataContracts;
@@ -90,7 +88,7 @@ public class MapsController : ControllerBase
             }
 
             // Compute ETag based on stable map metadata
-            var etag = ComputeMapETag(map);
+            var etag = _lookupService.ComputeMapETag(map);
 
             // Conditional request handling
             if (Request.Headers.IfNoneMatch.Count > 0)
@@ -123,12 +121,153 @@ public class MapsController : ControllerBase
         }
     }
 
-    private static string ComputeMapETag(MapDto map)
+    /// <summary>
+    /// Gets the list of tiles for a specific map by code.
+    /// </summary>
+    /// <param name="code">The unique map code.</param>
+    /// <param name="page">Optional 1-based page number (default: 1).</param>
+    /// <param name="pageSize">Optional page size (default: 20, max: 100).</param>
+    /// <remarks>
+    /// Returns tiles for rendering terrain and resources. Supports pagination for large maps.
+    /// Results are ordered by row, then column for stable pagination.
+    /// 
+    /// Supports conditional requests via ETag:
+    /// - Response includes an ETag header derived from map code, pagination, and tile count
+    /// - Clients can send If-None-Match header with the ETag value
+    /// - If data hasn't changed, returns 304 Not Modified
+    ///
+    /// Sample response:
+    ///
+    ///     {
+    ///       "items": [
+    ///         {
+    ///           "id": 1,
+    ///           "row": 0,
+    ///           "col": 0,
+    ///           "terrain": "grassland",
+    ///           "resourceType": "wheat",
+    ///           "resourceAmount": 2
+    ///         }
+    ///       ],
+    ///       "page": 1,
+    ///       "pageSize": 20,
+    ///       "total": 400
+    ///     }
+    /// </remarks>
+    /// <response code="200">Returns the paged list of map tiles.</response>
+    /// <response code="400">Bad request due to invalid parameters.</response>
+    /// <response code="404">Map not found.</response>
+    /// <response code="304">Not Modified - cached version is still valid.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpGet("{code}/tiles", Name = "GetMapTiles")]
+    [ProducesResponseType(typeof(PagedResult<MapTileDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "page", "pageSize" })]
+    public async Task<ActionResult<PagedResult<MapTileDto>>> GetMapTiles(
+        string code,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
-        var representation = $"{map.Code}:{map.SchemaVersion}:{map.Width}:{map.Height}";
-        var bytes = Encoding.UTF8.GetBytes(representation);
-        var hash = SHA256.HashData(bytes);
-        var etag = Convert.ToBase64String(hash);
-        return $"\"{etag}\""; // quoted per RFC 7232
+        try
+        {
+            // Validate map code
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _logger.LogWarning("Invalid map code provided");
+                return BadRequest(new
+                {
+                    code = "INVALID_CODE",
+                    message = "The 'code' path parameter must be provided."
+                });
+            }
+
+            // Validate pagination parameters
+            var effectivePage = page ?? 1;
+            var effectivePageSize = pageSize ?? 20;
+
+            if (effectivePage < 1)
+            {
+                _logger.LogWarning("Invalid page number: {Page}", page);
+                return BadRequest(new
+                {
+                    code = "INVALID_PAGE",
+                    message = "The 'page' parameter must be >= 1."
+                });
+            }
+
+            if (effectivePageSize < 1 || effectivePageSize > 100)
+            {
+                _logger.LogWarning("Invalid page size: {PageSize}", pageSize);
+                return BadRequest(new
+                {
+                    code = "INVALID_PAGE_SIZE",
+                    message = "The 'pageSize' parameter must be between 1 and 100."
+                });
+            }
+
+            // Fetch tiles from service
+            var tiles = await _lookupService.GetMapTilesAsync(code, effectivePage, effectivePageSize);
+            if (tiles is null)
+            {
+                _logger.LogInformation("Map with code {Code} not found", code);
+                return NotFound(new
+                {
+                    code = "MAP_NOT_FOUND",
+                    message = $"Map with code '{code}' was not found."
+                });
+            }
+
+            // Get ETag for conditional requests
+            var etag = await _lookupService.GetMapTilesETagAsync(code, effectivePage, effectivePageSize);
+            if (etag is not null)
+            {
+                // Conditional request handling
+                if (Request.Headers.IfNoneMatch.Count > 0)
+                {
+                    var clientETag = Request.Headers.IfNoneMatch.ToString();
+                    if (clientETag == etag)
+                    {
+                        Response.Headers.ETag = etag;
+                        _logger.LogDebug(
+                            "Client ETag matches current ETag for map {Code} tiles (page {Page}, size {PageSize}); returning 304.",
+                            code,
+                            effectivePage,
+                            effectivePageSize);
+                        return StatusCode(StatusCodes.Status304NotModified);
+                    }
+                }
+
+                // Set ETag header
+                Response.Headers.ETag = etag;
+            }
+
+            // Set caching headers
+            Response.Headers.CacheControl = "public, max-age=600"; // 10 minutes
+
+            return Ok(tiles);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for map tiles request");
+            return BadRequest(new
+            {
+                code = "INVALID_ARGUMENT",
+                message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve map tiles for code {Code}", code);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An error occurred while retrieving the map tiles."
+                });
+        }
     }
 }

@@ -21,7 +21,12 @@ public class LookupService : ILookupService
     private const string UnitDefinitionsCacheKey = "Lookup.UnitDefinitions";
     private const string UnitDefinitionsETagCacheKey = "Lookup.UnitDefinitions.ETag";
     private const string MapByCodeCacheKeyPrefix = "Lookup.Map.";
+    private const string MapTilesCacheKeyPrefix = "Lookup.MapTiles.";
+    private const string MapTilesETagCacheKeyPrefix = "Lookup.MapTiles.ETag.";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
+    
+    private const int DefaultPageSize = 20;
+    private const int MaxPageSize = 100;
 
     public LookupService(
         TenXDbContext context,
@@ -212,6 +217,202 @@ public class LookupService : ILookupService
             _logger.LogError(ex, "Failed to fetch map by code {Code}. EventId: {EventId}", code, "Lookup.Maps.GetByCodeFailed");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Gets map tiles by map code with optional pagination and caching.
+    /// </summary>
+    public async Task<PagedResult<MapTileDto>?> GetMapTilesAsync(string code, int? page = null, int? pageSize = null)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new ArgumentException("Code must be provided", nameof(code));
+        }
+
+        // Validate and normalize pagination parameters
+        var effectivePage = page ?? 1;
+        var effectivePageSize = pageSize ?? DefaultPageSize;
+
+        if (effectivePage < 1)
+        {
+            throw new ArgumentException("Page must be >= 1", nameof(page));
+        }
+
+        if (effectivePageSize < 1 || effectivePageSize > MaxPageSize)
+        {
+            throw new ArgumentException($"PageSize must be between 1 and {MaxPageSize}", nameof(pageSize));
+        }
+
+        try
+        {
+            // Check if map exists first (this is cached)
+            var map = await GetMapByCodeAsync(code);
+            if (map is null)
+            {
+                return null;
+            }
+
+            // Build cache key including pagination parameters
+            var cacheKey = $"{MapTilesCacheKeyPrefix}{code}:p{effectivePage}:ps{effectivePageSize}";
+
+            if (_cache.TryGetValue<PagedResult<MapTileDto>>(cacheKey, out var cached))
+            {
+                _logger.LogDebug("Map tiles for {Code} (page {Page}, size {PageSize}) retrieved from cache", code, effectivePage, effectivePageSize);
+                return cached!;
+            }
+
+            _logger.LogDebug("Fetching map tiles for {Code} (page {Page}, size {PageSize}) from database", code, effectivePage, effectivePageSize);
+
+            // Query with AsNoTracking and project to DTO
+            // Order by row, then col for stable pagination
+            var skip = (effectivePage - 1) * effectivePageSize;
+
+            var tiles = await _context.MapTiles
+                .AsNoTracking()
+                .Where(t => t.MapId == map.Id)
+                .OrderBy(t => t.Row)
+                .ThenBy(t => t.Col)
+                .Skip(skip)
+                .Take(effectivePageSize)
+                .Select(t => new MapTileDto(
+                    t.Id,
+                    t.Row,
+                    t.Col,
+                    t.Terrain,
+                    t.ResourceType,
+                    t.ResourceAmount))
+                .ToListAsync();
+
+            // Get total count for pagination metadata (only for first page to optimize)
+            // For large maps, we can cache the count separately
+            int? total = null;
+            if (effectivePage == 1)
+            {
+                total = await _context.MapTiles
+                    .AsNoTracking()
+                    .Where(t => t.MapId == map.Id)
+                    .CountAsync();
+            }
+
+            var result = new PagedResult<MapTileDto>
+            {
+                Items = tiles,
+                Page = effectivePage,
+                PageSize = effectivePageSize,
+                Total = total
+            };
+
+            // Cache the result
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration
+            };
+            _cache.Set(cacheKey, result, cacheOptions);
+
+            _logger.LogInformation(
+                "Fetched {Count} tiles for map {Code} (page {Page}, size {PageSize})",
+                tiles.Count,
+                code,
+                effectivePage,
+                effectivePageSize);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to fetch map tiles for code {Code}. EventId: {EventId}",
+                code,
+                "Lookup.MapTiles.FetchFailed");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets the ETag for map tiles by map code and pagination parameters.
+    /// </summary>
+    public async Task<string?> GetMapTilesETagAsync(string code, int? page = null, int? pageSize = null)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new ArgumentException("Code must be provided", nameof(code));
+        }
+
+        // Validate and normalize pagination parameters
+        var effectivePage = page ?? 1;
+        var effectivePageSize = pageSize ?? DefaultPageSize;
+
+        if (effectivePage < 1)
+        {
+            throw new ArgumentException("Page must be >= 1", nameof(page));
+        }
+
+        if (effectivePageSize < 1 || effectivePageSize > MaxPageSize)
+        {
+            throw new ArgumentException($"PageSize must be between 1 and {MaxPageSize}", nameof(pageSize));
+        }
+
+        try
+        {
+            var etagCacheKey = $"{MapTilesETagCacheKeyPrefix}{code}:p{effectivePage}:ps{effectivePageSize}";
+
+            // Check if ETag is cached
+            if (_cache.TryGetValue<string>(etagCacheKey, out var cachedETag))
+            {
+                _logger.LogDebug("Map tiles ETag for {Code} retrieved from cache", code);
+                return cachedETag!;
+            }
+
+            // If not cached, fetch the tiles (which will cache both tiles and generate ETag)
+            var tiles = await GetMapTilesAsync(code, effectivePage, effectivePageSize);
+            if (tiles is null)
+            {
+                return null;
+            }
+
+            // Generate ETag based on map code, pagination, and tile count
+            var etag = GenerateMapTilesETag(code, effectivePage, effectivePageSize, tiles.Items.Count, tiles.Total);
+
+            // Cache the ETag
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration
+            };
+            _cache.Set(etagCacheKey, etag, cacheOptions);
+
+            return etag;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get map tiles ETag for code {Code}", code);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Computes an ETag for a given map based on its metadata.
+    /// </summary>
+    public string ComputeMapETag(MapDto map)
+    {
+        var representation = $"{map.Code}:{map.SchemaVersion}:{map.Width}:{map.Height}";
+        var bytes = Encoding.UTF8.GetBytes(representation);
+        var hash = SHA256.HashData(bytes);
+        var etag = Convert.ToBase64String(hash);
+        return $"\"{etag}\""; // Wrap in quotes per HTTP spec
+    }
+
+    /// <summary>
+    /// Generates a stable ETag for map tiles based on map code, pagination, and metadata.
+    /// </summary>
+    private static string GenerateMapTilesETag(string code, int page, int pageSize, int itemCount, int? total)
+    {
+        // Create a stable representation based on map code, pagination params, and counts
+        var representation = $"{code}:p{page}:ps{pageSize}:cnt{itemCount}:tot{total}";
+        var bytes = Encoding.UTF8.GetBytes(representation);
+        var hash = SHA256.HashData(bytes);
+        var etag = Convert.ToBase64String(hash);
+        return $"\"{etag}\""; // Wrap in quotes per HTTP spec
     }
 }
 
