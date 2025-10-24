@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure;
@@ -14,7 +15,22 @@ namespace TenXEmpires.Server
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            // Configure Serilog early for bootstrap logging
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateBootstrapLogger();
+
+            try
+            {
+                Log.Information("Starting TenX Empires API");
+
+                var builder = WebApplication.CreateBuilder(args);
+
+                // Configure Serilog from appsettings
+                builder.Host.UseSerilog((context, services, configuration) => configuration
+                    .ReadFrom.Configuration(context.Configuration)
+                    .ReadFrom.Services(services)
+                    .Enrich.FromLogContext());
 
             // Add services to the container.
 
@@ -233,7 +249,19 @@ namespace TenXEmpires.Server
 
             app.MapFallbackToFile("/index.html");
 
-            app.Run();
+            // Add Serilog request logging
+            app.UseSerilogRequestLogging();
+
+                app.Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Application terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
     }
 }
