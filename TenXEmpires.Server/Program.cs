@@ -153,7 +153,7 @@ namespace TenXEmpires.Server
                     if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue))
                     {
                         retryAfter = retryAfterValue;
-                        context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfterValue.TotalSeconds).ToString();
+                        context.HttpContext.Response.Headers[TenXEmpires.Server.Domain.Constants.StandardHeaders.RetryAfter] = ((int)retryAfterValue.TotalSeconds).ToString();
                     }
 
                     await context.HttpContext.Response.WriteAsJsonAsync(new

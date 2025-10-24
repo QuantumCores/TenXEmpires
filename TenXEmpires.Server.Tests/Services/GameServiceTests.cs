@@ -734,6 +734,48 @@ public class GameServiceTests : IDisposable
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task GetGameDetailAsync_ForUserOwnedGame_ShouldReturnDetail()
+    {
+        // Arrange - game ID 1 belongs to _testUserId (seeded)
+
+        // Act
+        var detail = await _service.GetGameDetailAsync(_testUserId, 1, default);
+
+        // Assert
+        detail.Should().NotBeNull();
+        detail!.Id.Should().Be(1);
+        detail.UserId.Should().Be(_testUserId);
+        detail.MapId.Should().Be(1);
+        detail.TurnNo.Should().Be(1);
+        detail.Status.Should().Be("active");
+    }
+
+    [Fact]
+    public async Task GetGameDetailAsync_ForOtherUsersGame_ShouldReturnNull()
+    {
+        // Arrange - game ID 4 belongs to a different user (seeded)
+
+        // Act
+        var detail = await _service.GetGameDetailAsync(_testUserId, 4, default);
+
+        // Assert
+        detail.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetGameDetailAsync_ForNonExistentGame_ShouldReturnNull()
+    {
+        // Arrange
+        var nonExistent = 12345L;
+
+        // Act
+        var detail = await _service.GetGameDetailAsync(_testUserId, nonExistent, default);
+
+        // Assert
+        detail.Should().BeNull();
+    }
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

@@ -377,5 +377,81 @@ public class GamesController : ControllerBase
                 });
         }
     }
+
+    /// <summary>
+    /// Gets detailed information for a specific game owned by the authenticated user.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Returns a detailed summary of the game, including metadata like map, turn, status,
+    /// and timing fields. If the game does not exist or is not accessible due to RLS, a 404 is returned.
+    /// </remarks>
+    /// <response code="200">Returns the game details.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - game does not exist or user doesn't have access.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpGet("{id:long}", Name = "GetGameDetail")]
+    [ProducesResponseType(typeof(GameDetailDto), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(GameDetailDtoExample))]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<GameDetailDto>> GetGameDetail(
+        long id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = User.GetUserId();
+
+            _logger.LogDebug("User {UserId} requesting detail for game {GameId}", userId, id);
+
+            var detail = await _gameService.GetGameDetailAsync(userId, id, cancellationToken);
+
+            if (detail is null)
+            {
+                _logger.LogWarning("Game {GameId} not found or user {UserId} doesn't have access", id, userId);
+                return NotFound(new
+                {
+                    code = "GAME_NOT_FOUND",
+                    message = "Game not found or you don't have access to it."
+                });
+            }
+
+            // Conditional GET with ETag based on last turn timestamp and turn number
+            var etag = HttpHeaderExtensions.ComposeGameETag(id, detail.TurnNo, detail.LastTurnAt);
+
+            if (Request.IsNotModified(etag))
+            {
+                Response.SetETag(etag);
+                return StatusCode(StatusCodes.Status304NotModified);
+            }
+
+            Response.SetETag(etag);
+            return Ok(detail);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt");
+            return Unauthorized(new
+            {
+                code = "UNAUTHORIZED",
+                message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get game detail for game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An error occurred while retrieving the game details."
+                });
+        }
+    }
 }
 

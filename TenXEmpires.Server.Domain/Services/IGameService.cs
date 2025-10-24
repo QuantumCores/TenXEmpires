@@ -36,6 +36,18 @@ public interface IGameService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets detailed information for a specific game owned by the authenticated user.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The detailed game DTO if found; otherwise null.</returns>
+    Task<GameDetailDto?> GetGameDetailAsync(
+        Guid userId,
+        long gameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Verifies that a user has access to a specific game.
     /// </summary>
     /// <param name="userId">The authenticated user's ID.</param>

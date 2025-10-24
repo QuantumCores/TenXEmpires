@@ -58,6 +58,97 @@ public class GamesControllerTests
     }
 
     [Fact]
+    public async Task GetGameDetail_WithValidOwner_ShouldReturn200AndSetEtag()
+    {
+        // Arrange
+        var id = 42L;
+        var lastTurnAt = DateTimeOffset.UtcNow;
+        var detail = new GameDetailDto(
+            Id: id,
+            UserId: _testUserId,
+            MapId: 1,
+            MapSchemaVersion: 1,
+            TurnNo: 5,
+            ActiveParticipantId: 101,
+            TurnInProgress: false,
+            Status: "active",
+            StartedAt: lastTurnAt.AddHours(-2),
+            FinishedAt: null,
+            LastTurnAt: lastTurnAt,
+            Settings: null);
+
+        _gameServiceMock
+            .Setup(s => s.GetGameDetailAsync(_testUserId, id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(detail);
+
+        // Act
+        var result = await _controller.GetGameDetail(id, CancellationToken.None);
+
+        // Assert
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        ok.Value.Should().BeOfType<GameDetailDto>();
+
+        _controller.Response.Headers.ContainsKey("ETag").Should().BeTrue();
+
+        var expectedEtag = $"\"g:{id}:t:{detail.TurnNo}:ts:{detail.LastTurnAt?.ToUnixTimeSeconds() ?? 0}\"";
+        _controller.Response.Headers["ETag"].ToString().Should().Be(expectedEtag);
+    }
+
+    [Fact]
+    public async Task GetGameDetail_WithMatchingIfNoneMatch_ShouldReturn304()
+    {
+        // Arrange
+        var id = 43L;
+        var lastTurnAt = DateTimeOffset.UtcNow;
+        var detail = new GameDetailDto(
+            Id: id,
+            UserId: _testUserId,
+            MapId: 2,
+            MapSchemaVersion: 1,
+            TurnNo: 3,
+            ActiveParticipantId: 201,
+            TurnInProgress: false,
+            Status: "active",
+            StartedAt: lastTurnAt.AddHours(-3),
+            FinishedAt: null,
+            LastTurnAt: lastTurnAt,
+            Settings: null);
+
+        _gameServiceMock
+            .Setup(s => s.GetGameDetailAsync(_testUserId, id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(detail);
+
+        var expectedEtag = $"\"g:{id}:t:{detail.TurnNo}:ts:{detail.LastTurnAt?.ToUnixTimeSeconds() ?? 0}\"";
+        _controller.Request.Headers["If-None-Match"] = expectedEtag;
+
+        // Act
+        var result = await _controller.GetGameDetail(id, CancellationToken.None);
+
+        // Assert
+        var status = result.Result.Should().BeOfType<StatusCodeResult>().Subject;
+        status.StatusCode.Should().Be(StatusCodes.Status304NotModified);
+        _controller.Response.Headers["ETag"].ToString().Should().Be(expectedEtag);
+    }
+
+    [Fact]
+    public async Task GetGameDetail_NotFoundOrNoAccess_ShouldReturn404()
+    {
+        // Arrange
+        var id = 44L;
+        _gameServiceMock
+            .Setup(s => s.GetGameDetailAsync(_testUserId, id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameDetailDto?)null);
+
+        // Act
+        var result = await _controller.GetGameDetail(id, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
     public async Task ListGames_WithValidRequest_ShouldReturn200WithPagedResult()
     {
         // Arrange

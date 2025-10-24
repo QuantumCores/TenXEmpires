@@ -81,5 +81,15 @@ public static class TenxHeaders
     /// Header for correlation ID for request tracing.
     /// </summary>
     public const string CorrelationId = "X-Tenx-Correlation-Id";
+
+    /// <summary>
+    /// Header for total-count in paged list responses.
+    /// </summary>
+    public const string TotalCount = "X-Tenx-Total-Count";
+
+    /// <summary>
+    /// Header for request id used for tracing.
+    /// </summary>
+    public const string RequestId = "X-Tenx-Request-Id";
 }
 

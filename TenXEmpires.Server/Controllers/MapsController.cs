@@ -5,6 +5,8 @@ using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Examples;
+using TenXEmpires.Server.Extensions;
+using TenXEmpires.Server.Domain.Constants;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -93,21 +95,16 @@ public class MapsController : ControllerBase
             // Compute ETag based on stable map metadata
             var etag = _lookupService.ComputeMapETag(map);
 
-            // Conditional request handling
-            if (Request.Headers.IfNoneMatch.Count > 0)
+            if (Request.IsNotModified(etag))
             {
-                var clientETag = Request.Headers.IfNoneMatch.ToString();
-                if (clientETag == etag)
-                {
-                    Response.Headers.ETag = etag;
-                    _logger.LogDebug("Client ETag matches current ETag for map {Code}; returning 304.", code);
-                    return StatusCode(StatusCodes.Status304NotModified);
-                }
+                Response.SetETag(etag);
+                _logger.LogDebug("Client ETag matches current ETag for map {Code}; returning 304.", code);
+                return StatusCode(StatusCodes.Status304NotModified);
             }
 
             // Set caching headers
-            Response.Headers.ETag = etag;
-            Response.Headers.CacheControl = "public, max-age=600"; // 10 minutes
+            Response.SetETag(etag);
+            Response.Headers[StandardHeaders.CacheControl] = "public, max-age=600"; // 10 minutes
 
             return Ok(map);
         }
@@ -228,28 +225,23 @@ public class MapsController : ControllerBase
             var etag = await _lookupService.GetMapTilesETagAsync(code, effectivePage, effectivePageSize);
             if (etag is not null)
             {
-                // Conditional request handling
-                if (Request.Headers.IfNoneMatch.Count > 0)
+                if (Request.IsNotModified(etag))
                 {
-                    var clientETag = Request.Headers.IfNoneMatch.ToString();
-                    if (clientETag == etag)
-                    {
-                        Response.Headers.ETag = etag;
-                        _logger.LogDebug(
-                            "Client ETag matches current ETag for map {Code} tiles (page {Page}, size {PageSize}); returning 304.",
-                            code,
-                            effectivePage,
-                            effectivePageSize);
-                        return StatusCode(StatusCodes.Status304NotModified);
-                    }
+                    Response.SetETag(etag);
+                    _logger.LogDebug(
+                        "Client ETag matches current ETag for map {Code} tiles (page {Page}, size {PageSize}); returning 304.",
+                        code,
+                        effectivePage,
+                        effectivePageSize);
+                    return StatusCode(StatusCodes.Status304NotModified);
                 }
 
                 // Set ETag header
-                Response.Headers.ETag = etag;
+                Response.SetETag(etag);
             }
 
             // Set caching headers
-            Response.Headers.CacheControl = "public, max-age=600"; // 10 minutes
+            Response.Headers[StandardHeaders.CacheControl] = "public, max-age=600"; // 10 minutes
 
             return Ok(tiles);
         }

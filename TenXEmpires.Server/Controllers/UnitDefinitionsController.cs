@@ -5,6 +5,8 @@ using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Examples;
+using TenXEmpires.Server.Extensions;
+using TenXEmpires.Server.Domain.Constants;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -78,16 +80,11 @@ public class UnitDefinitionsController : ControllerBase
 
             // Get current ETag
             var currentETag = await _lookupService.GetUnitDefinitionsETagAsync();
-
-            // Check If-None-Match header for conditional request
-            if (Request.Headers.IfNoneMatch.Count > 0)
+            if (Request.IsNotModified(currentETag))
             {
-                var clientETag = Request.Headers.IfNoneMatch.ToString();
-                if (clientETag == currentETag)
-                {
-                    _logger.LogDebug("Client ETag matches current ETag, returning 304 Not Modified");
-                    return StatusCode(StatusCodes.Status304NotModified);
-                }
+                Response.SetETag(currentETag);
+                _logger.LogDebug("Client ETag matches current ETag, returning 304 Not Modified");
+                return StatusCode(StatusCodes.Status304NotModified);
             }
 
             // Fetch data
@@ -99,8 +96,8 @@ public class UnitDefinitionsController : ControllerBase
             };
 
             // Set caching headers
-            Response.Headers.ETag = currentETag;
-            Response.Headers.CacheControl = "public, max-age=600"; // 10 minutes
+            Response.SetETag(currentETag);
+            Response.Headers[StandardHeaders.CacheControl] = "public, max-age=600"; // 10 minutes
 
             _logger.LogDebug("Returning {Count} unit definitions with ETag {ETag}", unitDefinitions.Count, currentETag);
 

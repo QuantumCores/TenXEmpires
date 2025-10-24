@@ -322,6 +322,25 @@ public class GameService : IGameService
         return gameExists;
     }
 
+    public async Task<GameDetailDto?> GetGameDetailAsync(
+        Guid userId,
+        long gameId,
+        CancellationToken cancellationToken = default)
+    {
+        // Defense-in-depth: filter by both Id and UserId even with RLS enabled
+        var game = await _context.Games
+            .AsNoTracking()
+            .SingleOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+        if (game is null)
+        {
+            return null;
+        }
+
+        // Map entity to DTO (includes safe JSON parsing for settings)
+        return GameDetailDto.From(game);
+    }
+
     /// <summary>
     /// Generates a random seed for the RNG.
     /// </summary>
