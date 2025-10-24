@@ -91,6 +91,191 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+    post:
+      tags:
+      - v1
+      summary: Creates a new game for the authenticated user.
+      description: "Creates a new game instance on a fixed map, initializes participants (human + AI),\r\nseeds starting cities/units, and returns the initial game state.\r\n\r\nThe endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to prevent duplicate game creation.\r\n\r\nRequest Body:\r\n- mapCode (optional): The map code to use (defaults to \"standard_6x8\" if not provided)\r\n- settings (optional): JSON object with game settings\r\n- displayName (optional): Your display name in the game (defaults to \"Player\" if not provided)\r\n\r\nExample request:\r\n            \r\n    POST /v1/games\r\n    X-Tenx-Idempotency-Key: unique-request-id-123\r\n    \r\n    {\r\n      \"mapCode\": \"standard_6x8\",\r\n      \"settings\": { \"difficulty\": \"normal\" },\r\n      \"displayName\": \"Commander Alex\"\r\n    }\r\n            \r\nThe response includes the full initial game state with all entities (participants, cities, units).\r\nYour AI opponent will be assigned a random historical or fantasy leader name (e.g., \"Charlemagne\", \"Cyrus the Great\")."
+      operationId: CreateGame
+      requestBody:
+        description: The command to create a new game with optional map code, settings, and display name.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateGameCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateGameCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateGameCommand'
+      responses:
+        201:
+          description: Game created successfully. Returns the game ID and initial state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameCreatedResponse'
+              example:
+                id: 42
+                state:
+                  game:
+                    id: 42
+                    turnNo: 1
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_6x8
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 5
+                    row: 0
+                    col: 1
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: food
+                    amount: 5
+                  - cityId: 301
+                    resourceType: production
+                    amount: 2
+                  - cityId: 302
+                    resourceType: food
+                    amount: 5
+                  - cityId: 302
+                    resourceType: production
+                    amount: 2
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  turnSummary: 
+        400:
+          description: Bad request due to invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - user has reached the game limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        422:
+          description: Unprocessable Entity - map schema mismatch or map not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
+  /v1/games/{id}/state:
+    get:
+      tags:
+      - v1
+      summary: Gets the current state of a specific game.
+      description: "Returns the complete game state including all participants, cities, units, resources, and unit definitions.\r\nThis is the authoritative game state used by clients to render the game.\r\n\r\nThe response includes:\r\n- Game metadata (turn number, active player, status)\r\n- Map information\r\n- All participants and their states\r\n- All units with positions and stats\r\n- All cities with positions and resources\r\n- Unit definitions (for client reference)\r\n\r\nExample response structure:\r\n            \r\n    {\r\n      \"game\": { \"id\": 1, \"turnNo\": 1, \"activeParticipantId\": 1, \"status\": \"active\" },\r\n      \"map\": { \"id\": 1, \"code\": \"standard_6x8\", \"width\": 8, \"height\": 6 },\r\n      \"participants\": [...],\r\n      \"units\": [...],\r\n      \"cities\": [...],\r\n      \"cityTiles\": [...],\r\n      \"cityResources\": [...],\r\n      \"unitDefinitions\": [...]\r\n    }"
+      operationId: GetGameState
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        200:
+          description: Returns the current game state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameStateDto'
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - game does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/maps/{code}:
     get:
       tags:
@@ -315,6 +500,75 @@ paths:
                   $ref: '#/components/schemas/WeatherForecast'
 components:
   schemas:
+    CityInStateDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        participantId:
+          type: integer
+          format: int64
+        hp:
+          type: integer
+          format: int32
+        maxHp:
+          type: integer
+          format: int32
+        tileId:
+          type: integer
+          format: int64
+        row:
+          type: integer
+          format: int32
+        col:
+          type: integer
+          format: int32
+      additionalProperties: false
+    CityResourceDto:
+      type: object
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        resourceType:
+          type: string
+          nullable: true
+        amount:
+          type: integer
+          format: int32
+      additionalProperties: false
+    CityTileLinkDto:
+      type: object
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        tileId:
+          type: integer
+          format: int64
+      additionalProperties: false
+    CreateGameCommand:
+      type: object
+      properties:
+        mapCode:
+          type: string
+          nullable: true
+        settings:
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    GameCreatedResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        state:
+          $ref: '#/components/schemas/GameStateDto'
+      additionalProperties: false
     GameListItemDto:
       type: object
       properties:
@@ -365,6 +619,84 @@ components:
           type: integer
           format: int32
           nullable: true
+      additionalProperties: false
+    GameStateDto:
+      type: object
+      properties:
+        game:
+          $ref: '#/components/schemas/GameStateGameDto'
+        map:
+          $ref: '#/components/schemas/GameStateMapDto'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantDto'
+          nullable: true
+        units:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnitInStateDto'
+          nullable: true
+        cities:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityInStateDto'
+          nullable: true
+        cityTiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityTileLinkDto'
+          nullable: true
+        cityResources:
+          type: array
+          items:
+            $ref: '#/components/schemas/CityResourceDto'
+          nullable: true
+        unitDefinitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnitDefinitionDto'
+          nullable: true
+        turnSummary:
+          nullable: true
+      additionalProperties: false
+    GameStateGameDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        turnNo:
+          type: integer
+          format: int32
+        activeParticipantId:
+          type: integer
+          format: int64
+          nullable: true
+        turnInProgress:
+          type: boolean
+        status:
+          type: string
+          nullable: true
+      additionalProperties: false
+    GameStateMapDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+          nullable: true
+        schemaVersion:
+          type: integer
+          format: int32
+        width:
+          type: integer
+          format: int32
+        height:
+          type: integer
+          format: int32
       additionalProperties: false
     MapDto:
       type: object
@@ -428,6 +760,28 @@ components:
           format: int32
           nullable: true
       additionalProperties: false
+    ParticipantDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        gameId:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        displayName:
+          type: string
+          nullable: true
+        isEliminated:
+          type: boolean
+      additionalProperties: false
     ProblemDetails:
       type: object
       properties:
@@ -488,6 +842,33 @@ components:
           items:
             $ref: '#/components/schemas/UnitDefinitionDto'
           nullable: true
+      additionalProperties: false
+    UnitInStateDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        participantId:
+          type: integer
+          format: int64
+        typeCode:
+          type: string
+          nullable: true
+        hp:
+          type: integer
+          format: int32
+        hasActed:
+          type: boolean
+        tileId:
+          type: integer
+          format: int64
+        row:
+          type: integer
+          format: int32
+        col:
+          type: integer
+          format: int32
       additionalProperties: false
     WeatherForecast:
       type: object

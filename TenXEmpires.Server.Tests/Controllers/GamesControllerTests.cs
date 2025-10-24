@@ -22,6 +22,7 @@ namespace TenXEmpires.Server.Tests.Controllers;
 public class GamesControllerTests
 {
     private readonly Mock<IGameService> _gameServiceMock;
+    private readonly Mock<IGameStateService> _gameStateServiceMock;
     private readonly Mock<ILogger<GamesController>> _loggerMock;
     private readonly GamesController _controller;
     private readonly Guid _testUserId;
@@ -29,10 +30,14 @@ public class GamesControllerTests
     public GamesControllerTests()
     {
         _gameServiceMock = new Mock<IGameService>();
+        _gameStateServiceMock = new Mock<IGameStateService>();
         _loggerMock = new Mock<ILogger<GamesController>>();
         _testUserId = Guid.NewGuid();
         
-        _controller = new GamesController(_gameServiceMock.Object, _loggerMock.Object);
+        _controller = new GamesController(
+            _gameServiceMock.Object,
+            _gameStateServiceMock.Object,
+            _loggerMock.Object);
 
         // Setup authenticated user context
         var claims = new List<Claim>
@@ -165,7 +170,10 @@ public class GamesControllerTests
     {
         // Arrange
         var query = new ListGamesQuery();
-        var controllerWithoutAuth = new GamesController(_gameServiceMock.Object, _loggerMock.Object)
+        var controllerWithoutAuth = new GamesController(
+            _gameServiceMock.Object,
+            _gameStateServiceMock.Object,
+            _loggerMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -193,7 +201,10 @@ public class GamesControllerTests
         var identity = new ClaimsIdentity(claims, "TestAuth");
         var claimsPrincipal = new ClaimsPrincipal(identity);
 
-        var controllerWithInvalidClaim = new GamesController(_gameServiceMock.Object, _loggerMock.Object)
+        var controllerWithInvalidClaim = new GamesController(
+            _gameServiceMock.Object,
+            _gameStateServiceMock.Object,
+            _loggerMock.Object)
         {
             ControllerContext = new ControllerContext
             {

@@ -39,9 +39,17 @@ namespace TenXEmpires.Server
             builder.Services.AddDbContext<TenXDbContext>(options =>
                 options.UseNpgsql(connectionString));
 
+            // Register configuration settings
+            builder.Services.Configure<TenXEmpires.Server.Domain.Configuration.GameSettings>(
+                builder.Configuration.GetSection("GameSettings"));
+
             // Register application services
             builder.Services.AddScoped<ILookupService, LookupService>();
             builder.Services.AddScoped<IGameService, GameService>();
+            builder.Services.AddScoped<IGameSeedingService, GameSeedingService>();
+            builder.Services.AddScoped<IGameStateService, GameStateService>();
+            builder.Services.AddSingleton<IIdempotencyStore, MemoryIdempotencyStore>();
+            builder.Services.AddSingleton<IAiNameGenerator, AiNameGenerator>();
 
             // Add memory cache for caching lookup data
             builder.Services.AddMemoryCache();

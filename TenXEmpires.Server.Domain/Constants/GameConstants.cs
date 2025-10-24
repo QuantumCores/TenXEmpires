@@ -53,3 +53,33 @@ public static class SortOrder
     public const string Default = Descending;
 }
 
+/// <summary>
+/// Constants for participant types in a game.
+/// </summary>
+public static class ParticipantKind
+{
+    public const string Human = "human";
+    public const string Ai = "ai";
+    
+    /// <summary>
+    /// Gets all valid participant kind values.
+    /// </summary>
+    public static readonly string[] ValidKinds = { Human, Ai };
+}
+
+/// <summary>
+/// Custom header names used by TenX Empires API.
+/// </summary>
+public static class TenxHeaders
+{
+    /// <summary>
+    /// Header for idempotency key to prevent duplicate operations.
+    /// </summary>
+    public const string IdempotencyKey = "X-Tenx-Idempotency-Key";
+    
+    /// <summary>
+    /// Header for correlation ID for request tracing.
+    /// </summary>
+    public const string CorrelationId = "X-Tenx-Correlation-Id";
+}
+

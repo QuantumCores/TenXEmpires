@@ -1,8 +1,12 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using TenXEmpires.Server.Domain.Configuration;
 using TenXEmpires.Server.Domain.DataContracts;
+using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure.Data;
 using TenXEmpires.Server.Infrastructure.Services;
 using TenXEmpires.Server.Domain.Entities;
@@ -14,18 +18,43 @@ public class GameServiceTests : IDisposable
     private readonly TenXDbContext _context;
     private readonly GameService _service;
     private readonly Mock<ILogger<GameService>> _loggerMock;
+    private readonly Mock<IIdempotencyStore> _idempotencyStoreMock;
+    private readonly Mock<IAiNameGenerator> _aiNameGeneratorMock;
+    private readonly Mock<IGameSeedingService> _gameSeedingServiceMock;
+    private readonly Mock<IGameStateService> _gameStateServiceMock;
     private readonly Guid _testUserId;
 
     public GameServiceTests()
     {
-        // Setup in-memory database
+        // Setup in-memory database - configure warnings to ignore transaction warnings
         var options = new DbContextOptionsBuilder<TenXDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         _context = new TenXDbContext(options);
         _loggerMock = new Mock<ILogger<GameService>>();
-        _service = new GameService(_context, _loggerMock.Object);
+        _idempotencyStoreMock = new Mock<IIdempotencyStore>();
+        _aiNameGeneratorMock = new Mock<IAiNameGenerator>();
+        _gameSeedingServiceMock = new Mock<IGameSeedingService>();
+        _gameStateServiceMock = new Mock<IGameStateService>();
+
+        var gameSettings = Options.Create(new GameSettings
+        {
+            MaxActiveGamesPerUser = 10,
+            AcceptedMapSchemaVersion = 1,
+            DefaultMapCode = "standard_6x8"
+        });
+
+        _service = new GameService(
+            _context,
+            _loggerMock.Object,
+            _idempotencyStoreMock.Object,
+            _aiNameGeneratorMock.Object,
+            _gameSeedingServiceMock.Object,
+            _gameStateServiceMock.Object,
+            gameSettings);
+
         _testUserId = Guid.NewGuid();
 
         // Seed test data
@@ -358,6 +387,351 @@ public class GameServiceTests : IDisposable
 
         // Assert
         result.Items.Should().BeInAscendingOrder(g => g.StartedAt);
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WithValidCommand_ShouldCreateGameSuccessfully()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("standard_6x8", null, "TestPlayer");
+        
+        // Setup test map
+        var testMap = new Map
+        {
+            Id = 100,
+            Code = "standard_6x8",
+            SchemaVersion = 1,
+            Width = 8,
+            Height = 6
+        };
+        _context.Maps.Add(testMap);
+        await _context.SaveChangesAsync();
+
+        // Setup mocks
+        _aiNameGeneratorMock.Setup(x => x.GenerateName(It.IsAny<long>()))
+            .Returns("Julius Caesar");
+
+        var expectedGameState = new GameStateDto(
+            new GameStateGameDto(1, 1, 1, false, "active"),
+            new GameStateMapDto(100, "standard_6x8", 1, 8, 6),
+            new List<ParticipantDto>(),
+            new List<UnitInStateDto>(),
+            new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(),
+            new List<CityResourceDto>(),
+            new List<UnitDefinitionDto>(),
+            null);
+
+        _gameStateServiceMock.Setup(x => x.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedGameState);
+
+        // Act
+        var result = await _service.CreateGameAsync(newUserId, command, null, default);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().BeGreaterThan(0);
+        result.State.Should().NotBeNull();
+
+        // Verify game was created in database
+        var game = await _context.Games.FirstOrDefaultAsync(g => g.Id == result.Id);
+        game.Should().NotBeNull();
+        game!.UserId.Should().Be(newUserId);
+        game.Status.Should().Be("active");
+        game.TurnNo.Should().Be(1);
+        game.MapId.Should().Be(100);
+
+        // Verify participants were created
+        var participants = await _context.Participants.Where(p => p.GameId == game.Id).ToListAsync();
+        participants.Should().HaveCount(2);
+        participants.Should().Contain(p => p.Kind == "human" && p.DisplayName == "TestPlayer");
+        participants.Should().Contain(p => p.Kind == "ai" && p.DisplayName == "Julius Caesar");
+
+        // Verify game seeding was called
+        _gameSeedingServiceMock.Verify(
+            x => x.SeedGameEntitiesAsync(
+                It.IsAny<long>(),
+                100,
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WithDefaultDisplayName_ShouldUsePlayer()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("standard_6x8", null, null);
+        
+        var testMap = new Map
+        {
+            Id = 101,
+            Code = "standard_6x8",
+            SchemaVersion = 1,
+            Width = 8,
+            Height = 6
+        };
+        _context.Maps.Add(testMap);
+        await _context.SaveChangesAsync();
+
+        _aiNameGeneratorMock.Setup(x => x.GenerateName(It.IsAny<long>())).Returns("Ramses II");
+        _gameStateServiceMock.Setup(x => x.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GameStateDto(
+                new GameStateGameDto(1, 1, 1, false, "active"),
+                new GameStateMapDto(101, "standard_6x8", 1, 8, 6),
+                Array.Empty<ParticipantDto>(),
+                Array.Empty<UnitInStateDto>(),
+                Array.Empty<CityInStateDto>(),
+                Array.Empty<CityTileLinkDto>(),
+                Array.Empty<CityResourceDto>(),
+                Array.Empty<UnitDefinitionDto>(),
+                null));
+
+        // Act
+        var result = await _service.CreateGameAsync(newUserId, command, null, default);
+
+        // Assert
+        var humanParticipant = await _context.Participants
+            .FirstOrDefaultAsync(p => p.GameId == result.Id && p.Kind == "human");
+        humanParticipant.Should().NotBeNull();
+        humanParticipant!.DisplayName.Should().Be("Player");
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WithIdempotencyKey_ShouldReturnCachedResponseIfExists()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var idempotencyKey = "test-key-123";
+        
+        var cachedResponse = new GameCreatedResponse(
+            999,
+            new GameStateDto(
+                new GameStateGameDto(999, 1, 1, false, "active"),
+                new GameStateMapDto(1, "standard_6x8", 1, 8, 6),
+                Array.Empty<ParticipantDto>(),
+                Array.Empty<UnitInStateDto>(),
+                Array.Empty<CityInStateDto>(),
+                Array.Empty<CityTileLinkDto>(),
+                Array.Empty<CityResourceDto>(),
+                Array.Empty<UnitDefinitionDto>(),
+                null));
+
+        _idempotencyStoreMock
+            .Setup(x => x.TryGetAsync<GameCreatedResponse>($"create-game:{newUserId}:{idempotencyKey}", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        // Act
+        var result = await _service.CreateGameAsync(newUserId, command, idempotencyKey, default);
+
+        // Assert
+        result.Should().Be(cachedResponse);
+        result.Id.Should().Be(999);
+        
+        // Verify no new game was created
+        var gameCount = await _context.Games.CountAsync();
+        gameCount.Should().Be(4); // Only the seeded games
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WhenGameLimitReached_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var limitedUserId = Guid.NewGuid();
+        
+        // Create 10 active games for this user (the limit)
+        for (int i = 0; i < 10; i++)
+        {
+            _context.Games.Add(new Game
+            {
+                UserId = limitedUserId,
+                MapId = 1,
+                MapSchemaVersion = 1,
+                TurnNo = 1,
+                Status = "active",
+                StartedAt = DateTimeOffset.UtcNow,
+                RngSeed = 12345 + i,
+                Settings = "{}"
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        var command = new CreateGameCommand("standard_6x8", null, "Player");
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateGameAsync(limitedUserId, command, null, default));
+        
+        exception.Message.Should().Contain("Game limit reached");
+        exception.Message.Should().Contain("10 active games");
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WithInvalidMapCode_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("non_existent_map", null, "Player");
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateGameAsync(newUserId, command, null, default));
+        
+        exception.Message.Should().Contain("Map with code 'non_existent_map' not found");
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WithMapSchemaVersionMismatch_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("old_map", null, "Player");
+        
+        var oldMap = new Map
+        {
+            Id = 102,
+            Code = "old_map",
+            SchemaVersion = 2, // Mismatch with accepted version (1)
+            Width = 8,
+            Height = 6
+        };
+        _context.Maps.Add(oldMap);
+        await _context.SaveChangesAsync();
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateGameAsync(newUserId, command, null, default));
+        
+        exception.Message.Should().Contain("Map schema version mismatch");
+        exception.Message.Should().Contain("Expected version 1");
+        exception.Message.Should().Contain("has version 2");
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_OnSuccess_ShouldStoreInIdempotencyCache()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var idempotencyKey = "test-key-456";
+        
+        var testMap = new Map
+        {
+            Id = 103,
+            Code = "standard_6x8",
+            SchemaVersion = 1,
+            Width = 8,
+            Height = 6
+        };
+        _context.Maps.Add(testMap);
+        await _context.SaveChangesAsync();
+
+        _aiNameGeneratorMock.Setup(x => x.GenerateName(It.IsAny<long>())).Returns("Attila");
+        _gameStateServiceMock.Setup(x => x.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GameStateDto(
+                new GameStateGameDto(1, 1, 1, false, "active"),
+                new GameStateMapDto(103, "standard_6x8", 1, 8, 6),
+                Array.Empty<ParticipantDto>(),
+                Array.Empty<UnitInStateDto>(),
+                Array.Empty<CityInStateDto>(),
+                Array.Empty<CityTileLinkDto>(),
+                Array.Empty<CityResourceDto>(),
+                Array.Empty<UnitDefinitionDto>(),
+                null));
+
+        // Act
+        var result = await _service.CreateGameAsync(newUserId, command, idempotencyKey, default);
+
+        // Assert
+        _idempotencyStoreMock.Verify(
+            x => x.TryStoreAsync(
+                $"create-game:{newUserId}:{idempotencyKey}",
+                It.IsAny<GameCreatedResponse>(),
+                TimeSpan.FromHours(24),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateGameAsync_WhenSeedingFails_ShouldThrowException()
+    {
+        // Arrange
+        var newUserId = Guid.NewGuid();
+        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        
+        var testMap = new Map
+        {
+            Id = 104,
+            Code = "standard_6x8",
+            SchemaVersion = 1,
+            Width = 8,
+            Height = 6
+        };
+        _context.Maps.Add(testMap);
+        await _context.SaveChangesAsync();
+
+        _aiNameGeneratorMock.Setup(x => x.GenerateName(It.IsAny<long>())).Returns("Napoleon");
+        
+        // Setup seeding to fail
+        _gameSeedingServiceMock
+            .Setup(x => x.SeedGameEntitiesAsync(
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<long>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Seeding failed"));
+
+        // Act & Assert - Verify exception is thrown
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateGameAsync(newUserId, command, null, default));
+
+        // Note: Transaction rollback cannot be fully tested with InMemory database provider
+        // as it doesn't support real transactions. In production with a real database,
+        // the transaction would roll back and no data would be persisted.
+    }
+
+    [Fact]
+    public async Task VerifyGameAccessAsync_ForUserOwnedGame_ShouldReturnTrue()
+    {
+        // Arrange - using seeded game with ID 1
+
+        // Act
+        var result = await _service.VerifyGameAccessAsync(_testUserId, 1, default);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task VerifyGameAccessAsync_ForOtherUsersGame_ShouldReturnFalse()
+    {
+        // Arrange - game ID 4 belongs to a different user
+
+        // Act
+        var result = await _service.VerifyGameAccessAsync(_testUserId, 4, default);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task VerifyGameAccessAsync_ForNonExistentGame_ShouldReturnFalse()
+    {
+        // Arrange
+        var nonExistentGameId = 999L;
+
+        // Act
+        var result = await _service.VerifyGameAccessAsync(_testUserId, nonExistentGameId, default);
+
+        // Assert
+        result.Should().BeFalse();
     }
 
     public void Dispose()

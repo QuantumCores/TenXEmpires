@@ -8,8 +8,8 @@ Creates a new game for the authenticated user on a fixed map, initializes partic
 - URL Pattern: /games
 - Parameters:
   - Required: none
-  - Optional: Header `Idempotency-Key` (string)
-- Request Body: `{ mapCode?: string, settings?: object }`
+  - Optional: Header `X-Tenx-Idempotency-Key` (string)
+- Request Body: `{ mapCode?: string, settings?: object, displayName?: string }`
 
 ## 3. Used Types
 - Command Model: `CreateGameCommand`
@@ -29,12 +29,12 @@ Creates a new game for the authenticated user on a fixed map, initializes partic
 - Service `IGameService.CreateGameAsync(command, idempotencyKey)`:
   - Validate map exists by code (or default map) and schema accepted.
   - Create `Game` row with `rng_seed`, `rng_version`, `map_schema_version`, `status='active'`.
-  - Create `Participants`: human (userId) and AI.
+  - Create `Participants`: human (userId, displayName from request or default "Player") and AI (generated name like "Charlemagne", "Cyrus the Great", etc.).
   - Seed deterministic starting `Cities` and `Units` for both sides.
   - Set `active_participant_id` to human; `turn_no=1`, `turn_in_progress=false`.
   - Persist in a single transaction.
   - Build and return `GameStateDto` via `IGameStateService.BuildAsync(gameId)`.
-- Idempotency: if `Idempotency-Key` present, use `IIdempotencyStore` to dedupe and return original response.
+- Idempotency: if `X-Tenx-Idempotency-Key` present, use `IIdempotencyStore` to dedupe and return original response.
 
 ## 6. Security Considerations
 - Authentication required; `Authenticated` policy.

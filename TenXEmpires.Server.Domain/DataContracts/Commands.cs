@@ -8,7 +8,10 @@ namespace TenXEmpires.Server.Domain.DataContracts;
 /// <summary>
 /// Command to create a new <see cref="Game"/>.
 /// </summary>
-public sealed record CreateGameCommand(string? MapCode, JsonDocument? Settings);
+public sealed record CreateGameCommand(
+    string? MapCode,
+    JsonDocument? Settings,
+    string? DisplayName);
 
 /// <summary>
 /// Command to move a <see cref="Unit"/> to a target grid position.
