@@ -190,6 +190,13 @@ public class UnitDefinitionsController : ControllerBase
    - Added `[EnableRateLimiting("PublicApi")]` attribute
    - Updated API explorer settings for versioning
 
+6. **`TenXEmpires.Server/Controllers/MapsController.cs`**
+   - Added new endpoint `GET /v1/maps/{code}` for map metadata
+   - Input validation for `code`
+   - Returns `404` with `{ code: "MAP_NOT_FOUND" }` when absent
+   - ETag support with `If-None-Match` → `304 Not Modified`
+   - Response caching headers set (10 minutes)
+
 ---
 
 ## Testing Results

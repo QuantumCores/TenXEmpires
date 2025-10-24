@@ -18,5 +18,12 @@ public interface ILookupService
     /// </summary>
     /// <returns>An ETag string that represents the current state of unit definitions.</returns>
     Task<string> GetUnitDefinitionsETagAsync();
+
+    /// <summary>
+    /// Gets map metadata by its unique code.
+    /// </summary>
+    /// <param name="code">The unique map code.</param>
+    /// <returns>The map metadata, or null if not found.</returns>
+    Task<MapDto?> GetMapByCodeAsync(string code);
 }
 

@@ -7,6 +7,7 @@ This document describes the production-ready features implemented in the TenX Em
 - [CORS Configuration](#cors-configuration)
 - [API Versioning](#api-versioning)
 - [HTTP Caching](#http-caching)
+- [Maps Endpoint](#maps-endpoint)
 
 ---
 
@@ -278,6 +279,28 @@ The API sets appropriate cache directives:
 2. **Respect `Cache-Control` directives**
 3. **Handle 304 responses** by using cached data
 4. **Check `X-Api-Version`** for version changes
+
+---
+
+## Maps Endpoint
+
+The API exposes a public lookup endpoint for map metadata.
+
+- Method: `GET`
+- Route: `/v1/maps/{code}`
+- Auth: Not required
+- Rate limiting: `PublicApi` policy
+
+Responses:
+- `200 OK` — Returns `MapDto { id, code, schemaVersion, width, height }` and `ETag` header
+- `400 Bad Request` — `{ code: "INVALID_CODE", message: "..." }`
+- `404 Not Found` — `{ code: "MAP_NOT_FOUND", message: "..." }`
+- `304 Not Modified` — when `If-None-Match` matches server ETag
+- `500 Internal Server Error` — `{ code: "INTERNAL_ERROR", message: "..." }`
+
+Notes:
+- Uses `IMemoryCache` for lookup caching by code (10 minutes)
+- Includes ETag/conditional responses (`If-None-Match` → `304 Not Modified`)
 
 ---
 

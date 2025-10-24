@@ -17,7 +17,7 @@ Cookies are small text files stored on your device by your browser. We use only 
   - Expiry: short‑lived
 
 - Session/state cookie (e.g., `tenx.sid`)
-  - Purpose: maintain essential state across requests (rate limiting, session continuity)
+  - Purpose: maintain essential state across requests (session continuity)
   - Expiry: session
 
 - Preference cookie (optional, e.g., `tenx.ui`)

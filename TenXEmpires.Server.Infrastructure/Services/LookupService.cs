@@ -20,6 +20,7 @@ public class LookupService : ILookupService
     
     private const string UnitDefinitionsCacheKey = "Lookup.UnitDefinitions";
     private const string UnitDefinitionsETagCacheKey = "Lookup.UnitDefinitions.ETag";
+    private const string MapByCodeCacheKeyPrefix = "Lookup.Map.";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
 
     public LookupService(
@@ -152,6 +153,65 @@ public class LookupService : ILookupService
         var etag = Convert.ToBase64String(hash);
 
         return $"\"{etag}\""; // Wrap in quotes per HTTP spec
+    }
+
+    /// <summary>
+    /// Gets map metadata by its unique code with caching.
+    /// </summary>
+    public async Task<MapDto?> GetMapByCodeAsync(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            throw new ArgumentException("Code must be provided", nameof(code));
+        }
+
+        try
+        {
+            var cacheKey = MapByCodeCacheKeyPrefix + code;
+
+            if (_cache.TryGetValue<MapDto?>(cacheKey, out var cached))
+            {
+                _logger.LogDebug("Map {Code} retrieved from cache", code);
+                return cached!; // may be null if not found cached
+            }
+
+            _logger.LogDebug("Fetching map {Code} from database", code);
+
+            // Query database with AsNoTracking and project directly to DTO
+            var map = await _context.Maps
+                .AsNoTracking()
+                .Where(m => m.Code == code)
+                .Select(m => new MapDto(
+                    m.Id,
+                    m.Code,
+                    m.SchemaVersion,
+                    m.Width,
+                    m.Height))
+                .FirstOrDefaultAsync();
+
+            // Cache the result (including null to avoid repeated misses) with short TTL
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheExpiration
+            };
+            _cache.Set(cacheKey, map, cacheOptions);
+
+            if (map is null)
+            {
+                _logger.LogInformation("Map {Code} not found", code);
+            }
+            else
+            {
+                _logger.LogInformation("Map {Code} retrieved with Id {Id}", code, map.Id);
+            }
+
+            return map;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch map by code {Code}. EventId: {EventId}", code, "Lookup.Maps.GetByCodeFailed");
+            throw;
+        }
     }
 }
 
