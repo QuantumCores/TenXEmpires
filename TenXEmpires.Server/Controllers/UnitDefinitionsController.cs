@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
+using TenXEmpires.Server.Examples;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -64,6 +66,7 @@ public class UnitDefinitionsController : ControllerBase
     /// <response code="500">Internal server error occurred.</response>
     [HttpGet(Name = "GetUnitDefinitions")]
     [ProducesResponseType(typeof(ItemsResult<UnitDefinitionDto>), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(UnitDefinitionsDtoExample))]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any, VaryByHeader = "Accept")]

@@ -1,9 +1,11 @@
 using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure;
 using TenXEmpires.Server.Infrastructure.Data;
+using TenXEmpires.Server.Infrastructure.Middleware;
 using TenXEmpires.Server.Infrastructure.Services;
 
 namespace TenXEmpires.Server
@@ -23,6 +25,7 @@ namespace TenXEmpires.Server
 
             // Register application services
             builder.Services.AddScoped<ILookupService, LookupService>();
+            builder.Services.AddScoped<IGameService, GameService>();
 
             // Add memory cache for caching lookup data
             builder.Services.AddMemoryCache();
@@ -187,9 +190,19 @@ namespace TenXEmpires.Server
                 c.TagActionsBy(api => new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"] ?? "Default" });
                 c.DocInclusionPredicate((name, api) => true);
 
-                // Support API versioning in Swagger
-                c.OperationFilter<SwaggerDefaultValues>();
+                // Enable example filters for rich API documentation
+                c.ExampleFilters();
             });
+
+            // Register example providers
+            builder.Services.AddSwaggerExamplesFromAssemblyOf<Program>();
+
+            // Register OpenAPI export services (for automatic YAML generation)
+            builder.Services.AddSingleton<OpenApiExporter>();
+            if (builder.Environment.IsDevelopment())
+            {
+                builder.Services.AddHostedService<OpenApiExportHostedService>();
+            }
 
             var app = builder.Build();
 
@@ -209,6 +222,9 @@ namespace TenXEmpires.Server
             app.UseCors("DefaultCorsPolicy");
 
             app.UseAuthorization();
+
+            // Enable RLS context (must be after UseAuthorization)
+            app.UseRlsContext();
 
             // Enable rate limiting
             app.UseRateLimiter();

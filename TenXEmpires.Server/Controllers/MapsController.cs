@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
+using TenXEmpires.Server.Examples;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -56,6 +58,7 @@ public class MapsController : ControllerBase
     /// <response code="500">Internal server error occurred.</response>
     [HttpGet("{code}", Name = "GetMapByCode")]
     [ProducesResponseType(typeof(MapDto), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(MapDtoExample))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
@@ -161,6 +164,7 @@ public class MapsController : ControllerBase
     /// <response code="500">Internal server error occurred.</response>
     [HttpGet("{code}/tiles", Name = "GetMapTiles")]
     [ProducesResponseType(typeof(PagedResult<MapTileDto>), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(PagedMapTileDtoExample))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
