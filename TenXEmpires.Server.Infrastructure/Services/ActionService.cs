@@ -5,6 +5,7 @@ using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Domain.Utilities;
 using TenXEmpires.Server.Infrastructure.Data;
+using TenXEmpires.Server.Domain.Entities;
 
 namespace TenXEmpires.Server.Infrastructure.Services;
 
@@ -259,6 +260,249 @@ public class ActionService : IActionService
                 command.UnitId,
                 gameId);
             
+            throw;
+        }
+    }
+
+    public async Task<ActionStateResponse> AttackAsync(
+        Guid userId,
+        long gameId,
+        AttackUnitCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        // Check idempotency if key provided
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.AttackUnitIdempotency(gameId, idempotencyKey);
+            var cachedResponse = await _idempotencyStore.TryGetAsync<ActionStateResponse>(
+                cachedKey,
+                cancellationToken);
+
+            if (cachedResponse != null)
+            {
+                _logger.LogInformation(
+                    "Returning cached attack response for idempotency key {IdempotencyKey} (game {GameId}, attacker {AttackerId}, target {TargetId})",
+                    idempotencyKey,
+                    gameId,
+                    command.AttackerUnitId,
+                    command.TargetUnitId);
+                return cachedResponse;
+            }
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable,
+            cancellationToken);
+
+        try
+        {
+            // Load game and active participant
+            var game = await _context.Games
+                .Include(g => g.Map)
+                .Include(g => g.ActiveParticipant)
+                .FirstOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+            if (game == null)
+            {
+                throw new UnauthorizedAccessException(
+                    $"Game {gameId} not found or you don't have access to it.");
+            }
+
+            if (game.ActiveParticipant == null)
+            {
+                throw new InvalidOperationException("No active participant found for this game.");
+            }
+
+            if (game.ActiveParticipant.Kind != ParticipantKind.Human || game.ActiveParticipant.UserId != userId)
+            {
+                throw new InvalidOperationException("NOT_PLAYER_TURN: It is not your turn to act.");
+            }
+
+            if (game.TurnInProgress)
+            {
+                throw new InvalidOperationException(
+                    "A turn action is already in progress. Please wait for it to complete.");
+            }
+
+            // Guard
+            game.TurnInProgress = true;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                // Load attacker and target units with types and tiles
+                var attacker = await _context.Units
+                    .Include(u => u.Type)
+                    .Include(u => u.Tile)
+                    .FirstOrDefaultAsync(u => u.Id == command.AttackerUnitId && u.GameId == gameId, cancellationToken);
+
+                if (attacker == null)
+                {
+                    throw new InvalidOperationException($"UNIT_NOT_FOUND: Attacker unit {command.AttackerUnitId} not found in game {gameId}.");
+                }
+
+                if (attacker.ParticipantId != game.ActiveParticipantId)
+                {
+                    throw new InvalidOperationException("This unit does not belong to the active participant.");
+                }
+
+                if (attacker.HasActed)
+                {
+                    throw new InvalidOperationException("NO_ACTIONS_LEFT: This unit has already acted this turn.");
+                }
+
+                var target = await _context.Units
+                    .Include(u => u.Type)
+                    .Include(u => u.Tile)
+                    .FirstOrDefaultAsync(u => u.Id == command.TargetUnitId && u.GameId == gameId, cancellationToken);
+
+                if (target == null)
+                {
+                    throw new InvalidOperationException($"UNIT_NOT_FOUND: Target unit {command.TargetUnitId} not found in game {gameId}.");
+                }
+
+                if (target.ParticipantId == attacker.ParticipantId)
+                {
+                    throw new ArgumentException("INVALID_TARGET: Target must be an enemy unit.");
+                }
+
+                // Range validation using hex distance
+                var attackerCube = Domain.Utilities.HexagonalGrid.ConvertOddrToCube(attacker.Tile.Col, attacker.Tile.Row);
+                var targetCube = Domain.Utilities.HexagonalGrid.ConvertOddrToCube(target.Tile.Col, target.Tile.Row);
+                var distance = Domain.Utilities.HexagonalGrid.GetCubeDistance(attackerCube, targetCube);
+
+                if (!attacker.Type.IsRanged)
+                {
+                    // Melee must be adjacent
+                    if (distance != 1)
+                    {
+                        throw new ArgumentException("OUT_OF_RANGE: Melee attacks require adjacency.");
+                    }
+                }
+                else
+                {
+                    var min = attacker.Type.RangeMin;
+                    var max = attacker.Type.RangeMax;
+                    if (distance < min || distance > max)
+                    {
+                        throw new ArgumentException($"OUT_OF_RANGE: Ranged attack distance {distance} not in [{min},{max}].");
+                    }
+                }
+
+                // Compute damage using HP-adapted stats:
+                // effectiveAtk = Attack * (attackerHp / attackerMaxHp)
+                // effectiveDef = Defence * (defenderHp / defenderMaxHp)
+                // DMG = effectiveAtk * (1 + (effectiveAtk - effectiveDef)/effectiveDef) * 0.5
+                static int ComputeDamage(
+                    int atkStat,
+                    int defStat,
+                    int attackerHp,
+                    int attackerMaxHp,
+                    int defenderHp,
+                    int defenderMaxHp)
+                {
+                    var atkRatio = attackerMaxHp > 0 ? Math.Clamp(attackerHp / (double)attackerMaxHp, 0.0, 1.0) : 1.0;
+                    var defRatio = defenderMaxHp > 0 ? Math.Clamp(defenderHp / (double)defenderMaxHp, 0.0, 1.0) : 1.0;
+                    var atk = atkStat * atkRatio;
+                    var def = defStat * defRatio;
+                    if (def <= 0) def = 1; // safety
+                    var value = (atk * (1.0 + (atk - def) / def) * 0.5);
+                    var rounded = (int)Math.Round(value, 0, MidpointRounding.AwayFromZero);
+                    return Math.Max(1, rounded);
+                }
+
+                var attackerDamage = ComputeDamage(
+                    attacker.Type.Attack,
+                    target.Type.Defence,
+                    attacker.Hp,
+                    attacker.Type.Health,
+                    target.Hp,
+                    target.Type.Health);
+
+                // Apply attacker damage first
+                target.Hp -= attackerDamage;
+                target.UpdatedAt = DateTimeOffset.UtcNow;
+
+                if (target.Hp > 0)
+                {
+                    // Counterattack only if defender survives and is eligible (melee defender; attacker is melee)
+                    var defenderCanCounter = !target.Type.IsRanged; // ranged defenders never counterattack
+                    var attackerReceivesCounter = !attacker.Type.IsRanged; // ranged attackers never receive counterattack
+
+                    if (defenderCanCounter && attackerReceivesCounter)
+                    {
+                        var counterDamage = ComputeDamage(
+                            target.Type.Attack,
+                            attacker.Type.Defence,
+                            target.Hp,
+                            target.Type.Health,
+                            attacker.Hp,
+                            attacker.Type.Health);
+                        attacker.Hp -= counterDamage;
+                        attacker.UpdatedAt = DateTimeOffset.UtcNow;
+                    }
+                }
+
+                // Note: No special tie handling; if both reach <= 0 HP, both are removed.
+
+                // Remove destroyed units
+                if (target.Hp <= 0)
+                {
+                    _context.Units.Remove(target);
+                }
+
+                if (attacker.Hp <= 0)
+                {
+                    _context.Units.Remove(attacker);
+                }
+
+                // Mark attacker as acted
+                if (_context.Entry(attacker).State != EntityState.Deleted)
+                {
+                    attacker.HasActed = true;
+                    attacker.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "Attack resolved in game {GameId}: attacker {AttackerId} -> target {TargetId}, dmg={Damage}, dist={Distance}",
+                    gameId, attacker.Id, target.Id, attackerDamage, distance);
+
+                // Clear guard
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+
+                var gameState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+                var response = new ActionStateResponse(gameState);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cacheKey = CacheKeys.AttackUnitIdempotency(gameId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(cacheKey, response, TimeSpan.FromHours(1), cancellationToken);
+                }
+
+                return response;
+            }
+            catch
+            {
+                // Clear guard on error
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError(ex,
+                "Failed to execute attack {AttackerId}->{TargetId} in game {GameId}",
+                command.AttackerUnitId,
+                command.TargetUnitId,
+                gameId);
             throw;
         }
     }

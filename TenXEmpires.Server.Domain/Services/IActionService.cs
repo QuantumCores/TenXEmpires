@@ -25,5 +25,25 @@ public interface IActionService
         MoveUnitCommand command,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes an attack from one unit to another with deterministic damage.
+    /// Ranged attackers never receive counterattacks.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="command">The attack command with attacker and target IDs.</param>
+    /// <param name="idempotencyKey">Optional idempotency key for safe retries.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated game state after the attack.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when attack is invalid (not player's turn, unit not found, already acted).</exception>
+    /// <exception cref="ArgumentException">Thrown when the attack is illegal (out of range, invalid target).</exception>
+    /// <exception cref="UnauthorizedAccessException">Thrown when user doesn't have access to the game.</exception>
+    Task<ActionStateResponse> AttackAsync(
+        Guid userId,
+        long gameId,
+        AttackUnitCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

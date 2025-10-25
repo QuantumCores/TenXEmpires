@@ -24,6 +24,7 @@ public class GamesControllerTests
     private readonly Mock<IGameService> _gameServiceMock;
     private readonly Mock<IGameStateService> _gameStateServiceMock;
     private readonly Mock<ITurnService> _turnServiceMock;
+    private readonly Mock<IActionService> _actionServiceMock;
     private readonly Mock<ILogger<GamesController>> _loggerMock;
     private readonly GamesController _controller;
     private readonly Guid _testUserId;
@@ -33,6 +34,7 @@ public class GamesControllerTests
         _gameServiceMock = new Mock<IGameService>();
         _gameStateServiceMock = new Mock<IGameStateService>();
         _turnServiceMock = new Mock<ITurnService>();
+        _actionServiceMock = new Mock<IActionService>();
         _loggerMock = new Mock<ILogger<GamesController>>();
         _testUserId = Guid.NewGuid();
         
@@ -40,6 +42,7 @@ public class GamesControllerTests
             _gameServiceMock.Object,
             _gameStateServiceMock.Object,
             _turnServiceMock.Object,
+            _actionServiceMock.Object,
             _loggerMock.Object);
 
         // Setup authenticated user context
@@ -267,6 +270,8 @@ public class GamesControllerTests
         var controllerWithoutAuth = new GamesController(
             _gameServiceMock.Object,
             _gameStateServiceMock.Object,
+            _turnServiceMock.Object,
+            _actionServiceMock.Object,
             _loggerMock.Object)
         {
             ControllerContext = new ControllerContext
@@ -298,6 +303,8 @@ public class GamesControllerTests
         var controllerWithInvalidClaim = new GamesController(
             _gameServiceMock.Object,
             _gameStateServiceMock.Object,
+            _turnServiceMock.Object,
+            _actionServiceMock.Object,
             _loggerMock.Object)
         {
             ControllerContext = new ControllerContext

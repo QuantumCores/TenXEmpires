@@ -34,8 +34,8 @@ public static class CacheKeys
         => $"move-unit:{gameId}:{idempotencyKey}";
 
     // Future idempotency keys for other operations can be added here as needed:
-    // public static string AttackUnitIdempotency(long gameId, string idempotencyKey)
-    //     => $"attack-unit:{gameId}:{idempotencyKey}";
+    public static string AttackUnitIdempotency(long gameId, string idempotencyKey)
+        => $"attack-unit:{gameId}:{idempotencyKey}";
     //
     // public static string EndTurnIdempotency(Guid userId, long gameId, string idempotencyKey)
     //     => $"end-turn:{userId}:{gameId}:{idempotencyKey}";

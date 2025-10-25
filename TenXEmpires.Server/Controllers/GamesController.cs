@@ -835,5 +835,114 @@ public class GamesController : ControllerBase
                 });
         }
     }
+
+    /// <summary>
+    /// Executes an attack action from one unit against a target unit using deterministic damage rules.
+    /// Ranged attackers never receive a counterattack. Returns updated game state.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">The attack command with attacker and target unit IDs.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Validations:
+    /// - It must be the human player's turn
+    /// - Attacker must belong to the active participant and have not acted
+    /// - Target must be an enemy unit and be in range (melee: adjacent; ranged: within [min,max])
+    /// - Ranged units never receive counterattacks
+    /// 
+    /// Returns 409 for NOT_PLAYER_TURN or NO_ACTIONS_LEFT, 422 for OUT_OF_RANGE or INVALID_TARGET.
+    /// </remarks>
+    /// <response code="200">Returns the updated game state after the attack.</response>
+    /// <response code="400">Bad request due to invalid payload.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - unit does not exist or user doesn't have access.</response>
+    /// <response code="409">Conflict - NOT_PLAYER_TURN or NO_ACTIONS_LEFT.</response>
+    /// <response code="422">Unprocessable Entity - OUT_OF_RANGE or INVALID_TARGET.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("{id:long}/actions/attack", Name = "AttackUnit")]
+    [ValidateAntiForgeryToken]
+    [SwaggerRequestExample(typeof(AttackUnitCommand), typeof(AttackUnitCommandExample))]
+    [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ActionStateResponseExample))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ActionStateResponse>> AttackUnit(
+        long id,
+        [FromBody] AttackUnitCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid request body for AttackUnit on game {GameId}", id);
+                return BadRequest(new
+                {
+                    code = "INVALID_INPUT",
+                    message = "One or more validation errors occurred.",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()
+                });
+            }
+
+            var userId = User.GetUserId();
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            _logger.LogDebug("User {UserId} attempting attack in game {GameId} (attacker {AttackerId} -> target {TargetId})",
+                userId, id, command.AttackerUnitId, command.TargetUnitId);
+
+            var response = await _actionService.AttackAsync(userId, id, command, idempotencyKey, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("NOT_PLAYER_TURN"))
+        {
+            _logger.LogWarning(ex, "Not player's turn for game {GameId}", id);
+            return Conflict(new { code = "NOT_PLAYER_TURN", message = "It is not your turn to act." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("NO_ACTIONS_LEFT"))
+        {
+            _logger.LogWarning(ex, "Unit has no actions left in game {GameId}", id);
+            return Conflict(new { code = "NO_ACTIONS_LEFT", message = "This unit has already acted this turn." });
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("OUT_OF_RANGE"))
+        {
+            _logger.LogWarning(ex, "Attack out of range in game {GameId}", id);
+            return UnprocessableEntity(new { code = "OUT_OF_RANGE", message = ex.Message });
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("INVALID_TARGET"))
+        {
+            _logger.LogWarning(ex, "Invalid attack target in game {GameId}", id);
+            return UnprocessableEntity(new { code = "INVALID_TARGET", message = ex.Message });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found") || ex.Message.Contains("UNIT_NOT_FOUND"))
+        {
+            _logger.LogWarning(ex, "Unit not found or doesn't belong to player in game {GameId}", id);
+            return NotFound(new { code = "UNIT_NOT_FOUND", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for AttackUnit request on game {GameId}", id);
+            return BadRequest(new { code = "INVALID_INPUT", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to execute attack in game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { code = "INTERNAL_ERROR", message = "An error occurred while processing the attack." });
+        }
+    }
 }
 

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Domain.DataContracts;
@@ -28,6 +29,7 @@ public class ActionServiceTests : IDisposable
         // Setup in-memory database
         var options = new DbContextOptionsBuilder<TenXDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         _context = new TenXDbContext(options);
@@ -280,8 +282,8 @@ public class ActionServiceTests : IDisposable
     public async Task MoveUnitAsync_OutOfRange_ShouldThrowArgumentException()
     {
         // Arrange
-        // Try to move unit 1 from (0,0) to (3,3) - too far (warrior has 2 move points)
-        var command = new MoveUnitCommand(1, new GridPosition(3, 3));
+        // Try to move unit 1 from (0,0) to (3,0) - too far (warrior has 2 move points) and tile is empty
+        var command = new MoveUnitCommand(1, new GridPosition(3, 0));
 
         // Act & Assert
         var act = async () => await _service.MoveUnitAsync(_testUserId, _testGameId, command, null, CancellationToken.None);
