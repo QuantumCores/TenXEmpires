@@ -107,10 +107,14 @@ namespace TenX.DbMigrate
         private static Dictionary<string, string> ParseArgs(string[] args)
         {
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < args.Length; i++)
+            for (var i = 0; i < args.Length; i++)
             {
                 var a = args[i];
-                if (!a.StartsWith("-")) continue;
+                if (!a.StartsWith("-"))
+                {
+                    continue;
+                }
+
                 if (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
                 {
                     d[a] = args[i + 1];
@@ -127,7 +131,9 @@ namespace TenX.DbMigrate
         private static string ResolveConnectionString(Dictionary<string, string> argDict)
         {
             if (argDict.TryGetValue("--connection", out var conn) && !string.IsNullOrWhiteSpace(conn))
+            { 
                 return conn;
+            }
 
             var envConn = Environment.GetEnvironmentVariable("TENX_DB_CONNECTION")
                         ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
@@ -137,7 +143,11 @@ namespace TenX.DbMigrate
 
         private static string? ParseDatabaseUrl(string? url)
         {
-            if (string.IsNullOrWhiteSpace(url)) return null;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return null;
+            }
+
             // Expect postgres://user:pass@host:port/db?sslmode=require
             try
             {
@@ -162,9 +172,17 @@ namespace TenX.DbMigrate
         private static Dictionary<string, string> ParseQuery(string? query)
         {
             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(query)) return dict;
+            if (string.IsNullOrEmpty(query))
+            {
+                return dict;
+            }
+
             var q = query;
-            if (q.StartsWith("?")) q = q.Substring(1);
+            if (q.StartsWith("?"))
+            {
+                q = q.Substring(1);
+            }
+
             foreach (var pair in q.Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
                 var kv = pair.Split('=', 2);
