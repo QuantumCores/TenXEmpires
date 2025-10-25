@@ -266,4 +266,102 @@ public class SaveService : ISaveService
             throw;
         }
     }
+
+    public async Task<bool> DeleteManualAsync(
+        long gameId,
+        int slot,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (slot < 1 || slot > 3)
+        {
+            throw new ArgumentException("Invalid slot. Slot must be between 1 and 3.");
+        }
+
+        // Check idempotency if key provided
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.DeleteManualSaveIdempotency(gameId, slot, idempotencyKey);
+            var cachedResponse = await _idempotencyStore.TryGetAsync<string>(cachedKey, cancellationToken);
+            if (cachedResponse is not null)
+            {
+                _logger.LogInformation(
+                    "Returning cached manual save delete response for idempotency key {IdempotencyKey} (game {GameId}, slot {Slot})",
+                    idempotencyKey,
+                    gameId,
+                    slot);
+                return cachedResponse == "deleted";
+            }
+        }
+
+        // Attempt to delete the manual save
+        // Try set-based delete when available, else fall back to tracked deletion
+        try
+        {
+            var deletedCount = await _context.Saves
+                .Where(s => s.GameId == gameId && s.Kind == "manual" && s.Slot == slot)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            if (deletedCount == 0)
+            {
+                _logger.LogWarning("Manual save not found for game {GameId} slot {Slot}", gameId, slot);
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cachedKey = CacheKeys.DeleteManualSaveIdempotency(gameId, slot, idempotencyKey!);
+                    await _idempotencyStore.TryStoreAsync(cachedKey, "not_found", TimeSpan.FromHours(24), cancellationToken);
+                }
+                return false;
+            }
+        }
+        catch (NotSupportedException)
+        {
+            var entity = await _context.Saves
+                .Where(s => s.GameId == gameId && s.Kind == "manual" && s.Slot == slot)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (entity is null)
+            {
+                _logger.LogWarning("Manual save not found for game {GameId} slot {Slot}", gameId, slot);
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cachedKey = CacheKeys.DeleteManualSaveIdempotency(gameId, slot, idempotencyKey!);
+                    await _idempotencyStore.TryStoreAsync(cachedKey, "not_found", TimeSpan.FromHours(24), cancellationToken);
+                }
+                return false;
+            }
+
+            _context.Saves.Remove(entity);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (InvalidOperationException)
+        {
+            var entity = await _context.Saves
+                .Where(s => s.GameId == gameId && s.Kind == "manual" && s.Slot == slot)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (entity is null)
+            {
+                _logger.LogWarning("Manual save not found for game {GameId} slot {Slot}", gameId, slot);
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cachedKey = CacheKeys.DeleteManualSaveIdempotency(gameId, slot, idempotencyKey!);
+                    await _idempotencyStore.TryStoreAsync(cachedKey, "not_found", TimeSpan.FromHours(24), cancellationToken);
+                }
+                return false;
+            }
+
+            _context.Saves.Remove(entity);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        _logger.LogInformation("Deleted manual save slot {Slot} for game {GameId}", slot, gameId);
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.DeleteManualSaveIdempotency(gameId, slot, idempotencyKey);
+            await _idempotencyStore.TryStoreAsync(cachedKey, "deleted", TimeSpan.FromHours(24), cancellationToken);
+        }
+
+        return true;
+    }
 }

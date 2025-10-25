@@ -83,9 +83,12 @@ public class SavesController : ControllerBase
     [HttpGet("{id:long}/saves", Name = "ListGameSaves")]
     [ProducesResponseType(typeof(GameSavesListDto), StatusCodes.Status200OK)]
     [SwaggerResponseExample(StatusCodes.Status200OK, typeof(GameSavesListDtoExample))]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(ApiErrorUnauthorizedExample))]
+    [SwaggerResponseExample(StatusCodes.Status404NotFound, typeof(ApiErrorGameNotFoundExample))]
+    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(ApiErrorInternalExample))]
     public async Task<ActionResult<GameSavesListDto>> ListGameSaves(
         long id,
         CancellationToken cancellationToken = default)
@@ -160,11 +163,16 @@ public class SavesController : ControllerBase
     [SwaggerRequestExample(typeof(CreateManualSaveCommand), typeof(CreateManualSaveCommandExample))]
     [ProducesResponseType(typeof(SaveCreatedDto), StatusCodes.Status201Created)]
     [SwaggerResponseExample(StatusCodes.Status201Created, typeof(SaveCreatedDtoExample))]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(ApiErrorInvalidInputExample))]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(ApiErrorUnauthorizedExample))]
+    [SwaggerResponseExample(StatusCodes.Status404NotFound, typeof(ApiErrorGameNotFoundExample))]
+    [SwaggerResponseExample(StatusCodes.Status409Conflict, typeof(ApiErrorSaveConflictExample))]
+    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(ApiErrorInternalExample))]
     public async Task<ActionResult<SaveCreatedDto>> CreateManualSave(
         long id,
         [FromBody] CreateManualSaveCommand command,
@@ -231,6 +239,85 @@ public class SavesController : ControllerBase
         {
             _logger.LogError(ex, "Failed to create manual save for game {GameId}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred while creating the manual save." });
+        }
+    }
+
+    /// <summary>
+    /// Deletes a manual save in the specified slot (1..3) for a game.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="slot">The manual save slot to delete (1..3).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Deletes the manual save for the given slot if it exists and the authenticated user has access
+    /// to the game. Returns 204 No Content on success. Returns 404 if the game or the manual save
+    /// in the specified slot does not exist or is not accessible.
+    ///
+    /// Supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.
+    /// </remarks>
+    /// <response code="204">Manual save deleted successfully.</response>
+    /// <response code="400">Bad request due to invalid slot.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - game or manual save does not exist or user doesn't have access.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpDelete("{id:long}/saves/manual/{slot:int}", Name = "DeleteManualSave")]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(ApiErrorInvalidSlotExample))]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(ApiErrorUnauthorizedExample))]
+    [SwaggerResponseExample(StatusCodes.Status404NotFound, typeof(ApiErrorManualSaveNotFoundExample))]
+    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(ApiErrorInternalExample))]
+    public async Task<IActionResult> DeleteManualSave(
+        long id,
+        int slot,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (slot < 1 || slot > 3)
+            {
+                return BadRequest(new { code = "INVALID_SLOT", message = "Slot must be between 1 and 3." });
+            }
+
+            var userId = User.GetUserId();
+
+            // Verify the game exists and belongs to the user
+            var gameExists = await _gameService.VerifyGameAccessAsync(userId, id, cancellationToken);
+            if (!gameExists)
+            {
+                _logger.LogWarning("Game {GameId} not found or user {UserId} doesn't have access", id, userId);
+                return NotFound(new { code = "GAME_NOT_FOUND", message = "Game not found or you don't have access to it." });
+            }
+
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            var deleted = await _saveService.DeleteManualAsync(id, slot, idempotencyKey, cancellationToken);
+            if (!deleted)
+            {
+                _logger.LogWarning("Manual save not found for game {GameId} slot {Slot}", id, slot);
+                return NotFound(new { code = "SAVE_NOT_FOUND", message = "Manual save not found in the specified slot." });
+            }
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for DeleteManualSave on game {GameId}", id);
+            return BadRequest(new { code = "INVALID_INPUT", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete manual save for game {GameId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred while deleting the manual save." });
         }
     }
 }

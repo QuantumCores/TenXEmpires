@@ -15,5 +15,3 @@ public class CreateManualSaveCommandExample : IExamplesProvider<CreateManualSave
             Name: "Before assault on capital");
     }
 }
-
-

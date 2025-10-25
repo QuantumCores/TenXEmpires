@@ -483,15 +483,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
         404:
           description: Not Found - game does not exist or user doesn't have access.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: GAME_NOT_FOUND
+                message: Game not found or you don't have access to it.
         500:
           description: Internal server error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while deleting the manual save.
   /v1/games/{id}/turns:
     get:
       tags:
@@ -1320,15 +1333,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
         404:
           description: Not Found - game does not exist or user doesn't have access.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: GAME_NOT_FOUND
+                message: Game not found or you don't have access to it.
         500:
           description: Internal server error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while deleting the manual save.
   /v1/games/{id}/saves/manual:
     post:
       tags:
@@ -1389,27 +1415,107 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INVALID_INPUT
+                message: One or more validation errors occurred.
         401:
           description: Unauthorized - user is not authenticated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
         404:
           description: Not Found - game does not exist or user doesn't have access.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: GAME_NOT_FOUND
+                message: Game not found or you don't have access to it.
         409:
           description: Conflict - SAVE_CONFLICT on upsert failure.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProblemDetails'
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: SAVE_CONFLICT
+                message: Could not create manual save due to a conflict. Please retry.
         500:
           description: Internal server error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while deleting the manual save.
+  /v1/games/{id}/saves/manual/{slot}:
+    delete:
+      tags:
+      - v1
+      summary: Deletes a manual save in the specified slot (1..3) for a game.
+      description: "Deletes the manual save for the given slot if it exists and the authenticated user has access\r\nto the game. Returns 204 No Content on success. Returns 404 if the game or the manual save\r\nin the specified slot does not exist or is not accessible.\r\n            \r\nSupports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries."
+      operationId: DeleteManualSave
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: slot
+        in: path
+        description: The manual save slot to delete (1..3).
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        204:
+          description: Manual save deleted successfully.
+        400:
+          description: Bad request due to invalid slot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INVALID_SLOT
+                message: Slot must be between 1 and 3.
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        404:
+          description: Not Found - game or manual save does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: SAVE_NOT_FOUND
+                message: Manual save not found in the specified slot.
+        500:
+          description: Internal server error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while deleting the manual save.
   /v1/unit-definitions:
     get:
       tags:
@@ -1524,6 +1630,16 @@ components:
       properties:
         state:
           $ref: '#/components/schemas/GameStateDto'
+      additionalProperties: false
+    ApiErrorDto:
+      type: object
+      properties:
+        code:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
       additionalProperties: false
     AttackUnitCommand:
       type: object

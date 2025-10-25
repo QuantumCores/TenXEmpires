@@ -18,5 +18,3 @@ public class SaveCreatedDtoExample : IExamplesProvider<SaveCreatedDto>
             Name: "Before assault on capital");
     }
 }
-
-

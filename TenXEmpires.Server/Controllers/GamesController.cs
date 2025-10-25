@@ -494,9 +494,12 @@ public class GamesController : ControllerBase
     [HttpDelete("{id:long}", Name = "DeleteGame")]
     [ValidateAntiForgeryToken]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(ApiErrorUnauthorizedExample))]
+    [SwaggerResponseExample(StatusCodes.Status404NotFound, typeof(ApiErrorGameNotFoundExample))]
+    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(ApiErrorInternalExample))]
     public async Task<IActionResult> DeleteGame(
         long id,
         CancellationToken cancellationToken = default)

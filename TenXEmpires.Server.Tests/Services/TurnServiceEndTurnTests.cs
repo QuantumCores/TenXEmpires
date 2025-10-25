@@ -75,7 +75,9 @@ public class TurnServiceEndTurnTests
         var gameStateLogger = Mock.Of<ILogger<GameStateService>>();
         var gameStateSvc = new GameStateService(context, gameStateLogger);
         var saveLogger = Mock.Of<ILogger<SaveService>>();
-        var saveSvc = new SaveService(context, saveLogger);
+        var idemp = new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
+        var gs = new GameStateService(context, Mock.Of<ILogger<GameStateService>>());
+        var saveSvc = new SaveService(context, saveLogger, idemp, gs);
         var idempStore = new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
         var settings = Options.Create(new GameSettings { CityRegenNormal = 4, CityRegenUnderSiege = 2 });
         var turnLogger = Mock.Of<ILogger<TurnService>>();

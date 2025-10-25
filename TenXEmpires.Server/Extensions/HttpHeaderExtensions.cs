@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using TenXEmpires.Server.Domain.Constants;
 
 namespace TenXEmpires.Server.Extensions;
@@ -16,16 +15,25 @@ public static class HttpHeaderExtensions
     public static bool IsNotModified(this HttpRequest request, string currentEtag)
     {
         var ifNoneMatch = request.Headers[StandardHeaders.IfNoneMatch].ToString();
-        if (string.IsNullOrWhiteSpace(ifNoneMatch)) return false;
+        if (string.IsNullOrWhiteSpace(ifNoneMatch))
+        {
+            return false;
+        }
 
         var values = ifNoneMatch
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(v => v.Trim())
             .ToArray();
 
-        if (values.Length == 0) return false;
+        if (values.Length == 0)
+        {
+            return false;
+        }
 
-        if (values.Any(v => v == "*")) return true;
+        if (values.Any(v => v == "*"))
+        {
+            return true;
+        }
 
         // Normalize possible weak validators
         static string Normalize(string v) => v.StartsWith("W/\"") ? v[2..] : v;
@@ -53,4 +61,3 @@ public static class HttpHeaderExtensions
         return $"\"g:{gameId}:t:{turnNo}:ts:{ts}\"";
     }
 }
-

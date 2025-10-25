@@ -58,8 +58,8 @@ public class AiTurnSummaryTests
 
         var gsLogger = Mock.Of<ILogger<GameStateService>>();
         var gs = new GameStateService(context, gsLogger);
-        var saveSvc = new SaveService(context, Mock.Of<ILogger<SaveService>>());
         var idemp = new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
+        var saveSvc = new SaveService(context, Mock.Of<ILogger<SaveService>>(), idemp, gs);
         var settings = Options.Create(new GameSettings());
         var turnSvc = new TurnService(context, gs, saveSvc, idemp, settings, Mock.Of<ILogger<TurnService>>());
 

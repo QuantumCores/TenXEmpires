@@ -52,5 +52,18 @@ public interface ISaveService
         CreateManualSaveCommand command,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
-}
 
+    /// <summary>
+    /// Deletes a manual save in the specified slot for the given game.
+    /// Returns true if a save was deleted; false if not found.
+    /// </summary>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="slot">The manual save slot (1..3).</param>
+    /// <param name="idempotencyKey">Optional idempotency key to safely retry requests.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<bool> DeleteManualAsync(
+        long gameId,
+        int slot,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
+}
