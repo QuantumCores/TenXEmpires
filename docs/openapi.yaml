@@ -1516,6 +1516,214 @@ paths:
               example:
                 code: INTERNAL_ERROR
                 message: An error occurred while deleting the manual save.
+  /v1/saves/{saveId}/load:
+    post:
+      tags:
+      - v1
+      summary: Loads a save into its game, replacing current state with the saved snapshot.
+      description: "Loads a save into its game, replacing current state with the saved snapshot, subject to schema/version compatibility checks.\r\nReturns updated GameState and game id.\r\n\r\nSupports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.\r\n\r\nThe operation validates:\r\n- Ownership via RLS (save must belong to authenticated user via game ownership)\r\n- Schema version compatibility between save and current game state\r\n\r\nExample request:\r\n            \r\n    POST /v1/saves/123/load\r\n    X-Tenx-Idempotency-Key: unique-request-id-789\r\n    \r\n    {}\r\n            \r\nThe response includes the complete game state after loading the save."
+      operationId: LoadSave
+      parameters:
+      - name: saveId
+        in: path
+        description: The save ID to load.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Empty command body.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoadSaveCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoadSaveCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoadSaveCommand'
+      responses:
+        200:
+          description: Save loaded successfully. Returns the game ID and updated state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadSaveResponse'
+              example:
+                gameId: 42
+                state:
+                  game:
+                    id: 42
+                    turnNo: 5
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_6x8
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 80
+                    hasActed: true
+                    tileId: 12
+                    row: 1
+                    col: 4
+                  - id: 202
+                    participantId: 101
+                    typeCode: settler
+                    hp: 50
+                    hasActed: false
+                    tileId: 15
+                    row: 1
+                    col: 7
+                  - id: 203
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 3
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 3
+                  - id: 302
+                    participantId: 102
+                    hp: 85
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 5
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 301
+                    tileId: 4
+                  - cityId: 301
+                    tileId: 11
+                  - cityId: 302
+                    tileId: 45
+                  - cityId: 302
+                    tileId: 44
+                  - cityId: 302
+                    tileId: 37
+                  cityResources:
+                  - cityId: 301
+                    resourceType: food
+                    amount: 12
+                  - cityId: 301
+                    resourceType: production
+                    amount: 8
+                  - cityId: 301
+                    resourceType: gold
+                    amount: 5
+                  - cityId: 302
+                    resourceType: food
+                    amount: 8
+                  - cityId: 302
+                    resourceType: production
+                    amount: 6
+                  - cityId: 302
+                    resourceType: gold
+                    amount: 3
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  - id: 3
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 2
+                    movePoints: 2
+                    health: 80
+                  turnSummary: 
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        403:
+          description: Forbidden - save does not belong to user via game ownership.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        404:
+          description: Not Found - save does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        422:
+          description: Unprocessable Entity - schema version mismatch.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        500:
+          description: Internal server error occurred.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INTERNAL_ERROR
+                message: An error occurred while deleting the manual save.
   /v1/unit-definitions:
     get:
       tags:
@@ -1937,6 +2145,18 @@ components:
         col:
           type: integer
           format: int32
+      additionalProperties: false
+    LoadSaveCommand:
+      type: object
+      additionalProperties: false
+    LoadSaveResponse:
+      type: object
+      properties:
+        gameId:
+          type: integer
+          format: int64
+        state:
+          $ref: '#/components/schemas/GameStateDto'
       additionalProperties: false
     MapDto:
       type: object

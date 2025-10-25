@@ -364,4 +364,236 @@ public class SaveService : ISaveService
 
         return true;
     }
+
+    public async Task<LoadSaveResponse> LoadAsync(
+        Guid userId,
+        long saveId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        // Check idempotency if key provided
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cacheKey = CacheKeys.LoadSaveIdempotency(userId, saveId, idempotencyKey);
+            var cached = await _idempotencyStore.TryGetAsync<LoadSaveResponse>(cacheKey, cancellationToken);
+            if (cached is not null)
+            {
+                _logger.LogInformation(
+                    "Returning cached load save response for idempotency key {IdempotencyKey} (save {SaveId})",
+                    idempotencyKey,
+                    saveId);
+                return cached;
+            }
+        }
+
+        // Load save with RLS; verify ownership
+        var save = await _context.Saves
+            .Include(s => s.Game)
+                .ThenInclude(g => g.Map)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == saveId, cancellationToken);
+
+        if (save is null)
+        {
+            throw new KeyNotFoundException($"Save {saveId} not found.");
+        }
+
+        if (save.UserId != userId)
+        {
+            throw new UnauthorizedAccessException($"Save {saveId} does not belong to user {userId}.");
+        }
+
+        // Validate schema version compatibility
+        var currentSchemaVersion = save.Game.MapSchemaVersion;
+        if (save.SchemaVersion != currentSchemaVersion)
+        {
+            _logger.LogWarning(
+                "Schema version mismatch for save {SaveId}: save has {SaveSchema}, game has {GameSchema}",
+                saveId,
+                save.SchemaVersion,
+                currentSchemaVersion);
+            throw new InvalidOperationException("SCHEMA_MISMATCH: Save schema version is incompatible with current game schema.");
+        }
+
+        // Deserialize saved state
+        GameStateDto savedState;
+        try
+        {
+            savedState = JsonSerializer.Deserialize<GameStateDto>(save.State)
+                ?? throw new InvalidOperationException("Failed to deserialize save state: result was null.");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize save state for save {SaveId}", saveId);
+            throw new InvalidOperationException("Failed to deserialize save state.", ex);
+        }
+
+        // Begin transaction to replace game state
+        using var trx = await _context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var gameId = save.GameId;
+
+            // Load the game for update
+            var game = await _context.Games
+                .Include(g => g.Map)
+                .SingleOrDefaultAsync(g => g.Id == gameId, cancellationToken);
+
+            if (game is null)
+            {
+                throw new InvalidOperationException($"Game {gameId} not found.");
+            }
+
+            // Delete existing game state entities
+            // Note: ExecuteDelete with joins may not be supported by in-memory database, so use fallback
+            try
+            {
+                // 1. City resources
+                await _context.CityResources
+                    .Where(cr => cr.City.GameId == gameId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                // 2. City tiles
+                await _context.CityTiles
+                    .Where(ct => ct.City.GameId == gameId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                // 3. Cities
+                await _context.Cities
+                    .Where(c => c.GameId == gameId)
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                // 4. Units
+                await _context.Units
+                    .Where(u => u.GameId == gameId)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            catch (InvalidOperationException)
+            {
+                // Fallback for databases that don't support ExecuteDelete with joins (e.g., in-memory)
+                var cityIds = await _context.Cities.Where(c => c.GameId == gameId).Select(c => c.Id).ToListAsync(cancellationToken);
+                
+                var cityResources = await _context.CityResources.Where(cr => cityIds.Contains(cr.CityId)).ToListAsync(cancellationToken);
+                _context.CityResources.RemoveRange(cityResources);
+                
+                var cityTiles = await _context.CityTiles.Where(ct => cityIds.Contains(ct.CityId)).ToListAsync(cancellationToken);
+                _context.CityTiles.RemoveRange(cityTiles);
+                
+                var cities = await _context.Cities.Where(c => c.GameId == gameId).ToListAsync(cancellationToken);
+                _context.Cities.RemoveRange(cities);
+                
+                var units = await _context.Units.Where(u => u.GameId == gameId).ToListAsync(cancellationToken);
+                _context.Units.RemoveRange(units);
+                
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            // Update game metadata
+            game.TurnNo = save.TurnNo;
+            game.ActiveParticipantId = save.ActiveParticipantId;
+            game.TurnInProgress = savedState.Game.TurnInProgress;
+            game.Status = savedState.Game.Status;
+            game.LastTurnAt = DateTimeOffset.UtcNow;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Restore entities from saved state
+            // Note: We need to map from DTO back to entity and get tile IDs
+            var tileMap = await _context.MapTiles
+                .Where(t => t.MapId == game.MapId)
+                .ToDictionaryAsync(t => new { t.Row, t.Col }, t => t.Id, cancellationToken);
+
+            // Get unit type mapping (code -> ID)
+            var unitTypeMap = await _context.UnitDefinitions
+                .ToDictionaryAsync(ud => ud.Code, ud => ud.Id, cancellationToken);
+
+            // Restore units
+            foreach (var unitDto in savedState.Units)
+            {
+                var tileId = tileMap[new { unitDto.Row, unitDto.Col }];
+                var typeId = unitTypeMap[unitDto.TypeCode];
+                var unit = new Unit
+                {
+                    ParticipantId = unitDto.ParticipantId,
+                    GameId = gameId,
+                    TypeId = typeId,
+                    Hp = unitDto.Hp,
+                    HasActed = unitDto.HasActed,
+                    TileId = tileId
+                };
+                _context.Units.Add(unit);
+            }
+
+            // Restore cities
+            var cityIdMapping = new Dictionary<long, long>(); // old ID -> new ID
+            foreach (var cityDto in savedState.Cities)
+            {
+                var tileId = tileMap[new { cityDto.Row, cityDto.Col }];
+                var city = new City
+                {
+                    ParticipantId = cityDto.ParticipantId,
+                    GameId = gameId,
+                    Hp = cityDto.Hp,
+                    MaxHp = cityDto.MaxHp,
+                    TileId = tileId
+                };
+                _context.Cities.Add(city);
+                await _context.SaveChangesAsync(cancellationToken); // Save to get ID
+                cityIdMapping[cityDto.Id] = city.Id;
+            }
+
+            // Restore city tiles
+            foreach (var ctDto in savedState.CityTiles)
+            {
+                var newCityId = cityIdMapping[ctDto.CityId];
+                var cityTile = new CityTile
+                {
+                    CityId = newCityId,
+                    TileId = ctDto.TileId
+                };
+                _context.CityTiles.Add(cityTile);
+            }
+
+            // Restore city resources
+            foreach (var crDto in savedState.CityResources)
+            {
+                var newCityId = cityIdMapping[crDto.CityId];
+                var cityResource = new CityResource
+                {
+                    CityId = newCityId,
+                    ResourceType = crDto.ResourceType,
+                    Amount = crDto.Amount
+                };
+                _context.CityResources.Add(cityResource);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            await trx.CommitAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Loaded save {SaveId} into game {GameId} for user {UserId} at turn {TurnNo}",
+                saveId,
+                gameId,
+                userId,
+                save.TurnNo);
+
+            // Rebuild game state
+            var newState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+            var response = new LoadSaveResponse(gameId, newState);
+
+            // Cache response if idempotency key provided
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                var cacheKey = CacheKeys.LoadSaveIdempotency(userId, saveId, idempotencyKey);
+                await _idempotencyStore.TryStoreAsync(cacheKey, response, TimeSpan.FromHours(24), cancellationToken);
+            }
+
+            return response;
+        }
+        catch
+        {
+            await trx.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
 }

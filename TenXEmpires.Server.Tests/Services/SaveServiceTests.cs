@@ -1,9 +1,11 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Entities;
+using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure.Data;
 using TenXEmpires.Server.Infrastructure.Services;
 
@@ -572,4 +574,435 @@ public class SaveServiceDeleteTests
     }
 
 }
+
+public class SaveServiceLoadTests
+{
+    [Fact]
+    public async Task LoadAsync_SuccessfullyLoadsValidSave()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        await using var context = new TenXDbContext(options);
+        var logger = new Mock<ILogger<SaveService>>().Object;
+        var gameStateServiceMock = new Mock<IGameStateService>();
+        var service = new SaveService(
+            context,
+            logger,
+            new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())),
+            gameStateServiceMock.Object);
+
+        var userId = Guid.NewGuid();
+        var gameId = 1L;
+        var saveId = 100L;
+
+        // Seed map, tiles, and unit definitions
+        var map = new Map { Id = 1, Code = "test_map", SchemaVersion = 1, Width = 3, Height = 3 };
+        context.Maps.Add(map);
+        
+        for (int row = 0; row < 3; row++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                context.MapTiles.Add(new MapTile 
+                { 
+                    Id = row * 3 + col + 1, 
+                    MapId = 1, 
+                    Row = row, 
+                    Col = col, 
+                    Terrain = "grassland" 
+                });
+            }
+        }
+
+        context.UnitDefinitions.AddRange(
+            new UnitDefinition { Id = 1, Code = "warrior", Attack = 20, Defence = 10, Health = 100, MovePoints = 2 },
+            new UnitDefinition { Id = 2, Code = "settler", Attack = 0, Defence = 5, Health = 50, MovePoints = 2 }
+        );
+
+        // Seed game
+        var game = new Game 
+        { 
+            Id = gameId, 
+            UserId = userId, 
+            MapId = 1, 
+            MapSchemaVersion = 1, 
+            TurnNo = 10,
+            ActiveParticipantId = 101,
+            Status = "active",
+            Map = map
+        };
+        context.Games.Add(game);
+
+        // Seed existing game state (units and cities to be replaced)
+        context.Units.Add(new Unit 
+        { 
+            Id = 1, 
+            GameId = gameId, 
+            ParticipantId = 101, 
+            TypeId = 1, 
+            TileId = 1, 
+            Hp = 50,
+            HasActed = true
+        });
+        context.Cities.Add(new City 
+        { 
+            Id = 1, 
+            GameId = gameId, 
+            ParticipantId = 101, 
+            TileId = 2, 
+            Hp = 80,
+            MaxHp = 100
+        });
+
+        // Create saved state JSON
+        var savedState = new GameStateDto(
+            new GameStateGameDto(gameId, 5, 101, false, "active"),
+            new GameStateMapDto(1, "test_map", 1, 3, 3),
+            new List<ParticipantDto> { new ParticipantDto(101, gameId, "human", userId, "Player", false) },
+            new List<UnitInStateDto> 
+            { 
+                new UnitInStateDto(201, 101, "warrior", 100, false, 5, 1, 1),
+                new UnitInStateDto(202, 101, "settler", 50, false, 7, 2, 0)
+            },
+            new List<CityInStateDto> 
+            { 
+                new CityInStateDto(301, 101, 100, 100, 3, 0, 2)
+            },
+            new List<CityTileLinkDto> 
+            { 
+                new CityTileLinkDto(301, 3),
+                new CityTileLinkDto(301, 4)
+            },
+            new List<CityResourceDto> 
+            { 
+                new CityResourceDto(301, "food", 10),
+                new CityResourceDto(301, "production", 5)
+            },
+            new List<UnitDefinitionDto>(),
+            null
+        );
+
+        // Seed save
+        context.Saves.Add(new Save
+        {
+            Id = saveId,
+            UserId = userId,
+            GameId = gameId,
+            Kind = "manual",
+            Name = "Test save",
+            Slot = 1,
+            TurnNo = 5,
+            ActiveParticipantId = 101,
+            SchemaVersion = 1,
+            MapCode = "test_map",
+            State = System.Text.Json.JsonSerializer.Serialize(savedState),
+            CreatedAt = DateTimeOffset.UtcNow,
+            Game = game
+        });
+
+        await context.SaveChangesAsync();
+
+        // Mock BuildGameStateAsync to return new state
+        var newState = new GameStateDto(
+            new GameStateGameDto(gameId, 5, 101, false, "active"),
+            new GameStateMapDto(1, "test_map", 1, 3, 3),
+            new List<ParticipantDto>(),
+            new List<UnitInStateDto>(),
+            new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(),
+            new List<CityResourceDto>(),
+            new List<UnitDefinitionDto>(),
+            null
+        );
+        gameStateServiceMock.Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(newState);
+
+        // Act
+        var result = await service.LoadAsync(userId, saveId, null);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.GameId.Should().Be(gameId);
+        result.State.Should().Be(newState);
+
+        // Verify game was updated
+        var updatedGame = await context.Games.FindAsync(gameId);
+        updatedGame.Should().NotBeNull();
+        updatedGame!.TurnNo.Should().Be(5);
+        updatedGame.ActiveParticipantId.Should().Be(101);
+
+        // Verify old entities were deleted
+        var units = await context.Units.Where(u => u.GameId == gameId).ToListAsync();
+        var cities = await context.Cities.Where(c => c.GameId == gameId).ToListAsync();
+        
+        // New units and cities should be created from save
+        units.Should().HaveCount(2);
+        cities.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThrowsKeyNotFoundException_WhenSaveDoesNotExist()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new TenXDbContext(options);
+        var logger = new Mock<ILogger<SaveService>>().Object;
+        var service = new SaveService(
+            context,
+            logger,
+            new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())),
+            Mock.Of<IGameStateService>());
+
+        var userId = Guid.NewGuid();
+
+        // Act
+        var act = async () => await service.LoadAsync(userId, 999L, null);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Save 999 not found.");
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThrowsUnauthorizedAccessException_WhenSaveBelongsToDifferentUser()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new TenXDbContext(options);
+        var logger = new Mock<ILogger<SaveService>>().Object;
+        var service = new SaveService(
+            context,
+            logger,
+            new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())),
+            Mock.Of<IGameStateService>());
+
+        var ownerUserId = Guid.NewGuid();
+        var differentUserId = Guid.NewGuid();
+        var gameId = 1L;
+        var saveId = 100L;
+
+        // Seed game and save
+        var map = new Map { Id = 1, Code = "test_map", SchemaVersion = 1, Width = 3, Height = 3 };
+        context.Maps.Add(map);
+        
+        var game = new Game 
+        { 
+            Id = gameId, 
+            UserId = ownerUserId, 
+            MapId = 1, 
+            MapSchemaVersion = 1,
+            Map = map
+        };
+        context.Games.Add(game);
+
+        context.Saves.Add(new Save
+        {
+            Id = saveId,
+            UserId = ownerUserId,
+            GameId = gameId,
+            Kind = "manual",
+            Name = "Test save",
+            Slot = 1,
+            TurnNo = 5,
+            ActiveParticipantId = 101,
+            SchemaVersion = 1,
+            MapCode = "test_map",
+            State = "{}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Game = game
+        });
+
+        await context.SaveChangesAsync();
+
+        // Act
+        var act = async () => await service.LoadAsync(differentUserId, saveId, null);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage($"Save {saveId} does not belong to user {differentUserId}.");
+    }
+
+    [Fact]
+    public async Task LoadAsync_ThrowsInvalidOperationException_WhenSchemaVersionMismatch()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var context = new TenXDbContext(options);
+        var logger = new Mock<ILogger<SaveService>>().Object;
+        var service = new SaveService(
+            context,
+            logger,
+            new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())),
+            Mock.Of<IGameStateService>());
+
+        var userId = Guid.NewGuid();
+        var gameId = 1L;
+        var saveId = 100L;
+
+        // Seed game with schema version 2
+        var map = new Map { Id = 1, Code = "test_map", SchemaVersion = 2, Width = 3, Height = 3 };
+        context.Maps.Add(map);
+        
+        var game = new Game 
+        { 
+            Id = gameId, 
+            UserId = userId, 
+            MapId = 1, 
+            MapSchemaVersion = 2,  // Current version
+            Map = map
+        };
+        context.Games.Add(game);
+
+        // Seed save with schema version 1
+        context.Saves.Add(new Save
+        {
+            Id = saveId,
+            UserId = userId,
+            GameId = gameId,
+            Kind = "manual",
+            Name = "Old save",
+            Slot = 1,
+            TurnNo = 5,
+            ActiveParticipantId = 101,
+            SchemaVersion = 1,  // Old version
+            MapCode = "test_map",
+            State = "{}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Game = game
+        });
+
+        await context.SaveChangesAsync();
+
+        // Act
+        var act = async () => await service.LoadAsync(userId, saveId, null);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("SCHEMA_MISMATCH: Save schema version is incompatible with current game schema.");
+    }
+
+    [Fact]
+    public async Task LoadAsync_Idempotency_ReturnsCachedResult()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        await using var context = new TenXDbContext(options);
+        var logger = new Mock<ILogger<SaveService>>().Object;
+        var gameStateServiceMock = new Mock<IGameStateService>();
+        var service = new SaveService(
+            context,
+            logger,
+            new MemoryIdempotencyStore(new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())),
+            gameStateServiceMock.Object);
+
+        var userId = Guid.NewGuid();
+        var gameId = 1L;
+        var saveId = 100L;
+        var idempotencyKey = "test-key-123";
+
+        // Seed minimal data
+        var map = new Map { Id = 1, Code = "test_map", SchemaVersion = 1, Width = 3, Height = 3 };
+        context.Maps.Add(map);
+        
+        for (int row = 0; row < 3; row++)
+        {
+            for (int col = 0; col < 3; col++)
+            {
+                context.MapTiles.Add(new MapTile 
+                { 
+                    Id = row * 3 + col + 1, 
+                    MapId = 1, 
+                    Row = row, 
+                    Col = col, 
+                    Terrain = "grassland" 
+                });
+            }
+        }
+
+        context.UnitDefinitions.Add(new UnitDefinition { Id = 1, Code = "warrior", Attack = 20, Defence = 10, Health = 100, MovePoints = 2 });
+
+        var game = new Game 
+        { 
+            Id = gameId, 
+            UserId = userId, 
+            MapId = 1, 
+            MapSchemaVersion = 1,
+            Map = map
+        };
+        context.Games.Add(game);
+
+        var savedState = new GameStateDto(
+            new GameStateGameDto(gameId, 5, 101, false, "active"),
+            new GameStateMapDto(1, "test_map", 1, 3, 3),
+            new List<ParticipantDto>(),
+            new List<UnitInStateDto>(),
+            new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(),
+            new List<CityResourceDto>(),
+            new List<UnitDefinitionDto>(),
+            null
+        );
+
+        context.Saves.Add(new Save
+        {
+            Id = saveId,
+            UserId = userId,
+            GameId = gameId,
+            Kind = "manual",
+            Name = "Test save",
+            Slot = 1,
+            TurnNo = 5,
+            ActiveParticipantId = 101,
+            SchemaVersion = 1,
+            MapCode = "test_map",
+            State = System.Text.Json.JsonSerializer.Serialize(savedState),
+            CreatedAt = DateTimeOffset.UtcNow,
+            Game = game
+        });
+
+        await context.SaveChangesAsync();
+
+        var newState = new GameStateDto(
+            new GameStateGameDto(gameId, 5, 101, false, "active"),
+            new GameStateMapDto(1, "test_map", 1, 3, 3),
+            new List<ParticipantDto>(),
+            new List<UnitInStateDto>(),
+            new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(),
+            new List<CityResourceDto>(),
+            new List<UnitDefinitionDto>(),
+            null
+        );
+        gameStateServiceMock.Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(newState);
+
+        // Act - first call
+        var result1 = await service.LoadAsync(userId, saveId, idempotencyKey);
+
+        // Act - second call with same idempotency key
+        var result2 = await service.LoadAsync(userId, saveId, idempotencyKey);
+
+        // Assert
+        result1.Should().NotBeNull();
+        result2.Should().NotBeNull();
+        result1.GameId.Should().Be(result2.GameId);
+        result1.State.Should().Be(result2.State);
+
+        // BuildGameStateAsync should only be called once (first time, not on cached call)
+        gameStateServiceMock.Verify(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+}
+
 

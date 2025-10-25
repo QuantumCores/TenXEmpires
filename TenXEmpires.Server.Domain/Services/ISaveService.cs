@@ -66,4 +66,22 @@ public interface ISaveService
         int slot,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads a save into its game, replacing current state with the saved snapshot.
+    /// Validates schema compatibility and ownership via RLS.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="saveId">The save ID to load.</param>
+    /// <param name="idempotencyKey">Optional idempotency key to safely retry requests.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The loaded game state and game ID.</returns>
+    /// <exception cref="UnauthorizedAccessException">Thrown when save does not belong to user.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when schema version is incompatible.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when save is not found.</exception>
+    Task<LoadSaveResponse> LoadAsync(
+        Guid userId,
+        long saveId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }

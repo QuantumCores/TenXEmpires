@@ -320,5 +320,97 @@ public class SavesController : ControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred while deleting the manual save." });
         }
     }
+
+    /// <summary>
+    /// Loads a save into its game, replacing current state with the saved snapshot.
+    /// </summary>
+    /// <param name="saveId">The save ID to load.</param>
+    /// <param name="command">Empty command body.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Loads a save into its game, replacing current state with the saved snapshot, subject to schema/version compatibility checks.
+    /// Returns updated GameState and game id.
+    /// 
+    /// Supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.
+    /// 
+    /// The operation validates:
+    /// - Ownership via RLS (save must belong to authenticated user via game ownership)
+    /// - Schema version compatibility between save and current game state
+    /// 
+    /// Example request:
+    ///
+    ///     POST /v1/saves/123/load
+    ///     X-Tenx-Idempotency-Key: unique-request-id-789
+    ///     
+    ///     {}
+    ///
+    /// The response includes the complete game state after loading the save.
+    /// </remarks>
+    /// <response code="200">Save loaded successfully. Returns the game ID and updated state.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="403">Forbidden - save does not belong to user via game ownership.</response>
+    /// <response code="404">Not Found - save does not exist.</response>
+    /// <response code="422">Unprocessable Entity - schema version mismatch.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("/v{version:apiVersion}/saves/{saveId:long}/load", Name = "LoadSave")]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(typeof(LoadSaveResponse), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(LoadSaveResponseExample))]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(ApiErrorUnauthorizedExample))]
+    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(ApiErrorInternalExample))]
+    public async Task<ActionResult<LoadSaveResponse>> LoadSave(
+        long saveId,
+        [FromBody] LoadSaveCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = User.GetUserId();
+
+            _logger.LogDebug("User {UserId} requesting to load save {SaveId}", userId, saveId);
+
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            var result = await _saveService.LoadAsync(userId, saveId, idempotencyKey, cancellationToken);
+
+            _logger.LogInformation("Successfully loaded save {SaveId} into game {GameId} for user {UserId}", 
+                saveId, result.GameId, userId);
+
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Save {SaveId} not found", saveId);
+            return NotFound(new { code = "SAVE_NOT_FOUND", message = "Save not found." });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for save {SaveId}", saveId);
+            return StatusCode(StatusCodes.Status403Forbidden, 
+                new { code = "FORBIDDEN", message = "You don't have access to this save." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("SCHEMA_MISMATCH", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(ex, "Schema mismatch when loading save {SaveId}", saveId);
+            return UnprocessableEntity(new { code = "SCHEMA_MISMATCH", message = "Save schema version is incompatible with current game schema." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Failed to load save {SaveId}", saveId);
+            return StatusCode(StatusCodes.Status500InternalServerError, 
+                new { code = "INTERNAL_ERROR", message = "An error occurred while loading the save." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while loading save {SaveId}", saveId);
+            return StatusCode(StatusCodes.Status500InternalServerError, 
+                new { code = "INTERNAL_ERROR", message = "An error occurred while loading the save." });
+        }
+    }
 }
 

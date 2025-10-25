@@ -62,5 +62,15 @@ public static class CacheKeys
     /// <returns>A formatted cache key string.</returns>
     public static string DeleteManualSaveIdempotency(long gameId, int slot, string idempotencyKey)
         => $"delete-manual-save:{gameId}:{slot}:{idempotencyKey}";
+
+    /// <summary>
+    /// Gets the idempotency cache key for load save operations.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="saveId">The save ID to load.</param>
+    /// <param name="idempotencyKey">The client-provided idempotency key.</param>
+    /// <returns>A formatted cache key string.</returns>
+    public static string LoadSaveIdempotency(Guid userId, long saveId, string idempotencyKey)
+        => $"load-save:{userId}:{saveId}:{idempotencyKey}";
 }
 
