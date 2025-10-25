@@ -495,11 +495,11 @@ Acceptance Criteria
 - If defender HP ≤ 0 after the attack, no counterattack occurs.
 - Ranged defenders never counterattack.
 
-US-034: Ties go to attacker
+US-034: Ties do not go to attacker
 
 Description
 
-As a player, I want ties to resolve predictably.
+As a player, I want ties to resolve predictably. That is if attacker and target have less than 0 health they both die.
 
 Acceptance Criteria
 

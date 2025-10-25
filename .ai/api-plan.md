@@ -180,7 +180,7 @@ Validation Rules
   - Enforce 1UPT: disallow ending a move on occupied tile. Unique index `(game_id, tile_id)` ensures DB integrity.
   - Attack resolution: `DMG = Attack × (1 + (Attack - Defence)/Defence) × 0.5`, round half up, min 1.
   - Order: attacker hits first; if defender survives and is eligible, it counterattacks; ranged never receive counterattack.
-  - Ties go to attacker. Validate target in range for ranged and melee rules.
+  - Ties do not go to attacker. Validate target in range for ranged and melee rules.
 
 - Cities & Economy
   - City regen: +4 HP/turn normally; +2 HP/turn under siege (enemy present within reach). Cap at `max_hp`.
