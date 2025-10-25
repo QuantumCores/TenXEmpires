@@ -315,6 +315,7 @@ public class GamesController : ControllerBase
     /// <response code="500">Internal server error occurred.</response>
     [HttpGet("{id}/state", Name = "GetGameState")]
     [ProducesResponseType(typeof(GameStateDto), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(GameStateDtoExample))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

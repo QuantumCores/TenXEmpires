@@ -331,6 +331,225 @@ public class GamesControllerTests
         errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
 
+    #region GetGameState Tests
+
+    [Fact]
+    public async Task GetGameState_WithValidAccess_ShouldReturn200WithGameState()
+    {
+        // Arrange
+        var gameId = 42L;
+        var gameState = CreateSampleGameState(gameId);
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameState);
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.StatusCode.Should().Be(StatusCodes.Status200OK);
+        okResult.Value.Should().BeOfType<GameStateDto>();
+        
+        var returnedState = okResult.Value as GameStateDto;
+        returnedState.Should().NotBeNull();
+        returnedState!.Game.Id.Should().Be(gameId);
+    }
+
+    [Fact]
+    public async Task GetGameState_WithNonExistentGame_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 999L;
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        
+        _gameStateServiceMock.Verify(
+            s => s.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetGameState_WithGameOwnedByAnotherUser_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task GetGameState_WhenServiceThrowsInvalidOperationException_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Game not found"));
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task GetGameState_WhenServiceThrowsUnauthorizedException_ShouldReturn401()
+    {
+        // Arrange
+        var gameId = 42L;
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Access denied"));
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var unauthorized = result.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        unauthorized.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetGameState_WhenServiceThrowsException_ShouldReturn500()
+    {
+        // Arrange
+        var gameId = 42L;
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        var errorResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public async Task GetGameState_ShouldPassCorrectUserIdToService()
+    {
+        // Arrange
+        var gameId = 42L;
+        var gameState = CreateSampleGameState(gameId);
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameState);
+
+        // Act
+        await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        _gameServiceMock.Verify(
+            s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetGameState_ShouldCallBuildGameStateAfterVerification()
+    {
+        // Arrange
+        var gameId = 42L;
+        var gameState = CreateSampleGameState(gameId);
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _gameStateServiceMock
+            .Setup(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameState);
+
+        // Act
+        await _controller.GetGameState(gameId, CancellationToken.None);
+
+        // Assert
+        _gameStateServiceMock.Verify(
+            s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private static GameStateDto CreateSampleGameState(long gameId)
+    {
+        var game = new GameStateGameDto(
+            Id: gameId,
+            TurnNo: 1,
+            ActiveParticipantId: 101,
+            TurnInProgress: false,
+            Status: "active");
+
+        var map = new GameStateMapDto(
+            Id: 1,
+            Code: "standard_6x8",
+            SchemaVersion: 1,
+            Width: 8,
+            Height: 6);
+
+        var participants = new List<ParticipantDto>
+        {
+            new ParticipantDto(101, gameId, "human", Guid.NewGuid(), "Player", false)
+        };
+
+        return new GameStateDto(
+            game,
+            map,
+            participants,
+            new List<UnitInStateDto>(),
+            new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(),
+            new List<CityResourceDto>(),
+            new List<UnitDefinitionDto>(),
+            null);
+    }
+
+    #endregion
+
     #region DeleteGame Tests
 
     [Fact]
