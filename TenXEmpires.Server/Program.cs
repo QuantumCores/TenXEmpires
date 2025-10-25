@@ -49,6 +49,7 @@ namespace TenXEmpires.Server
             builder.Services.AddScoped<IGameSeedingService, GameSeedingService>();
             builder.Services.AddScoped<IGameStateService, GameStateService>();
             builder.Services.AddScoped<ITurnService, TurnService>();
+            builder.Services.AddScoped<IActionService, ActionService>();
             builder.Services.AddSingleton<IIdempotencyStore, MemoryIdempotencyStore>();
             builder.Services.AddSingleton<IAiNameGenerator, AiNameGenerator>();
 

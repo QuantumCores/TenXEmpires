@@ -606,6 +606,180 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/actions/move:
+    post:
+      tags:
+      - v1
+      summary: Moves a unit to a target position in the game.
+      description: "Moves a unit along a valid path according to deterministic pathfinding rules (A*, uniform cost).\r\nThe move must satisfy several constraints:\r\n- It must be the human player's turn (not AI turn)\r\n- The unit must belong to the active participant\r\n- The destination must be reachable within the unit's movement points\r\n- The destination tile must not be occupied by another unit (1UPT - one unit per tile)\r\n- The unit must not have already acted this turn\r\n\r\nThe endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to safely retry moves.\r\n\r\nRequest Body:\r\n- unitId: The ID of the unit to move\r\n- to: Target position with row and col coordinates\r\n\r\nExample request:\r\n            \r\n    POST /v1/games/42/actions/move\r\n    X-Tenx-Idempotency-Key: unique-move-request-123\r\n    \r\n    {\r\n      \"unitId\": 201,\r\n      \"to\": { \"row\": 2, \"col\": 3 }\r\n    }\r\n            \r\nThe response includes the complete updated game state after the move."
+      operationId: MoveUnit
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: The move command with unit ID and target position.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/MoveUnitCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/MoveUnitCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/MoveUnitCommand'
+      responses:
+        200:
+          description: Move successful. Returns the updated game state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStateResponse'
+              example:
+                state:
+                  game:
+                    id: 42
+                    turnNo: 3
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_6x8
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: true
+                    tileId: 13
+                    row: 2
+                    col: 3
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  - id: 203
+                    participantId: 101
+                    typeCode: settler
+                    hp: 50
+                    hasActed: false
+                    tileId: 7
+                    row: 0
+                    col: 2
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: food
+                    amount: 8
+                  - cityId: 301
+                    resourceType: production
+                    amount: 4
+                  - cityId: 302
+                    resourceType: food
+                    amount: 7
+                  - cityId: 302
+                    resourceType: production
+                    amount: 3
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  - id: 3
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 2
+                    movePoints: 2
+                    health: 80
+                  turnSummary: 
+        400:
+          description: Bad request due to invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - NOT_PLAYER_TURN, ONE_UNIT_PER_TILE, or NO_ACTIONS_LEFT.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        422:
+          description: Unprocessable Entity - ILLEGAL_MOVE (path blocked or out of range).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/maps/{code}:
     get:
       tags:
@@ -830,6 +1004,12 @@ paths:
                   $ref: '#/components/schemas/WeatherForecast'
 components:
   schemas:
+    ActionStateResponse:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/GameStateDto'
+      additionalProperties: false
     CityInStateDto:
       type: object
       properties:
@@ -1069,6 +1249,16 @@ components:
           type: integer
           format: int32
       additionalProperties: false
+    GridPosition:
+      type: object
+      properties:
+        row:
+          type: integer
+          format: int32
+        col:
+          type: integer
+          format: int32
+      additionalProperties: false
     MapDto:
       type: object
       properties:
@@ -1130,6 +1320,15 @@ components:
           type: integer
           format: int32
           nullable: true
+      additionalProperties: false
+    MoveUnitCommand:
+      type: object
+      properties:
+        unitId:
+          type: integer
+          format: int64
+        to:
+          $ref: '#/components/schemas/GridPosition'
       additionalProperties: false
     ParticipantDto:
       type: object

@@ -49,6 +49,17 @@ public static class HexagonalGrid
     }
 
     /// <summary>
+    /// Calculates the distance between two cube coordinates on a hexagonal grid.
+    /// </summary>
+    /// <param name="a">First cube coordinate.</param>
+    /// <param name="b">Second cube coordinate.</param>
+    /// <returns>The hexagonal distance between the two coordinates.</returns>
+    public static int GetCubeDistance(CubeCoord a, CubeCoord b)
+    {
+        return (Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y) + Math.Abs(a.Z - b.Z)) / 2;
+    }
+
+    /// <summary>
     /// Finds an adjacent tile to the given tile that's not in the exclusion set.
     /// </summary>
     /// <param name="centerTile">The center tile to find neighbors for.</param>

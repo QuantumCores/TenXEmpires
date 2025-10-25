@@ -27,17 +27,20 @@ public class GamesController : ControllerBase
     private readonly IGameService _gameService;
     private readonly IGameStateService _gameStateService;
     private readonly ITurnService _turnService;
+    private readonly IActionService _actionService;
     private readonly ILogger<GamesController> _logger;
 
     public GamesController(
         IGameService gameService,
         IGameStateService gameStateService,
         ITurnService turnService,
+        IActionService actionService,
         ILogger<GamesController> logger)
     {
         _gameService = gameService;
         _gameStateService = gameStateService;
         _turnService = turnService;
+        _actionService = actionService;
         _logger = logger;
     }
 
@@ -669,6 +672,166 @@ public class GamesController : ControllerBase
                 {
                     code = "INTERNAL_ERROR",
                     message = "An error occurred while retrieving game turns."
+                });
+        }
+    }
+
+    /// <summary>
+    /// Moves a unit to a target position in the game.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">The move command with unit ID and target position.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Moves a unit along a valid path according to deterministic pathfinding rules (A*, uniform cost).
+    /// The move must satisfy several constraints:
+    /// - It must be the human player's turn (not AI turn)
+    /// - The unit must belong to the active participant
+    /// - The destination must be reachable within the unit's movement points
+    /// - The destination tile must not be occupied by another unit (1UPT - one unit per tile)
+    /// - The unit must not have already acted this turn
+    /// 
+    /// The endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to safely retry moves.
+    /// 
+    /// Request Body:
+    /// - unitId: The ID of the unit to move
+    /// - to: Target position with row and col coordinates
+    /// 
+    /// Example request:
+    ///
+    ///     POST /v1/games/42/actions/move
+    ///     X-Tenx-Idempotency-Key: unique-move-request-123
+    ///     
+    ///     {
+    ///       "unitId": 201,
+    ///       "to": { "row": 2, "col": 3 }
+    ///     }
+    ///
+    /// The response includes the complete updated game state after the move.
+    /// </remarks>
+    /// <response code="200">Move successful. Returns the updated game state.</response>
+    /// <response code="400">Bad request due to invalid input.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="409">Conflict - NOT_PLAYER_TURN, ONE_UNIT_PER_TILE, or NO_ACTIONS_LEFT.</response>
+    /// <response code="422">Unprocessable Entity - ILLEGAL_MOVE (path blocked or out of range).</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("{id:long}/actions/move", Name = "MoveUnit")]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ActionStateResponseExample))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ActionStateResponse>> MoveUnit(
+        long id,
+        [FromBody] MoveUnitCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Validate model state
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid request body for MoveUnit on game {GameId}", id);
+                return BadRequest(new
+                {
+                    code = "INVALID_INPUT",
+                    message = "One or more validation errors occurred.",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()
+                });
+            }
+
+            // Get user ID from authenticated user
+            var userId = User.GetUserId();
+
+            // Extract idempotency key from headers (optional)
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            _logger.LogDebug("User {UserId} attempting to move unit {UnitId} in game {GameId} to ({Row}, {Col})",
+                userId, command.UnitId, id, command.To.Row, command.To.Col);
+
+            // Call service to execute move
+            var response = await _actionService.MoveUnitAsync(userId, id, command, idempotencyKey, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not your turn") || ex.Message.Contains("NOT_PLAYER_TURN"))
+        {
+            _logger.LogWarning(ex, "Not player's turn for game {GameId}", id);
+            return Conflict(new
+            {
+                code = "NOT_PLAYER_TURN",
+                message = "It is not your turn to move."
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("occupied") || ex.Message.Contains("ONE_UNIT_PER_TILE"))
+        {
+            _logger.LogWarning(ex, "Destination tile occupied in game {GameId}", id);
+            return Conflict(new
+            {
+                code = "ONE_UNIT_PER_TILE",
+                message = "The destination tile is already occupied by another unit."
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("acted") || ex.Message.Contains("NO_ACTIONS_LEFT"))
+        {
+            _logger.LogWarning(ex, "Unit has no actions left in game {GameId}", id);
+            return Conflict(new
+            {
+                code = "NO_ACTIONS_LEFT",
+                message = "This unit has already acted this turn."
+            });
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("illegal") || ex.Message.Contains("blocked") || ex.Message.Contains("range"))
+        {
+            _logger.LogWarning(ex, "Illegal move attempted in game {GameId}", id);
+            return UnprocessableEntity(new
+            {
+                code = "ILLEGAL_MOVE",
+                message = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found") || ex.Message.Contains("unit"))
+        {
+            _logger.LogWarning(ex, "Unit not found or doesn't belong to player in game {GameId}", id);
+            return NotFound(new
+            {
+                code = "UNIT_NOT_FOUND",
+                message = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new
+            {
+                code = "UNAUTHORIZED",
+                message = ex.Message
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for MoveUnit request on game {GameId}", id);
+            return BadRequest(new
+            {
+                code = "INVALID_INPUT",
+                message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to move unit in game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An error occurred while processing the move."
                 });
         }
     }

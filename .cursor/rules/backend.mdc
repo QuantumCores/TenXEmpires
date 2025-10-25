@@ -13,6 +13,7 @@ globs: **/*.cs
   - Prefer LINQ and lambda expressions for collection operations.
   - Use descriptive variable and method names (e.g., 'IsUserSignedIn', 'CalculateTotal').
   - Structure files according to .NET conventions (Controllers, Models, Services, etc.).
+  - Centralize 'magic' literals
   - Follow project architecture structure
 
   ## Naming Conventions
