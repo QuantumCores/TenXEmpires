@@ -7,6 +7,94 @@ info:
     url: https://github.com/tenxempires
   version: v1
 paths:
+  /v1/analytics/batch:
+    post:
+      tags:
+      - v1
+      summary: Ingests a batch of analytics events with privacy-preserving pseudonymization and best-effort deduplication.
+      requestBody:
+        description: Batch of analytics events.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AnalyticsBatchCommand'
+            example:
+              events:
+              - eventType: turn_end
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.695262+00:00
+                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                payload:
+                  fps: 58
+                  latencyMs: 120
+              - eventType: autosave
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.6953882+00:00
+                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                payload: 
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AnalyticsBatchCommand'
+            example:
+              events:
+              - eventType: turn_end
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.695262+00:00
+                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                payload:
+                  fps: 58
+                  latencyMs: 120
+              - eventType: autosave
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.6953882+00:00
+                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                payload: 
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AnalyticsBatchCommand'
+            example:
+              events:
+              - eventType: turn_end
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.695262+00:00
+                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                payload:
+                  fps: 58
+                  latencyMs: 120
+              - eventType: autosave
+                gameId: 42
+                turnNo: 5
+                occurredAt: 2025-10-25T18:22:12.6953882+00:00
+                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                payload: 
+      responses:
+        202:
+          description: Accepted with count of ingested events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsBatchResponse'
+              example:
+                accepted: 2
+        400:
+          description: Invalid payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        429:
+          description: Too many requests (rate-limited per identity).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Server error.
   /v1/games:
     get:
       tags:
@@ -1838,6 +1926,46 @@ components:
       properties:
         state:
           $ref: '#/components/schemas/GameStateDto'
+      additionalProperties: false
+    AnalyticsBatchCommand:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsEventItem'
+          nullable: true
+      additionalProperties: false
+    AnalyticsBatchResponse:
+      type: object
+      properties:
+        accepted:
+          type: integer
+          format: int32
+      additionalProperties: false
+    AnalyticsEventItem:
+      type: object
+      properties:
+        eventType:
+          type: string
+          nullable: true
+        gameId:
+          type: integer
+          format: int64
+          nullable: true
+        turnNo:
+          type: integer
+          format: int32
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+          nullable: true
+        clientRequestId:
+          type: string
+          nullable: true
+        payload:
+          nullable: true
       additionalProperties: false
     ApiErrorDto:
       type: object

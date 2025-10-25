@@ -51,6 +51,7 @@ namespace TenXEmpires.Server
             builder.Services.AddScoped<ITurnService, TurnService>();
             builder.Services.AddScoped<IActionService, ActionService>();
             builder.Services.AddScoped<ISaveService, SaveService>();
+            builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddSingleton<IIdempotencyStore, MemoryIdempotencyStore>();
             builder.Services.AddSingleton<IAiNameGenerator, AiNameGenerator>();
 
@@ -146,6 +147,34 @@ namespace TenXEmpires.Server
                             QueueLimit = 0,
                             Window = TimeSpan.FromMinutes(1)
                         }));
+
+                // Policy for analytics ingestion (per-identity: userId, else device cookie, else IP)
+                options.AddPolicy("AnalyticsIngest", httpContext =>
+                {
+                    string key;
+                    if (httpContext.User?.Identity?.IsAuthenticated == true && !string.IsNullOrEmpty(httpContext.User.Identity?.Name))
+                    {
+                        key = httpContext.User.Identity!.Name!;
+                    }
+                    else if (httpContext.Request.Cookies.TryGetValue("tenx.sid", out var device))
+                    {
+                        key = $"device:{device}";
+                    }
+                    else
+                    {
+                        key = $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? httpContext.Request.Headers.Host.ToString()}";
+                    }
+
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: key,
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 60,
+                            QueueLimit = 0,
+                            Window = TimeSpan.FromMinutes(1)
+                        });
+                });
 
                 // Customize rejection response
                 options.OnRejected = async (context, token) =>
