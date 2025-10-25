@@ -1271,6 +1271,64 @@ paths:
           description: Not Modified - cached version is still valid.
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/saves:
+    get:
+      tags:
+      - v1
+      summary: Lists all saves (manual and autosaves) for a specific game.
+      description: "Returns two lists: manual saves (slots 1-3) and autosaves (most recent first, max 5 shown).\r\nRLS (Row-Level Security) is enforced via the session `app.user_id` context variable.\r\n\r\nManual saves are user-created snapshots with custom names.\r\nAutosaves are created automatically at the end of each turn.\r\n\r\nExample response:\r\n            \r\n    {\r\n      \"manual\": [\r\n        {\r\n          \"id\": 101,\r\n          \"slot\": 1,\r\n          \"turnNo\": 5,\r\n          \"createdAt\": \"2025-10-20T11:30:00Z\",\r\n          \"name\": \"Before attacking Rome\"\r\n        }\r\n      ],\r\n      \"autosaves\": [\r\n        {\r\n          \"id\": 201,\r\n          \"turnNo\": 7,\r\n          \"createdAt\": \"2025-10-20T14:15:00Z\"\r\n        },\r\n        {\r\n          \"id\": 202,\r\n          \"turnNo\": 6,\r\n          \"createdAt\": \"2025-10-20T13:45:00Z\"\r\n        }\r\n      ]\r\n    }"
+      operationId: ListGameSaves
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        200:
+          description: Returns the list of saves.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameSavesListDto'
+              example:
+                manual:
+                - id: 101
+                  slot: 1
+                  turnNo: 5
+                  createdAt: 2025-10-20T11:30:00+00:00
+                  name: Before attacking Rome
+                - id: 102
+                  slot: 2
+                  turnNo: 3
+                  createdAt: 2025-10-20T10:15:00+00:00
+                  name: Opening strategy
+                autosaves:
+                - id: 201
+                  turnNo: 7
+                  createdAt: 2025-10-20T14:15:00+00:00
+                - id: 202
+                  turnNo: 6
+                  createdAt: 2025-10-20T13:45:00+00:00
+                - id: 203
+                  turnNo: 5
+                  createdAt: 2025-10-20T13:20:00+00:00
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - game does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/unit-definitions:
     get:
       tags:
@@ -1571,6 +1629,20 @@ components:
           format: int32
           nullable: true
       additionalProperties: false
+    GameSavesListDto:
+      type: object
+      properties:
+        manual:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaveManualDto'
+          nullable: true
+        autosaves:
+          type: array
+          items:
+            $ref: '#/components/schemas/SaveAutosaveDto'
+          nullable: true
+      additionalProperties: false
     GameStateDto:
       type: object
       properties:
@@ -1772,6 +1844,38 @@ components:
           type: string
           nullable: true
       additionalProperties: {}
+    SaveAutosaveDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        turnNo:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+      additionalProperties: false
+    SaveManualDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slot:
+          type: integer
+          format: int32
+        turnNo:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        name:
+          type: string
+          nullable: true
+      additionalProperties: false
     TurnDto:
       type: object
       properties:

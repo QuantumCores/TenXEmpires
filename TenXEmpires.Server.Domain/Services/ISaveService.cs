@@ -28,5 +28,13 @@ public interface ISaveService
         string mapCode,
         GameStateDto state,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists all saves for a specific game, grouped into manual saves and autosaves.
+    /// </summary>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The list of manual saves and autosaves.</returns>
+    Task<GameSavesListDto> ListSavesAsync(long gameId, CancellationToken cancellationToken = default);
 }
 

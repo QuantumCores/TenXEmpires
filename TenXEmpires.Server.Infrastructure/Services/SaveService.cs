@@ -100,4 +100,30 @@ public class SaveService : ISaveService
 
         return save.Id;
     }
+
+    public async Task<GameSavesListDto> ListSavesAsync(long gameId, CancellationToken cancellationToken = default)
+    {
+        // Query all saves for the game
+        var saves = await _context.Saves
+            .AsNoTracking()
+            .Where(s => s.GameId == gameId)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        // Group by kind and project to DTOs
+        var manualSaves = saves
+            .Where(s => s.Kind == "manual")
+            .Select(SaveManualDto.From)
+            .ToList();
+
+        var autosaves = saves
+            .Where(s => s.Kind == "autosave")
+            .Select(SaveAutosaveDto.From)
+            .ToList();
+
+        _logger.LogDebug("Listed {ManualCount} manual saves and {AutosaveCount} autosaves for game {GameId}",
+            manualSaves.Count, autosaves.Count, gameId);
+
+        return new GameSavesListDto(manualSaves, autosaves);
+    }
 }
