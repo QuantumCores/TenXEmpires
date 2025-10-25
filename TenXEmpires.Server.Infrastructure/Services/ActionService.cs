@@ -12,7 +12,7 @@ namespace TenXEmpires.Server.Infrastructure.Services;
 /// <summary>
 /// Service implementation for game action commands (move, attack, etc.).
 /// </summary>
-public class ActionService : IActionService
+    public class ActionService : IActionService
 {
     private readonly TenXDbContext _context;
     private readonly IGameStateService _gameStateService;
@@ -58,9 +58,21 @@ public class ActionService : IActionService
         }
 
         // Begin serializable transaction to prevent race conditions
-        await using var transaction = await _context.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable,
-            cancellationToken);
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        try
+        {
+            transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable,
+                cancellationToken);
+        }
+        catch (InvalidOperationException)
+        {
+            // InMemory provider: transactions not supported; proceed without explicit transaction
+        }
+        catch (NotSupportedException)
+        {
+            // Non-relational provider; proceed without explicit transaction
+        }
 
         try
         {
@@ -207,6 +219,15 @@ public class ActionService : IActionService
                 unit.HasActed = true;
                 unit.UpdatedAt = DateTimeOffset.UtcNow;
 
+                // If melee unit ends turn on a defeated enemy city tile, capture it
+                var cityOnTile = await _context.Cities
+                    .Include(c => c.Tile)
+                    .FirstOrDefaultAsync(c => c.GameId == gameId && c.TileId == targetTile.Id, cancellationToken);
+                if (cityOnTile != null && cityOnTile.ParticipantId != unit.ParticipantId && cityOnTile.Hp <= 0 && !unit.Type.IsRanged)
+                {
+                    await CityCaptureHelper.CaptureCityAsync(_context, cityOnTile, unit.ParticipantId, cancellationToken);
+                }
+
                 await _context.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
@@ -223,7 +244,10 @@ public class ActionService : IActionService
                 await _context.SaveChangesAsync(cancellationToken);
 
                 // Commit transaction
-                await transaction.CommitAsync(cancellationToken);
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
 
                 // Build updated game state
                 var gameState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
@@ -390,59 +414,8 @@ public class ActionService : IActionService
                     }
                 }
 
-                // Compute damage using HP-adapted stats:
-                // effectiveAtk = Attack * (attackerHp / attackerMaxHp)
-                // effectiveDef = Defence * (defenderHp / defenderMaxHp)
-                // DMG = effectiveAtk * (1 + (effectiveAtk - effectiveDef)/effectiveDef) * 0.5
-                static int ComputeDamage(
-                    int atkStat,
-                    int defStat,
-                    int attackerHp,
-                    int attackerMaxHp,
-                    int defenderHp,
-                    int defenderMaxHp)
-                {
-                    var atkRatio = attackerMaxHp > 0 ? Math.Clamp(attackerHp / (double)attackerMaxHp, 0.0, 1.0) : 1.0;
-                    var defRatio = defenderMaxHp > 0 ? Math.Clamp(defenderHp / (double)defenderMaxHp, 0.0, 1.0) : 1.0;
-                    var atk = atkStat * atkRatio;
-                    var def = defStat * defRatio;
-                    if (def <= 0) def = 1; // safety
-                    var value = (atk * (1.0 + (atk - def) / def) * 0.5);
-                    var rounded = (int)Math.Round(value, 0, MidpointRounding.AwayFromZero);
-                    return Math.Max(1, rounded);
-                }
-
-                var attackerDamage = ComputeDamage(
-                    attacker.Type.Attack,
-                    target.Type.Defence,
-                    attacker.Hp,
-                    attacker.Type.Health,
-                    target.Hp,
-                    target.Type.Health);
-
-                // Apply attacker damage first
-                target.Hp -= attackerDamage;
-                target.UpdatedAt = DateTimeOffset.UtcNow;
-
-                if (target.Hp > 0)
-                {
-                    // Counterattack only if defender survives and is eligible (melee defender; attacker is melee)
-                    var defenderCanCounter = !target.Type.IsRanged; // ranged defenders never counterattack
-                    var attackerReceivesCounter = !attacker.Type.IsRanged; // ranged attackers never receive counterattack
-
-                    if (defenderCanCounter && attackerReceivesCounter)
-                    {
-                        var counterDamage = ComputeDamage(
-                            target.Type.Attack,
-                            attacker.Type.Defence,
-                            target.Hp,
-                            target.Type.Health,
-                            attacker.Hp,
-                            attacker.Type.Health);
-                        attacker.Hp -= counterDamage;
-                        attacker.UpdatedAt = DateTimeOffset.UtcNow;
-                    }
-                }
+                // Resolve attack using shared combat helper (applies counter and HP updates)
+                var outcome = CombatHelper.ResolveAttack(attacker, target);
 
                 // Note: No special tie handling; if both reach <= 0 HP, both are removed.
 
@@ -468,7 +441,7 @@ public class ActionService : IActionService
 
                 _logger.LogInformation(
                     "Attack resolved in game {GameId}: attacker {AttackerId} -> target {TargetId}, dmg={Damage}, dist={Distance}",
-                    gameId, attacker.Id, target.Id, attackerDamage, distance);
+                    gameId, attacker.Id, target.Id, outcome.AttackerDamage, distance);
 
                 // Clear guard
                 game.TurnInProgress = false;
@@ -497,7 +470,10 @@ public class ActionService : IActionService
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             _logger.LogError(ex,
                 "Failed to execute attack {AttackerId}->{TargetId} in game {GameId}",
                 command.AttackerUnitId,
@@ -506,5 +482,191 @@ public class ActionService : IActionService
             throw;
         }
     }
-}
 
+    public async Task<ActionStateResponse> AttackCityAsync(
+        Guid userId,
+        long gameId,
+        long attackerUnitId,
+        long targetCityId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        // Check idempotency if key provided
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.AttackCityIdempotency(gameId, idempotencyKey);
+            var cachedResponse = await _idempotencyStore.TryGetAsync<ActionStateResponse>(
+                cachedKey,
+                cancellationToken);
+
+            if (cachedResponse != null)
+            {
+                _logger.LogInformation(
+                    "Returning cached city attack response for idempotency key {IdempotencyKey} (game {GameId}, attacker {AttackerId}, city {CityId})",
+                    idempotencyKey,
+                    gameId,
+                    attackerUnitId,
+                    targetCityId);
+                return cachedResponse;
+            }
+        }
+
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        try
+        {
+            transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable,
+                cancellationToken);
+        }
+        catch (InvalidOperationException) { }
+        catch (NotSupportedException) { }
+
+        try
+        {
+            // Load game and active participant
+            var game = await _context.Games
+                .Include(g => g.Map)
+                .Include(g => g.ActiveParticipant)
+                .FirstOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+            if (game == null)
+            {
+                throw new UnauthorizedAccessException(
+                    $"Game {gameId} not found or you don't have access to it.");
+            }
+
+            if (game.ActiveParticipant == null)
+            {
+                throw new InvalidOperationException("No active participant found for this game.");
+            }
+
+            if (game.ActiveParticipant.Kind != ParticipantKind.Human || game.ActiveParticipant.UserId != userId)
+            {
+                throw new InvalidOperationException("NOT_PLAYER_TURN: It is not your turn to act.");
+            }
+
+            if (game.TurnInProgress)
+            {
+                throw new InvalidOperationException(
+                    "A turn action is already in progress. Please wait for it to complete.");
+            }
+
+            // Guard
+            game.TurnInProgress = true;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                // Load attacker and target city with tiles
+                var attacker = await _context.Units
+                    .Include(u => u.Type)
+                    .Include(u => u.Tile)
+                    .FirstOrDefaultAsync(u => u.Id == attackerUnitId && u.GameId == gameId, cancellationToken);
+
+                if (attacker == null)
+                {
+                    throw new InvalidOperationException($"UNIT_NOT_FOUND: Attacker unit {attackerUnitId} not found in game {gameId}.");
+                }
+
+                if (attacker.ParticipantId != game.ActiveParticipantId)
+                {
+                    throw new InvalidOperationException("This unit does not belong to the active participant.");
+                }
+
+                if (attacker.HasActed)
+                {
+                    throw new InvalidOperationException("NO_ACTIONS_LEFT: This unit has already acted this turn.");
+                }
+
+                var city = await _context.Cities
+                    .Include(c => c.Tile)
+                    .FirstOrDefaultAsync(c => c.Id == targetCityId && c.GameId == gameId, cancellationToken);
+
+                if (city == null)
+                {
+                    throw new InvalidOperationException($"CITY_NOT_FOUND: City {targetCityId} not found in game {gameId}.");
+                }
+
+                if (city.ParticipantId == attacker.ParticipantId)
+                {
+                    throw new ArgumentException("INVALID_TARGET: Target must be an enemy city.");
+                }
+
+                // Range validation using hex distance
+                var attackerCube = Domain.Utilities.HexagonalGrid.ConvertOddrToCube(attacker.Tile.Col, attacker.Tile.Row);
+                var cityCube = Domain.Utilities.HexagonalGrid.ConvertOddrToCube(city.Tile.Col, city.Tile.Row);
+                var distance = Domain.Utilities.HexagonalGrid.GetCubeDistance(attackerCube, cityCube);
+
+                if (!attacker.Type.IsRanged)
+                {
+                    if (distance != 1)
+                    {
+                        throw new ArgumentException("OUT_OF_RANGE: Melee attacks on city require adjacency.");
+                    }
+                }
+                else
+                {
+                    var min = attacker.Type.RangeMin;
+                    var max = attacker.Type.RangeMax;
+                    if (distance < min || distance > max)
+                    {
+                        throw new ArgumentException($"OUT_OF_RANGE: Ranged attack distance {distance} not in [{min},{max}] for city.");
+                    }
+                }
+
+                // Resolve attack on city (capture now requires melee unit ending turn on city tile)
+                var dmg = CombatHelper.ResolveAttackOnCity(attacker, city);
+
+                // Attacker marks as acted (never receives counterattack from city)
+                attacker.HasActed = true;
+                attacker.UpdatedAt = DateTimeOffset.UtcNow;
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "City attack resolved in game {GameId}: attacker {AttackerId} -> city {CityId}, dmg={Damage}, dist={Distance}",
+                    gameId, attacker.Id, city.Id, dmg, distance);
+
+                // Clear guard
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
+                var gameState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+                var response = new ActionStateResponse(gameState);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cacheKey = CacheKeys.AttackCityIdempotency(gameId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(cacheKey, response, TimeSpan.FromHours(1), cancellationToken);
+                }
+
+                return response;
+            }
+            catch
+            {
+                // Clear guard on error
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+            _logger.LogError(ex,
+                "Failed to execute city attack {AttackerId}->{CityId} in game {GameId}",
+                attackerUnitId,
+                targetCityId,
+                gameId);
+            throw;
+        }
+    }
+}

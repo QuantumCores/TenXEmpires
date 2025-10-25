@@ -944,5 +944,74 @@ public class GamesController : ControllerBase
                 new { code = "INTERNAL_ERROR", message = "An error occurred while processing the attack." });
         }
     }
+
+    /// <summary>
+    /// Ends the active participant's turn, commits the turn, creates an autosave, and advances to the next participant.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">Optional empty command body.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Triggers end-of-turn systems (regen/harvest/production), writes a Turn record, creates an autosave, and advances turn/participant.
+    /// If the next participant is AI, it may be executed within budgeted time in later steps.
+    /// </remarks>
+    /// <response code="200">Returns the updated state with turn summary and autosave id.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="409">Conflict - NOT_PLAYER_TURN or TURN_IN_PROGRESS.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("{id:long}/end-turn", Name = "EndTurn")]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(typeof(EndTurnResponse), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(EndTurnResponseExample))]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<EndTurnResponse>> EndTurn(
+        long id,
+        [FromBody] EndTurnCommand? command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = User.GetUserId();
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            _logger.LogDebug("User {UserId} ending turn for game {GameId}", userId, id);
+
+            var response = await _turnService.EndTurnAsync(
+                userId,
+                id,
+                command ?? new EndTurnCommand(),
+                idempotencyKey,
+                cancellationToken);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("NOT_PLAYER_TURN", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("not your turn", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(ex, "Not player's turn for game {GameId}", id);
+            return Conflict(new { code = "NOT_PLAYER_TURN", message = "It is not your turn." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("TURN_IN_PROGRESS", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("in progress", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(ex, "Turn already in progress for game {GameId}", id);
+            return Conflict(new { code = "TURN_IN_PROGRESS", message = "A turn action is already in progress. Please wait and retry." });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for EndTurn on game {GameId}", id);
+            return BadRequest(new { code = "INVALID_INPUT", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to end turn for game {GameId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred while ending the turn." });
+        }
+    }
 }
 

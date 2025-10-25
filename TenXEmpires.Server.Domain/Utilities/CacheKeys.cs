@@ -36,9 +36,19 @@ public static class CacheKeys
     // Future idempotency keys for other operations can be added here as needed:
     public static string AttackUnitIdempotency(long gameId, string idempotencyKey)
         => $"attack-unit:{gameId}:{idempotencyKey}";
-    //
-    // public static string EndTurnIdempotency(Guid userId, long gameId, string idempotencyKey)
-    //     => $"end-turn:{userId}:{gameId}:{idempotencyKey}";
+
+    public static string AttackCityIdempotency(long gameId, string idempotencyKey)
+        => $"attack-city:{gameId}:{idempotencyKey}";
+    
+    /// <summary>
+    /// Gets the idempotency cache key for end-turn operations.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="idempotencyKey">The client-provided idempotency key.</param>
+    /// <returns>A formatted cache key string.</returns>
+    public static string EndTurnIdempotency(Guid userId, long gameId, string idempotencyKey)
+        => $"end-turn:{userId}:{gameId}:{idempotencyKey}";
     //
     // public static string CreateSaveIdempotency(Guid userId, long gameId, string idempotencyKey)
     //     => $"create-save:{userId}:{gameId}:{idempotencyKey}";

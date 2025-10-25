@@ -60,8 +60,7 @@ public class ActionServiceTests : IDisposable
             Code = "test_4x4",
             SchemaVersion = 1,
             Width = 4,
-            Height = 4,
-            GeneratedAt = now
+            Height = 4
         };
         _context.Maps.Add(map);
 

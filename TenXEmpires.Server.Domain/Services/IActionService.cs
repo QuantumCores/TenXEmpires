@@ -45,5 +45,23 @@ public interface IActionService
         AttackUnitCommand command,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes an attack from a unit against an enemy city using deterministic damage.
+    /// City does not counterattack. Returns updated game state.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="attackerUnitId">The attacking unit ID.</param>
+    /// <param name="targetCityId">The target city ID.</param>
+    /// <param name="idempotencyKey">Optional idempotency key for safe retries.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ActionStateResponse> AttackCityAsync(
+        Guid userId,
+        long gameId,
+        long attackerUnitId,
+        long targetCityId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

@@ -984,6 +984,178 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/end-turn:
+    post:
+      tags:
+      - v1
+      summary: Ends the active participant's turn, commits the turn, creates an autosave, and advances to the next participant.
+      description: >-
+        Triggers end-of-turn systems (regen/harvest/production), writes a Turn record, creates an autosave, and advances turn/participant.
+
+        If the next participant is AI, it may be executed within budgeted time in later steps.
+      operationId: EndTurn
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: Optional empty command body.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/EndTurnCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/EndTurnCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/EndTurnCommand'
+      responses:
+        200:
+          description: Returns the updated state with turn summary and autosave id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EndTurnResponse'
+              example:
+                state:
+                  game:
+                    id: 42
+                    turnNo: 2
+                    activeParticipantId: 102
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_6x8
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Player
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 95
+                    hasActed: true
+                    tileId: 5
+                    row: 0
+                    col: 1
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: wood
+                    amount: 7
+                  - cityId: 301
+                    resourceType: stone
+                    amount: 6
+                  - cityId: 301
+                    resourceType: wheat
+                    amount: 8
+                  - cityId: 301
+                    resourceType: iron
+                    amount: 2
+                  - cityId: 302
+                    resourceType: wood
+                    amount: 6
+                  - cityId: 302
+                    resourceType: stone
+                    amount: 6
+                  - cityId: 302
+                    resourceType: wheat
+                    amount: 7
+                  - cityId: 302
+                    resourceType: iron
+                    amount: 1
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: slinger
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 3
+                    movePoints: 2
+                    health: 60
+                  turnSummary: 
+                turnSummary:
+                  regenAppliedCities: 1
+                  harvested:
+                    wood: 2
+                    stone: 1
+                    wheat: 3
+                    iron: 0
+                  producedUnits:
+                  - warrior
+                  productionDelayed: 0
+                  aiExecuted: false
+                autosaveId: 9001
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - NOT_PLAYER_TURN or TURN_IN_PROGRESS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/maps/{code}:
     get:
       tags:
@@ -1283,6 +1455,20 @@ components:
         displayName:
           type: string
           nullable: true
+      additionalProperties: false
+    EndTurnCommand:
+      type: object
+      additionalProperties: false
+    EndTurnResponse:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/GameStateDto'
+        turnSummary:
+          nullable: true
+        autosaveId:
+          type: integer
+          format: int64
       additionalProperties: false
     GameCreatedResponse:
       type: object
