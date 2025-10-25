@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
+using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Examples;
 using TenXEmpires.Server.Extensions;
@@ -133,6 +134,103 @@ public class SavesController : ControllerBase
                     code = "INTERNAL_ERROR",
                     message = "An error occurred while retrieving saves."
                 });
+        }
+    }
+
+    /// <summary>
+    /// Creates or overwrites a manual save in a slot (1..3) for the specified game and current turn.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">The manual save command with slot and name.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Creates a manual save for the current game state in the specified slot. If a manual save already exists
+    /// in that slot, it is overwritten. Returns the created save metadata.
+    /// 
+    /// Supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.
+    /// </remarks>
+    /// <response code="201">Manual save created or overwritten successfully.</response>
+    /// <response code="400">Bad request due to invalid slot or name.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - game does not exist or user doesn't have access.</response>
+    /// <response code="409">Conflict - SAVE_CONFLICT on upsert failure.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("{id:long}/saves/manual", Name = "CreateManualSave")]
+    [ValidateAntiForgeryToken]
+    [SwaggerRequestExample(typeof(CreateManualSaveCommand), typeof(CreateManualSaveCommandExample))]
+    [ProducesResponseType(typeof(SaveCreatedDto), StatusCodes.Status201Created)]
+    [SwaggerResponseExample(StatusCodes.Status201Created, typeof(SaveCreatedDtoExample))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<SaveCreatedDto>> CreateManualSave(
+        long id,
+        [FromBody] CreateManualSaveCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid request body for CreateManualSave on game {GameId}", id);
+                return BadRequest(new
+                {
+                    code = "INVALID_INPUT",
+                    message = "One or more validation errors occurred.",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()
+                });
+            }
+
+            if (command.Slot < 1 || command.Slot > 3)
+            {
+                return BadRequest(new { code = "INVALID_SLOT", message = "Slot must be between 1 and 3." });
+            }
+
+            if (string.IsNullOrWhiteSpace(command.Name))
+            {
+                return BadRequest(new { code = "INVALID_NAME", message = "Name cannot be empty." });
+            }
+
+            var userId = User.GetUserId();
+
+            // Verify access
+            var gameExists = await _gameService.VerifyGameAccessAsync(userId, id, cancellationToken);
+            if (!gameExists)
+            {
+                _logger.LogWarning("Game {GameId} not found or user {UserId} doesn't have access", id, userId);
+                return NotFound(new { code = "GAME_NOT_FOUND", message = "Game not found or you don't have access to it." });
+            }
+
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            var result = await _saveService.CreateManualAsync(userId, id, command, idempotencyKey, cancellationToken);
+
+            return CreatedAtRoute("ListGameSaves", new { id }, result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("SAVE_CONFLICT", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(ex, "Manual save conflict for game {GameId}", id);
+            return Conflict(new { code = "SAVE_CONFLICT", message = "Could not create manual save due to a conflict. Please retry." });
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for CreateManualSave on game {GameId}", id);
+            return BadRequest(new { code = "INVALID_INPUT", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create manual save for game {GameId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred while creating the manual save." });
         }
     }
 }

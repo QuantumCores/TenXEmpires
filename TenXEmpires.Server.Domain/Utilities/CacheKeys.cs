@@ -50,7 +50,7 @@ public static class CacheKeys
     public static string EndTurnIdempotency(Guid userId, long gameId, string idempotencyKey)
         => $"end-turn:{userId}:{gameId}:{idempotencyKey}";
     //
-    // public static string CreateSaveIdempotency(Guid userId, long gameId, string idempotencyKey)
-    //     => $"create-save:{userId}:{gameId}:{idempotencyKey}";
+    public static string CreateManualSaveIdempotency(Guid userId, long gameId, string idempotencyKey)
+        => $"create-manual-save:{userId}:{gameId}:{idempotencyKey}";
 }
 

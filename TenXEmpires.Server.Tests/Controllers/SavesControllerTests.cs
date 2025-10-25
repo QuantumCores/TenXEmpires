@@ -7,6 +7,7 @@ using Moq;
 using TenXEmpires.Server.Controllers;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
+using TenXEmpires.Server.Domain.Constants;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
@@ -54,6 +55,106 @@ public class SavesControllerTests
                 User = claimsPrincipal
             }
         };
+    }
+
+    [Fact]
+    public async Task CreateManualSave_WithValidRequest_ShouldReturn201()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new CreateManualSaveCommand(1, "Before assault on capital");
+        var expected = new SaveCreatedDto(301, 1, 8, DateTimeOffset.UtcNow, command.Name);
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _saveServiceMock
+            .Setup(s => s.CreateManualAsync(_testUserId, gameId, command, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        // Add idempotency header
+        _controller.ControllerContext.HttpContext.Request.Headers[TenxHeaders.IdempotencyKey] = "req-1";
+
+        // Act
+        var result = await _controller.CreateManualSave(gameId, command, CancellationToken.None);
+
+        // Assert
+        var created = result.Result.Should().BeOfType<CreatedAtRouteResult>().Subject;
+        created.StatusCode.Should().Be(StatusCodes.Status201Created);
+        created.RouteName.Should().Be("ListGameSaves");
+        created.Value.Should().BeOfType<SaveCreatedDto>();
+    }
+
+    [Fact]
+    public async Task CreateManualSave_WithInvalidSlot_ShouldReturn400()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new CreateManualSaveCommand(0, "name");
+
+        // Act
+        var result = await _controller.CreateManualSave(gameId, command, CancellationToken.None);
+
+        // Assert
+        var badReq = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badReq.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateManualSave_WithEmptyName_ShouldReturn400()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new CreateManualSaveCommand(1, "  ");
+
+        // Act
+        var result = await _controller.CreateManualSave(gameId, command, CancellationToken.None);
+
+        // Assert
+        var badReq = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badReq.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateManualSave_WithNoAccess_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new CreateManualSaveCommand(1, "name");
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.CreateManualSave(gameId, command, CancellationToken.None);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task CreateManualSave_WithServiceConflict_ShouldReturn409()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new CreateManualSaveCommand(1, "name");
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _saveServiceMock
+            .Setup(s => s.CreateManualAsync(_testUserId, gameId, command, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("SAVE_CONFLICT: upsert failed"));
+
+        // Act
+        var result = await _controller.CreateManualSave(gameId, command, CancellationToken.None);
+
+        // Assert
+        var conflict = result.Result.Should().BeOfType<ConflictObjectResult>().Subject;
+        conflict.StatusCode.Should().Be(StatusCodes.Status409Conflict);
     }
 
     [Fact]

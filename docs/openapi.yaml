@@ -1329,6 +1329,87 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/saves/manual:
+    post:
+      tags:
+      - v1
+      summary: Creates or overwrites a manual save in a slot (1..3) for the specified game and current turn.
+      description: >-
+        Creates a manual save for the current game state in the specified slot. If a manual save already exists
+
+        in that slot, it is overwritten. Returns the created save metadata.
+
+
+        Supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.
+      operationId: CreateManualSave
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: The manual save command with slot and name.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateManualSaveCommand'
+            example:
+              slot: 1
+              name: Before assault on capital
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateManualSaveCommand'
+            example:
+              slot: 1
+              name: Before assault on capital
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/CreateManualSaveCommand'
+            example:
+              slot: 1
+              name: Before assault on capital
+      responses:
+        201:
+          description: Manual save created or overwritten successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveCreatedDto'
+              example:
+                id: 301
+                slot: 1
+                turnNo: 8
+                createdAt: 2025-10-25T12:00:00+00:00
+                name: Before assault on capital
+        400:
+          description: Bad request due to invalid slot or name.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - game does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - SAVE_CONFLICT on upsert failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/unit-definitions:
     get:
       tags:
@@ -1511,6 +1592,16 @@ components:
         settings:
           nullable: true
         displayName:
+          type: string
+          nullable: true
+      additionalProperties: false
+    CreateManualSaveCommand:
+      type: object
+      properties:
+        slot:
+          type: integer
+          format: int32
+        name:
           type: string
           nullable: true
       additionalProperties: false
@@ -1856,6 +1947,25 @@ components:
         createdAt:
           type: string
           format: date-time
+      additionalProperties: false
+    SaveCreatedDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slot:
+          type: integer
+          format: int32
+        turnNo:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        name:
+          type: string
+          nullable: true
       additionalProperties: false
     SaveManualDto:
       type: object

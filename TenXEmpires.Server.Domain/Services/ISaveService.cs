@@ -36,5 +36,21 @@ public interface ISaveService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The list of manual saves and autosaves.</returns>
     Task<GameSavesListDto> ListSavesAsync(long gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates or overwrites a manual save in a specific slot for the current game turn and returns metadata.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="command">The create manual save command with slot and name.</param>
+    /// <param name="idempotencyKey">Optional idempotency key to safely retry requests.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The created/overwritten manual save metadata.</returns>
+    Task<SaveCreatedDto> CreateManualAsync(
+        Guid userId,
+        long gameId,
+        CreateManualSaveCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

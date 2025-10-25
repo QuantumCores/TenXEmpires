@@ -5,6 +5,7 @@ using TenXEmpires.Server.Domain.Entities;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure.Data;
 using TenXEmpires.Server.Domain.DataContracts;
+using TenXEmpires.Server.Domain.Utilities;
 
 namespace TenXEmpires.Server.Infrastructure.Services;
 
@@ -17,11 +18,19 @@ public class SaveService : ISaveService
 
     private readonly TenXDbContext _context;
     private readonly ILogger<SaveService> _logger;
+    private readonly IIdempotencyStore _idempotencyStore;
+    private readonly IGameStateService _gameStateService;
 
-    public SaveService(TenXDbContext context, ILogger<SaveService> logger)
+    public SaveService(
+        TenXDbContext context,
+        ILogger<SaveService> logger,
+        IIdempotencyStore idempotencyStore,
+        IGameStateService gameStateService)
     {
         _context = context;
         _logger = logger;
+        _idempotencyStore = idempotencyStore;
+        _gameStateService = gameStateService;
     }
 
     public async Task<long> CreateAutosaveAsync(
@@ -125,5 +134,136 @@ public class SaveService : ISaveService
             manualSaves.Count, autosaves.Count, gameId);
 
         return new GameSavesListDto(manualSaves, autosaves);
+    }
+
+    public async Task<SaveCreatedDto> CreateManualAsync(
+        Guid userId,
+        long gameId,
+        CreateManualSaveCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (command is null)
+        {
+            throw new ArgumentException("Command cannot be null.");
+        }
+
+        if (command.Slot < 1 || command.Slot > 3)
+        {
+            throw new ArgumentException("Invalid slot. Slot must be between 1 and 3.");
+        }
+
+        if (string.IsNullOrWhiteSpace(command.Name))
+        {
+            throw new ArgumentException("Invalid name. Name cannot be empty.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cacheKey = CacheKeys.CreateManualSaveIdempotency(userId, gameId, idempotencyKey);
+            var cached = await _idempotencyStore.TryGetAsync<SaveCreatedDto>(cacheKey, cancellationToken);
+            if (cached is not null)
+            {
+                return cached;
+            }
+        }
+
+        // Verify game belongs to user and load required info
+        var game = await _context.Games
+            .Include(g => g.Map)
+            .AsNoTracking()
+            .SingleOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+        if (game is null)
+        {
+            throw new UnauthorizedAccessException($"Game {gameId} not found or access denied.");
+        }
+
+        if (game.ActiveParticipantId is null)
+        {
+            throw new InvalidOperationException("No active participant found for this game.");
+        }
+
+        // Build snapshot of current game state
+        var state = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+        var stateJson = JsonSerializer.Serialize(state);
+
+        // Transactional upsert by (userId, gameId, slot) for kind='manual'
+        using var trx = await _context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var existing = await _context.Saves
+                .Where(s => s.UserId == userId && s.GameId == gameId && s.Kind == "manual" && s.Slot == command.Slot)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existing is null)
+            {
+                var save = new Save
+                {
+                    UserId = userId,
+                    GameId = gameId,
+                    Kind = "manual",
+                    Name = command.Name.Trim(),
+                    Slot = command.Slot,
+                    TurnNo = game.TurnNo,
+                    ActiveParticipantId = game.ActiveParticipantId.Value,
+                    SchemaVersion = game.MapSchemaVersion,
+                    MapCode = game.Map.Code,
+                    State = stateJson,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                _context.Saves.Add(save);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                await trx.CommitAsync(cancellationToken);
+
+                var created = SaveCreatedDto.From(save);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cacheKey = CacheKeys.CreateManualSaveIdempotency(userId, gameId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(cacheKey, created, TimeSpan.FromHours(24), cancellationToken);
+                }
+
+                _logger.LogInformation("Created manual save slot {Slot} for game {GameId} by user {UserId}", command.Slot, gameId, userId);
+                return created;
+            }
+            else
+            {
+                existing.Name = command.Name.Trim();
+                existing.TurnNo = game.TurnNo;
+                existing.ActiveParticipantId = game.ActiveParticipantId.Value;
+                existing.SchemaVersion = game.MapSchemaVersion;
+                existing.MapCode = game.Map.Code;
+                existing.State = stateJson;
+                existing.CreatedAt = DateTimeOffset.UtcNow;
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await trx.CommitAsync(cancellationToken);
+
+                var created = SaveCreatedDto.From(existing);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cacheKey = CacheKeys.CreateManualSaveIdempotency(userId, gameId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(cacheKey, created, TimeSpan.FromHours(24), cancellationToken);
+                }
+
+                _logger.LogInformation("Overwrote manual save slot {Slot} for game {GameId} by user {UserId}", command.Slot, gameId, userId);
+                return created;
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            await trx.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to create manual save for game {GameId} by user {UserId}", gameId, userId);
+            throw new InvalidOperationException("SAVE_CONFLICT: Could not upsert manual save due to a conflict.");
+        }
+        catch
+        {
+            await trx.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 }
