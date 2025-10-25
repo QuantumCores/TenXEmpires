@@ -26,15 +26,18 @@ public class GamesController : ControllerBase
 {
     private readonly IGameService _gameService;
     private readonly IGameStateService _gameStateService;
+    private readonly ITurnService _turnService;
     private readonly ILogger<GamesController> _logger;
 
     public GamesController(
         IGameService gameService,
         IGameStateService gameStateService,
+        ITurnService turnService,
         ILogger<GamesController> logger)
     {
         _gameService = gameService;
         _gameStateService = gameStateService;
+        _turnService = turnService;
         _logger = logger;
     }
 
@@ -539,6 +542,133 @@ public class GamesController : ControllerBase
                 {
                     code = "INTERNAL_ERROR",
                     message = "An error occurred while deleting the game."
+                });
+        }
+    }
+
+    /// <summary>
+    /// Lists committed turns for a specific game with optional sorting and pagination.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="query">Query parameters for sorting and pagination.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Returns a paginated list of committed turns for the specified game, ordered by turn number or commit timestamp.
+    /// This endpoint is useful for displaying game history and timeline views.
+    /// 
+    /// Query Parameters:
+    /// - page: 1-based page number (default: 1)
+    /// - pageSize: Number of items per page (default: 20, max: 100)
+    /// - sort: Sort field - turnNo or committedAt (default: turnNo)
+    /// - order: Sort order - asc or desc (default: desc)
+    /// 
+    /// Examples:
+    /// - GET /v1/games/123/turns - Recent turns first
+    /// - GET /v1/games/123/turns?sort=committedAt&amp;order=asc - Chronological order
+    /// - GET /v1/games/123/turns?page=2&amp;pageSize=50 - Second page with 50 items
+    ///
+    /// Sample response:
+    ///
+    ///     {
+    ///       "items": [
+    ///         {
+    ///           "id": 42,
+    ///           "turnNo": 5,
+    ///           "participantId": 1,
+    ///           "committedAt": "2025-10-20T11:30:00Z",
+    ///           "durationMs": 12500,
+    ///           "summary": { "actions": 3, "unitsMovedCount": 2 }
+    ///         }
+    ///       ],
+    ///       "page": 1,
+    ///       "pageSize": 20,
+    ///       "total": 5
+    ///     }
+    /// </remarks>
+    /// <response code="200">Returns the paged list of turns.</response>
+    /// <response code="400">Bad request due to invalid query parameters.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - game does not exist or user doesn't have access.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpGet("{id:long}/turns", Name = "ListGameTurns")]
+    [ProducesResponseType(typeof(PagedResult<TurnDto>), StatusCodes.Status200OK)]
+    [SwaggerResponseExample(StatusCodes.Status200OK, typeof(PagedTurnDtoExample))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PagedResult<TurnDto>>> ListGameTurns(
+        long id,
+        [FromQuery] ListTurnsQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Validate model state (DataAnnotations)
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid query parameters for ListGameTurns");
+                return BadRequest(new
+                {
+                    code = "INVALID_INPUT",
+                    message = "One or more validation errors occurred.",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()
+                });
+            }
+
+            // Get user ID from authenticated user
+            var userId = User.GetUserId();
+
+            _logger.LogDebug("User {UserId} requesting turns for game {GameId}", userId, id);
+
+            // Verify the game exists and belongs to the user
+            var gameExists = await _gameService.VerifyGameAccessAsync(userId, id, cancellationToken);
+
+            if (!gameExists)
+            {
+                _logger.LogWarning("Game {GameId} not found or user {UserId} doesn't have access", id, userId);
+                return NotFound(new
+                {
+                    code = "GAME_NOT_FOUND",
+                    message = "Game not found or you don't have access to it."
+                });
+            }
+
+            // Call service to list turns
+            var result = await _turnService.ListTurnsAsync(id, query, cancellationToken);
+
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for ListGameTurns request");
+            return BadRequest(new
+            {
+                code = "INVALID_INPUT",
+                message = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt");
+            return Unauthorized(new
+            {
+                code = "UNAUTHORIZED",
+                message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to list turns for game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An error occurred while retrieving game turns."
                 });
         }
     }

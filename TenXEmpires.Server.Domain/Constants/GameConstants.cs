@@ -54,6 +54,25 @@ public static class SortOrder
 }
 
 /// <summary>
+/// Constants for turn query sort fields.
+/// </summary>
+public static class TurnSortField
+{
+    public const string TurnNo = "turnno";
+    public const string CommittedAt = "committedat";
+    
+    /// <summary>
+    /// Gets all valid sort field values (normalized to lowercase).
+    /// </summary>
+    public static readonly string[] ValidFields = { TurnNo, CommittedAt };
+    
+    /// <summary>
+    /// The default sort field for turn queries.
+    /// </summary>
+    public const string Default = TurnNo;
+}
+
+/// <summary>
 /// Constants for participant types in a game.
 /// </summary>
 public static class ParticipantKind

@@ -262,6 +262,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GameStateDto'
+              example:
+                game:
+                  id: 42
+                  turnNo: 5
+                  activeParticipantId: 101
+                  turnInProgress: false
+                  status: active
+                map:
+                  id: 1
+                  code: standard_6x8
+                  schemaVersion: 1
+                  width: 8
+                  height: 6
+                participants:
+                - id: 101
+                  gameId: 42
+                  kind: human
+                  userId: a0000000-0000-0000-0000-000000000001
+                  displayName: Commander Alex
+                  isEliminated: false
+                - id: 102
+                  gameId: 42
+                  kind: ai
+                  userId: 
+                  displayName: Genghis Khan
+                  isEliminated: false
+                units:
+                - id: 201
+                  participantId: 101
+                  typeCode: warrior
+                  hp: 80
+                  hasActed: true
+                  tileId: 12
+                  row: 1
+                  col: 4
+                - id: 202
+                  participantId: 101
+                  typeCode: settler
+                  hp: 50
+                  hasActed: false
+                  tileId: 15
+                  row: 1
+                  col: 7
+                - id: 203
+                  participantId: 102
+                  typeCode: warrior
+                  hp: 100
+                  hasActed: false
+                  tileId: 43
+                  row: 5
+                  col: 3
+                cities:
+                - id: 301
+                  participantId: 101
+                  hp: 100
+                  maxHp: 100
+                  tileId: 3
+                  row: 0
+                  col: 3
+                - id: 302
+                  participantId: 102
+                  hp: 85
+                  maxHp: 100
+                  tileId: 45
+                  row: 5
+                  col: 5
+                cityTiles:
+                - cityId: 301
+                  tileId: 3
+                - cityId: 301
+                  tileId: 4
+                - cityId: 301
+                  tileId: 11
+                - cityId: 302
+                  tileId: 45
+                - cityId: 302
+                  tileId: 44
+                - cityId: 302
+                  tileId: 37
+                cityResources:
+                - cityId: 301
+                  resourceType: food
+                  amount: 12
+                - cityId: 301
+                  resourceType: production
+                  amount: 8
+                - cityId: 301
+                  resourceType: gold
+                  amount: 5
+                - cityId: 302
+                  resourceType: food
+                  amount: 8
+                - cityId: 302
+                  resourceType: production
+                  amount: 6
+                - cityId: 302
+                  resourceType: gold
+                  amount: 3
+                unitDefinitions:
+                - id: 1
+                  code: warrior
+                  isRanged: false
+                  attack: 20
+                  defence: 10
+                  rangeMin: 0
+                  rangeMax: 0
+                  movePoints: 2
+                  health: 100
+                - id: 2
+                  code: settler
+                  isRanged: false
+                  attack: 0
+                  defence: 5
+                  rangeMin: 0
+                  rangeMax: 0
+                  movePoints: 2
+                  health: 50
+                - id: 3
+                  code: archer
+                  isRanged: true
+                  attack: 15
+                  defence: 8
+                  rangeMin: 2
+                  rangeMax: 2
+                  movePoints: 2
+                  health: 80
+                turnSummary: 
         401:
           description: Unauthorized - user is not authenticated.
           content:
@@ -351,6 +478,120 @@ paths:
       responses:
         204:
           description: Game successfully deleted.
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - game does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
+  /v1/games/{id}/turns:
+    get:
+      tags:
+      - v1
+      summary: Lists committed turns for a specific game with optional sorting and pagination.
+      description: "Returns a paginated list of committed turns for the specified game, ordered by turn number or commit timestamp.\r\nThis endpoint is useful for displaying game history and timeline views.\r\n\r\nQuery Parameters:\r\n- page: 1-based page number (default: 1)\r\n- pageSize: Number of items per page (default: 20, max: 100)\r\n- sort: Sort field - turnNo or committedAt (default: turnNo)\r\n- order: Sort order - asc or desc (default: desc)\r\n\r\nExamples:\r\n- GET /v1/games/123/turns - Recent turns first\r\n- GET /v1/games/123/turns?sort=committedAt&order=asc - Chronological order\r\n- GET /v1/games/123/turns?page=2&pageSize=50 - Second page with 50 items\r\n            \r\nSample response:\r\n            \r\n    {\r\n      \"items\": [\r\n        {\r\n          \"id\": 42,\r\n          \"turnNo\": 5,\r\n          \"participantId\": 1,\r\n          \"committedAt\": \"2025-10-20T11:30:00Z\",\r\n          \"durationMs\": 12500,\r\n          \"summary\": { \"actions\": 3, \"unitsMovedCount\": 2 }\r\n        }\r\n      ],\r\n      \"page\": 1,\r\n      \"pageSize\": 20,\r\n      \"total\": 5\r\n    }"
+      operationId: ListGameTurns
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: Page
+        in: query
+        schema:
+          maximum: 2147483647
+          minimum: 1
+          type: integer
+          format: int32
+      - name: PageSize
+        in: query
+        schema:
+          maximum: 100
+          minimum: 1
+          type: integer
+          format: int32
+      - name: Sort
+        in: query
+        schema:
+          type: string
+      - name: Order
+        in: query
+        schema:
+          type: string
+      responses:
+        200:
+          description: Returns the paged list of turns.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnDtoPagedResult'
+              example:
+                items:
+                - id: 42
+                  turnNo: 5
+                  participantId: 1
+                  committedAt: 2025-10-20T11:30:00+00:00
+                  durationMs: 12500
+                  summary:
+                    actions: 3
+                    unitsMovedCount: 2
+                    citiesFoundedCount: 0
+                - id: 41
+                  turnNo: 4
+                  participantId: 2
+                  committedAt: 2025-10-20T11:20:00+00:00
+                  durationMs: 8200
+                  summary:
+                    actions: 2
+                    unitsMovedCount: 1
+                    citiesFoundedCount: 1
+                - id: 40
+                  turnNo: 3
+                  participantId: 1
+                  committedAt: 2025-10-20T11:10:00+00:00
+                  durationMs: 15300
+                  summary:
+                    actions: 4
+                    unitsMovedCount: 3
+                    citiesFoundedCount: 0
+                - id: 39
+                  turnNo: 2
+                  participantId: 2
+                  committedAt: 2025-10-20T11:00:00+00:00
+                  durationMs: 6800
+                  summary:
+                    actions: 1
+                    unitsMovedCount: 1
+                    citiesFoundedCount: 0
+                - id: 38
+                  turnNo: 1
+                  participantId: 1
+                  committedAt: 2025-10-20T10:50:00+00:00
+                  durationMs: 9500
+                  summary:
+                    actions: 2
+                    unitsMovedCount: 2
+                    citiesFoundedCount: 0
+                page: 1
+                pageSize: 20
+                total: 5
+        400:
+          description: Bad request due to invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
         401:
           description: Unauthorized - user is not authenticated.
           content:
@@ -932,6 +1173,49 @@ components:
           type: string
           nullable: true
       additionalProperties: {}
+    TurnDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        turnNo:
+          type: integer
+          format: int32
+        participantId:
+          type: integer
+          format: int64
+        committedAt:
+          type: string
+          format: date-time
+        durationMs:
+          type: integer
+          format: int32
+          nullable: true
+        summary:
+          nullable: true
+      additionalProperties: false
+    TurnDtoPagedResult:
+      required:
+      - items
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TurnDto'
+          nullable: true
+        page:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
+          nullable: true
+      additionalProperties: false
     UnitDefinitionDto:
       type: object
       properties:

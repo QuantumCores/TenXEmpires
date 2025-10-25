@@ -23,6 +23,7 @@ public class GamesControllerTests
 {
     private readonly Mock<IGameService> _gameServiceMock;
     private readonly Mock<IGameStateService> _gameStateServiceMock;
+    private readonly Mock<ITurnService> _turnServiceMock;
     private readonly Mock<ILogger<GamesController>> _loggerMock;
     private readonly GamesController _controller;
     private readonly Guid _testUserId;
@@ -31,12 +32,14 @@ public class GamesControllerTests
     {
         _gameServiceMock = new Mock<IGameService>();
         _gameStateServiceMock = new Mock<IGameStateService>();
+        _turnServiceMock = new Mock<ITurnService>();
         _loggerMock = new Mock<ILogger<GamesController>>();
         _testUserId = Guid.NewGuid();
         
         _controller = new GamesController(
             _gameServiceMock.Object,
             _gameStateServiceMock.Object,
+            _turnServiceMock.Object,
             _loggerMock.Object);
 
         // Setup authenticated user context
@@ -674,6 +677,224 @@ public class GamesControllerTests
         // Assert
         _gameServiceMock.Verify(
             s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region ListGameTurns Tests
+
+    [Fact]
+    public async Task ListGameTurns_WithValidRequest_ShouldReturn200AndPagedResult()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery { Page = 1, PageSize = 20 };
+        var expectedResult = new PagedResult<TurnDto>
+        {
+            Items = new List<TurnDto>
+            {
+                new TurnDto(1, 5, 1, DateTimeOffset.UtcNow, 10000, null),
+                new TurnDto(2, 4, 2, DateTimeOffset.UtcNow.AddHours(-1), 8000, null)
+            },
+            Page = 1,
+            PageSize = 20,
+            Total = 2
+        };
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        var pagedResult = ok.Value.Should().BeOfType<PagedResult<TurnDto>>().Subject;
+        pagedResult.Items.Should().HaveCount(2);
+        pagedResult.Total.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithNonExistentGame_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 999L;
+        var query = new ListTurnsQuery();
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithGameOwnedByDifferentUser_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery();
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithInvalidSortField_ShouldReturn400()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery { Sort = "invalidField" };
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Invalid sort field", "Sort"));
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithInvalidOrder_ShouldReturn400()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery { Order = "sideways" };
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("Invalid order", "Order"));
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithEmptyResult_ShouldReturn200WithEmptyItems()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery();
+        var emptyResult = new PagedResult<TurnDto>
+        {
+            Items = new List<TurnDto>(),
+            Page = 1,
+            PageSize = 20,
+            Total = 0
+        };
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(emptyResult);
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        var pagedResult = ok.Value.Should().BeOfType<PagedResult<TurnDto>>().Subject;
+        pagedResult.Items.Should().BeEmpty();
+        pagedResult.Total.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithServiceException_ShouldReturn500()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery();
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var serverError = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        serverError.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public async Task ListGameTurns_WithPaginationParameters_ShouldPassThroughCorrectly()
+    {
+        // Arrange
+        var gameId = 42L;
+        var query = new ListTurnsQuery { Page = 2, PageSize = 50, Sort = "committedAt", Order = "asc" };
+        var expectedResult = new PagedResult<TurnDto>
+        {
+            Items = new List<TurnDto>(),
+            Page = 2,
+            PageSize = 50,
+            Total = 100
+        };
+
+        _gameServiceMock
+            .Setup(s => s.VerifyGameAccessAsync(_testUserId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _turnServiceMock
+            .Setup(s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedResult);
+
+        // Act
+        var result = await _controller.ListGameTurns(gameId, query, CancellationToken.None);
+
+        // Assert
+        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var pagedResult = ok.Value.Should().BeOfType<PagedResult<TurnDto>>().Subject;
+        pagedResult.Page.Should().Be(2);
+        pagedResult.PageSize.Should().Be(50);
+        pagedResult.Total.Should().Be(100);
+
+        _turnServiceMock.Verify(
+            s => s.ListTurnsAsync(gameId, query, It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
