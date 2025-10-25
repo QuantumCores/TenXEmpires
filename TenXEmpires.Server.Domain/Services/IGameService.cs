@@ -58,5 +58,20 @@ public interface IGameService
         Guid userId,
         long gameId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes a game and all associated child entities (participants, units, cities, saves, turns) 
+    /// owned by the authenticated user.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID to delete.</param>
+    /// <param name="idempotencyKey">Optional idempotency key to prevent duplicate deletions.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True if the game was deleted, false if not found or not accessible.</returns>
+    Task<bool> DeleteGameAsync(
+        Guid userId,
+        long gameId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

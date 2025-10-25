@@ -1,0 +1,37 @@
+namespace TenXEmpires.Server.Domain.Utilities;
+
+/// <summary>
+/// Centralized cache key builder for idempotency and caching operations.
+/// Provides consistent key formats across all services.
+/// </summary>
+public static class CacheKeys
+{
+    /// <summary>
+    /// Gets the idempotency cache key for game creation operations.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="idempotencyKey">The client-provided idempotency key.</param>
+    /// <returns>A formatted cache key string.</returns>
+    public static string CreateGameIdempotency(Guid userId, string idempotencyKey)
+        => $"create-game:{userId}:{idempotencyKey}";
+
+    /// <summary>
+    /// Gets the idempotency cache key for game deletion operations.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="idempotencyKey">The client-provided idempotency key.</param>
+    /// <returns>A formatted cache key string.</returns>
+    public static string DeleteGameIdempotency(Guid userId, string idempotencyKey)
+        => $"delete-game:{userId}:{idempotencyKey}";
+
+    // Future idempotency keys for other operations can be added here as needed:
+    // public static string UpdateGameIdempotency(Guid userId, long gameId, string idempotencyKey)
+    //     => $"update-game:{userId}:{gameId}:{idempotencyKey}";
+    //
+    // public static string EndTurnIdempotency(Guid userId, long gameId, string idempotencyKey)
+    //     => $"end-turn:{userId}:{gameId}:{idempotencyKey}";
+    //
+    // public static string CreateSaveIdempotency(Guid userId, long gameId, string idempotencyKey)
+    //     => $"create-save:{userId}:{gameId}:{idempotencyKey}";
+}
+

@@ -334,6 +334,37 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+    delete:
+      tags:
+      - v1
+      summary: Deletes a game and all associated child entities owned by the authenticated user.
+      description: "Permanently deletes a game and all related entities:\r\n- Participants (human and AI)\r\n- Units and their state\r\n- Cities, city tiles, and city resources\r\n- Game saves (manual and autosave)\r\n- Turn history\r\n\r\nThe operation is transactional - either all entities are deleted or none are.\r\nOnly the game owner can delete their games; attempts to delete games owned by others will return 404.\r\n\r\nThe endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.\r\n\r\n**Warning**: This operation is permanent and cannot be undone.\r\n\r\nExample:\r\n            \r\n    DELETE /v1/games/123\r\n    X-Tenx-Idempotency-Key: unique-request-id-456"
+      operationId: DeleteGame
+      parameters:
+      - name: id
+        in: path
+        description: The game ID to delete.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        204:
+          description: Game successfully deleted.
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - game does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/maps/{code}:
     get:
       tags:

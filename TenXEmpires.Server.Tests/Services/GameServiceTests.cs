@@ -7,6 +7,7 @@ using Moq;
 using TenXEmpires.Server.Domain.Configuration;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
+using TenXEmpires.Server.Domain.Utilities;
 using TenXEmpires.Server.Infrastructure.Data;
 using TenXEmpires.Server.Infrastructure.Services;
 using TenXEmpires.Server.Domain.Entities;
@@ -650,7 +651,7 @@ public class GameServiceTests : IDisposable
         // Assert
         _idempotencyStoreMock.Verify(
             x => x.TryStoreAsync(
-                $"create-game:{newUserId}:{idempotencyKey}",
+                CacheKeys.CreateGameIdempotency(newUserId, idempotencyKey),
                 It.IsAny<GameCreatedResponse>(),
                 TimeSpan.FromHours(24),
                 It.IsAny<CancellationToken>()),
@@ -775,6 +776,145 @@ public class GameServiceTests : IDisposable
         // Assert
         detail.Should().BeNull();
     }
+
+    #region DeleteGameAsync Tests
+
+    [Fact(Skip = "ExecuteSqlInterpolatedAsync not supported by InMemoryDatabase. Test with real database in integration tests.")]
+    public async Task DeleteGameAsync_WithValidGame_ShouldReturnTrueAndDeleteAllRelatedEntities()
+    {
+        // Note: This test is skipped because ExecuteSqlInterpolatedAsync is not supported
+        // by the InMemoryDatabase provider. The manual cascade delete logic using raw SQL
+        // can only be properly tested with a real relational database (e.g., PostgreSQL).
+        //
+        // Integration tests with a real database connection should verify:
+        // - Game is deleted
+        // - All related entities are cascade deleted (participants, units, cities, etc.)
+        //
+        // For unit testing, we rely on the simpler tests below that verify
+        // ownership checks and idempotency behavior.
+
+        await Task.CompletedTask; // Suppress async warning
+    }
+
+    [Fact]
+    public async Task DeleteGameAsync_WithNonExistentGame_ShouldReturnFalse()
+    {
+        // Arrange
+        var nonExistentGameId = 999L;
+
+        // Act
+        var result = await _service.DeleteGameAsync(_testUserId, nonExistentGameId, null, default);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteGameAsync_WithGameOwnedByDifferentUser_ShouldReturnFalse()
+    {
+        // Arrange - Game ID 4 belongs to a different user (seeded)
+        var gameId = 4L;
+
+        // Act
+        var result = await _service.DeleteGameAsync(_testUserId, gameId, null, default);
+
+        // Assert
+        result.Should().BeFalse();
+
+        // Verify game still exists (not deleted)
+        var game = await _context.Games.FindAsync(gameId);
+        game.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteGameAsync_WithIdempotencyKey_ShouldCheckCache()
+    {
+        // Arrange
+        var gameId = 1L;
+        var idempotencyKey = "delete-key-123";
+        var cachedKey = CacheKeys.DeleteGameIdempotency(_testUserId, idempotencyKey);
+
+        _idempotencyStoreMock
+            .Setup(x => x.TryGetAsync<string>(cachedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("deleted");
+
+        // Act
+        var result = await _service.DeleteGameAsync(_testUserId, gameId, idempotencyKey, default);
+
+        // Assert
+        result.Should().BeTrue();
+
+        // Verify cache was checked
+        _idempotencyStoreMock.Verify(
+            x => x.TryGetAsync<string>(cachedKey, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // Verify game was NOT deleted (returned from cache)
+        var game = await _context.Games.FindAsync(gameId);
+        game.Should().NotBeNull();
+    }
+
+    [Fact(Skip = "ExecuteSqlInterpolatedAsync not supported by InMemoryDatabase. Test with real database in integration tests.")]
+    public async Task DeleteGameAsync_WithIdempotencyKey_ShouldStoreSuccessInCache()
+    {
+        // Note: Skipped for same reason as DeleteGameAsync_WithValidGame_ShouldReturnTrueAndDeleteAllRelatedEntities
+        // The actual deletion uses ExecuteSqlInterpolatedAsync which requires a relational database.
+        
+        await Task.CompletedTask; // Suppress async warning
+    }
+
+    [Fact]
+    public async Task DeleteGameAsync_WithIdempotencyKeyForNotFound_ShouldStoreNotFoundInCache()
+    {
+        // Arrange
+        var nonExistentGameId = 999L;
+        var idempotencyKey = "delete-key-789";
+        var cachedKey = CacheKeys.DeleteGameIdempotency(_testUserId, idempotencyKey);
+
+        _idempotencyStoreMock
+            .Setup(x => x.TryGetAsync<string>(cachedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        // Act
+        var result = await _service.DeleteGameAsync(_testUserId, nonExistentGameId, idempotencyKey, default);
+
+        // Assert
+        result.Should().BeFalse();
+
+        // Verify not-found was stored in cache
+        _idempotencyStoreMock.Verify(
+            x => x.TryStoreAsync(
+                cachedKey,
+                "not_found",
+                TimeSpan.FromHours(24),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteGameAsync_WithIdempotencyKeyCachedAsNotFound_ShouldReturnFalse()
+    {
+        // Arrange
+        var gameId = 1L;
+        var idempotencyKey = "delete-key-not-found";
+        var cachedKey = CacheKeys.DeleteGameIdempotency(_testUserId, idempotencyKey);
+
+        _idempotencyStoreMock
+            .Setup(x => x.TryGetAsync<string>(cachedKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("not_found");
+
+        // Act
+        var result = await _service.DeleteGameAsync(_testUserId, gameId, idempotencyKey, default);
+
+        // Assert
+        result.Should().BeFalse();
+
+        // Verify game still exists (returned from cache)
+        var game = await _context.Games.FindAsync(gameId);
+        game.Should().NotBeNull();
+    }
+
+    #endregion
 
     public void Dispose()
     {

@@ -453,5 +453,93 @@ public class GamesController : ControllerBase
                 });
         }
     }
+
+    /// <summary>
+    /// Deletes a game and all associated child entities owned by the authenticated user.
+    /// </summary>
+    /// <param name="id">The game ID to delete.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// Permanently deletes a game and all related entities:
+    /// - Participants (human and AI)
+    /// - Units and their state
+    /// - Cities, city tiles, and city resources
+    /// - Game saves (manual and autosave)
+    /// - Turn history
+    /// 
+    /// The operation is transactional - either all entities are deleted or none are.
+    /// Only the game owner can delete their games; attempts to delete games owned by others will return 404.
+    /// 
+    /// The endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header for safe retries.
+    /// 
+    /// **Warning**: This operation is permanent and cannot be undone.
+    /// 
+    /// Example:
+    ///
+    ///     DELETE /v1/games/123
+    ///     X-Tenx-Idempotency-Key: unique-request-id-456
+    ///
+    /// </remarks>
+    /// <response code="204">Game successfully deleted.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    /// <response code="404">Not Found - game does not exist or user doesn't have access.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpDelete("{id:long}", Name = "DeleteGame")]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteGame(
+        long id,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Get user ID from authenticated user
+            var userId = User.GetUserId();
+
+            _logger.LogDebug("User {UserId} attempting to delete game {GameId}", userId, id);
+
+            // Extract idempotency key from headers (optional)
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault();
+
+            // Call service to delete game
+            var deleted = await _gameService.DeleteGameAsync(userId, id, idempotencyKey, cancellationToken);
+
+            if (!deleted)
+            {
+                _logger.LogWarning("Game {GameId} not found or user {UserId} doesn't have access for deletion", id, userId);
+                return NotFound(new
+                {
+                    code = "GAME_NOT_FOUND",
+                    message = "Game not found or you don't have access to it."
+                });
+            }
+
+            // Return 204 No Content on successful deletion
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt");
+            return Unauthorized(new
+            {
+                code = "UNAUTHORIZED",
+                message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    code = "INTERNAL_ERROR",
+                    message = "An error occurred while deleting the game."
+                });
+        }
+    }
 }
 

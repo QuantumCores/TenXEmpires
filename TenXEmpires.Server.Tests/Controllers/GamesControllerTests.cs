@@ -330,5 +330,134 @@ public class GamesControllerTests
         var errorResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
+
+    #region DeleteGame Tests
+
+    [Fact]
+    public async Task DeleteGame_WithValidOwner_ShouldReturn204()
+    {
+        // Arrange
+        var gameId = 42L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        var noContent = result.Should().BeOfType<NoContentResult>().Subject;
+        noContent.StatusCode.Should().Be(StatusCodes.Status204NoContent);
+    }
+
+    [Fact]
+    public async Task DeleteGame_WithNonExistentGame_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 999L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteGame_WithGameOwnedByAnotherUser_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false); // Service returns false for unauthorized access
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteGame_WithIdempotencyKey_ShouldPassToService()
+    {
+        // Arrange
+        var gameId = 42L;
+        var idempotencyKey = "test-key-123";
+        _controller.Request.Headers["X-Tenx-Idempotency-Key"] = idempotencyKey;
+
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, idempotencyKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        result.Should().BeOfType<NoContentResult>();
+        _gameServiceMock.Verify(
+            s => s.DeleteGameAsync(_testUserId, gameId, idempotencyKey, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteGame_WhenServiceThrowsUnauthorizedException_ShouldReturn401()
+    {
+        // Arrange
+        var gameId = 42L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new UnauthorizedAccessException("Unauthorized"));
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        var unauthorized = result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        unauthorized.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    public async Task DeleteGame_WhenServiceThrowsException_ShouldReturn500()
+    {
+        // Arrange
+        var gameId = 42L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        var errorResult = result.Should().BeOfType<ObjectResult>().Subject;
+        errorResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public async Task DeleteGame_ShouldPassCorrectUserIdToService()
+    {
+        // Arrange
+        var gameId = 42L;
+        _gameServiceMock
+            .Setup(s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _controller.DeleteGame(gameId, CancellationToken.None);
+
+        // Assert
+        _gameServiceMock.Verify(
+            s => s.DeleteGameAsync(_testUserId, gameId, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
 }
 

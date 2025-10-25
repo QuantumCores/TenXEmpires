@@ -7,6 +7,7 @@ using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Entities;
 using TenXEmpires.Server.Domain.Services;
+using TenXEmpires.Server.Domain.Utilities;
 using TenXEmpires.Server.Infrastructure.Data;
 
 namespace TenXEmpires.Server.Infrastructure.Services;
@@ -150,7 +151,7 @@ public class GameService : IGameService
         // Check idempotency if key provided
         if (!string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var cachedKey = $"create-game:{userId}:{idempotencyKey}";
+            var cachedKey = CacheKeys.CreateGameIdempotency(userId, idempotencyKey);
             var cachedResponse = await _idempotencyStore.TryGetAsync<GameCreatedResponse>(
                 cachedKey,
                 cancellationToken);
@@ -291,7 +292,7 @@ public class GameService : IGameService
             // Store in idempotency cache if key provided
             if (!string.IsNullOrWhiteSpace(idempotencyKey))
             {
-                var cachedKey = $"create-game:{userId}:{idempotencyKey}";
+                var cachedKey = CacheKeys.CreateGameIdempotency(userId, idempotencyKey);
                 await _idempotencyStore.TryStoreAsync(
                     cachedKey,
                     response,
@@ -339,6 +340,152 @@ public class GameService : IGameService
 
         // Map entity to DTO (includes safe JSON parsing for settings)
         return GameDetailDto.From(game);
+    }
+
+    public async Task<bool> DeleteGameAsync(
+        Guid userId,
+        long gameId,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        // Check idempotency if key provided
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.DeleteGameIdempotency(userId, idempotencyKey);
+            var cachedResponse = await _idempotencyStore.TryGetAsync<string>(
+                cachedKey,
+                cancellationToken);
+
+            if (cachedResponse != null)
+            {
+                _logger.LogInformation(
+                    "Returning cached delete response for idempotency key {IdempotencyKey} (game {GameId})",
+                    idempotencyKey,
+                    gameId);
+                // Return true if marked as "deleted", false if marked as "not_found"
+                return cachedResponse == "deleted";
+            }
+        }
+
+        // Begin transaction for atomic deletion
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            // Load game stub to verify ownership via RLS
+            // Defense-in-depth: filter by both Id and UserId even with RLS enabled
+            var game = await _context.Games
+                .Where(g => g.Id == gameId && g.UserId == userId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (game == null)
+            {
+                // Game not found or not accessible - return false
+                _logger.LogWarning(
+                    "Game {GameId} not found or user {UserId} doesn't have access for deletion",
+                    gameId,
+                    userId);
+
+                // Store not-found result in idempotency cache if key provided
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cachedKey = CacheKeys.DeleteGameIdempotency(userId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(
+                        cachedKey,
+                        "not_found",
+                        TimeSpan.FromHours(24),
+                        cancellationToken);
+                }
+
+                return false;
+            }
+
+            // Delete child entities in proper order to respect FK constraints
+            // Note: This is manual cascade delete. In production, FK constraints should have ON DELETE CASCADE.
+
+            // 1. Delete city resources (references cities)
+            var cityResourcesDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $@"DELETE FROM app.city_resources 
+                       WHERE city_id IN (SELECT id FROM app.cities WHERE game_id = {gameId})",
+                    cancellationToken);
+
+            // 2. Delete city tiles (references cities)
+            var cityTilesDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.city_tiles WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 3. Delete cities (references game)
+            var citiesDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.cities WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 4. Delete units (references game)
+            var unitsDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.units WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 5. Delete turns (references game and participants)
+            var turnsDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.turns WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 6. Delete saves (references game)
+            var savesDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.saves WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 7. Delete participants (references game)
+            var participantsDeleted = await _context.Database
+                .ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM app.participants WHERE game_id = {gameId}",
+                    cancellationToken);
+
+            // 8. Finally, delete the game itself
+            _context.Games.Remove(game);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Commit transaction
+            await transaction.CommitAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Successfully deleted game {GameId} for user {UserId} " +
+                "(cityResources: {CityResources}, cityTiles: {CityTiles}, cities: {Cities}, " +
+                "units: {Units}, turns: {Turns}, saves: {Saves}, participants: {Participants})",
+                gameId,
+                userId,
+                cityResourcesDeleted,
+                cityTilesDeleted,
+                citiesDeleted,
+                unitsDeleted,
+                turnsDeleted,
+                savesDeleted,
+                participantsDeleted);
+
+            // Store successful deletion in idempotency cache if key provided
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                var cachedKey = CacheKeys.DeleteGameIdempotency(userId, idempotencyKey);
+                await _idempotencyStore.TryStoreAsync(
+                    cachedKey,
+                    "deleted",
+                    TimeSpan.FromHours(24),
+                    cancellationToken);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Failed to delete game {GameId} for user {UserId}", gameId, userId);
+            throw;
+        }
     }
 
     /// <summary>
