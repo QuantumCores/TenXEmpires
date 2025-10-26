@@ -2,13 +2,84 @@ Added db entities
 Added reposirotries with UnitOfWork pattern
 
 Generated api plan.
-Editesd save entity, db scripts and so on.
+Edited save entity, db scripts and so on.
 Added folder structure and architecture info files for cleaner and smoother AI workflows
 
 Generating DTOs and CommandModels for .Net API
 
 23.10 
 Generated endpoint implementation plans with one modified prompt
+
+```markdown
+Your task is to implement a REST API endpoint based on the provided implementation plan. Your goal is to create a robust and well-structured implementation that includes proper validation, error handling, and follows all the logical steps outlined in the plan.
+
+First, carefully review the provided implementation plan:
+
+<implementation_plan>
+ post-analytics-batch-implementation-plan.md
+</implementation_plan>
+
+<types>  
+in   `TenXEmpires.Server.Domain\DataContracts` folder
+</types>
+
+<implementation_rules> 
+  @backend.mdc   @privacy-policy.md @cookie-policy.md 
+</implementation_rules>
+
+<implementation_approach>
+Implement up to **3 steps** from the implementation plan, briefly summarize what you’ve done, and describe the plan for the next 3 steps – stop at this point and wait for my feedback.
+</implementation_approach>
+
+---
+
+Now follow these steps to implement the REST API endpoint:
+
+### 1. Analyze the implementation plan:
+
+* Identify the HTTP method (GET, POST, PUT, DELETE, etc.) for the endpoint
+* Determine the endpoint URL structure
+* List all expected input parameters
+* Understand the required business logic and data processing steps
+* Take note of any specific validation or error handling requirements
+
+### 2. Begin implementation:
+
+* Start by defining the endpoint function with the appropriate HTTP method decorator
+* Set up function parameters based on expected input
+* Implement input validation for all parameters
+* Follow the logical steps described in the implementation plan
+* Implement error handling for each stage of the process
+* Ensure proper data processing and transformation as required
+* Prepare the response data structure
+
+### 3. Validation and error handling:
+
+* Implement thorough input validation for all parameters
+* Use appropriate HTTP status codes for different scenarios (e.g., 400 for bad requests, 404 for not found, 500 for server errors)
+* Provide clear and informative error messages in responses
+* Handle potential exceptions that may occur during processing
+
+### 4. Testing considerations:
+
+* Consider edge cases and potential issues that should be tested
+* Ensure the implementation covers all scenarios listed in the plan
+* Add unit tests
+
+### 5. Documentation:
+
+* Add clear comments to explain complex logic or important decisions
+* Add OpenApi examples to `TenXEmpires.Server\Examples` folder
+* Update @openapi.yaml by running `dotnet run --project TenXEmpires.Server/TenXEmpires.Server.csproj` command. Wait for the result at least 12 seconds.
+
+---
+
+After completing the implementation, ensure that it includes all necessary imports, function definitions, and any additional helper functions or classes required. Please do not craete any docuemntation files! Only update files if asked and allowed.
+
+If you need to make any assumptions or have questions about the implementation plan, raise them **before writing the code**.
+
+Be sure to follow **REST API best practices**, adhere to the programming language’s **style guidelines**, and ensure the code is **clean, readable, and well-organized**.
+```
 
 24.10
 implemented first endpoint with versioning, ratelimitting and cors. This is whats important

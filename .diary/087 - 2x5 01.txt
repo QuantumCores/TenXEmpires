@@ -1,0 +1,11 @@
+I had to prompt Gpt-5 high few times to create all api pland in one go. He missed some and had to make him generate missing views
+In the end he auto reflected with this
+
+"
+If you want me to add Forgot Password and Verify Email modals as separate plans, or flesh out About/Gallery content placeholders with PRD-derived copy blocks, I can do that next.
+"
+
+So he noticed that this time I was missing a view when I asked for more plans.
+
+After UI session I noticed that I'm missing few enpoints. I'll ask GPT to read plan files and add missing endpoints. Lets see how will this work
+

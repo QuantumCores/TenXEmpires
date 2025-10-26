@@ -147,6 +147,18 @@ Conventions
   - Response: `202 Accepted`, `{ accepted: number }` (best-effort). Server sets `user_key` using salted hash and copies `game_id` to `game_key`.
   - Errors: `429 RATE_LIMIT_EXCEEDED`.
 
+### 2.7 Auth & Session
+
+- GET `/auth/csrf`
+  - Issue/refresh anti-forgery token for SPA.
+  - Response: `204 No Content` with `Set-Cookie: XSRF-TOKEN=<token>; Path=/; SameSite=Lax; Secure`.
+  - Notes: Public endpoint; clients echo token via `X-XSRF-TOKEN` header on non-GET requests.
+
+- GET `/auth/keepalive`
+  - Refresh authenticated session (sliding expiration) without changing user state.
+  - Response: `204 No Content`.
+  - Errors: `401 UNAUTHORIZED` when not signed in.
+
 ## 3. Authentication and Authorization
 
 - Mechanism: Cookie-based ASP.NET Identity authentication. Use `SameSite=Lax`, `Secure`, `HttpOnly` cookies. Enforce TLS.
