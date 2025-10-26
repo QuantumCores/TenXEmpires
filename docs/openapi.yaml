@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.695262+00:00
-                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                occurredAt: 2025-10-26T19:02:10.7341567+00:00
+                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.6953882+00:00
-                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                occurredAt: 2025-10-26T19:02:10.7342693+00:00
+                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.695262+00:00
-                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                occurredAt: 2025-10-26T19:02:10.7341567+00:00
+                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.6953882+00:00
-                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                occurredAt: 2025-10-26T19:02:10.7342693+00:00
+                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.695262+00:00
-                clientRequestId: e46dcb8b-90a4-423d-98d0-189efe369b51
+                occurredAt: 2025-10-26T19:02:10.7341567+00:00
+                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-25T18:22:12.6953882+00:00
-                clientRequestId: bdf24b44-1505-4c2b-98a1-b86e95587307
+                occurredAt: 2025-10-26T19:02:10.7342693+00:00
+                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
                 payload: 
       responses:
         202:
@@ -95,6 +95,36 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Server error.
+  /v1/auth/csrf:
+    get:
+      tags:
+      - v1
+      summary: Issues or refreshes the CSRF token cookie for the SPA.
+      description: >-
+        Sets a non-HttpOnly XSRF-TOKEN cookie that the client should echo via the X-XSRF-TOKEN header
+
+        on subsequent non-GET requests protected with ValidateAntiForgeryToken.
+      responses:
+        204:
+          description: Token issued via Set-Cookie (no response body).
+        429:
+          description: Too many requests (rate limited).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: RATE_LIMIT_EXCEEDED
+                message: Too many requests. Please try again later.
+        500:
+          description: Failed to issue token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: CSRF_ISSUE_FAILED
+                message: Unable to issue CSRF token.
   /v1/games:
     get:
       tags:
@@ -1890,35 +1920,6 @@ paths:
           description: Not Modified - cached version is still valid.
         500:
           description: Internal server error occurred.
-  /WeatherForecast:
-    get:
-      tags:
-      - v1
-      operationId: GetWeatherForecast
-      parameters:
-      - name: X-Api-Version
-        in: header
-        schema:
-          type: string
-      responses:
-        200:
-          description: OK
-          content:
-            text/plain; version=1.0:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/WeatherForecast'
-            application/json; version=1.0:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/WeatherForecast'
-            text/json; version=1.0:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/WeatherForecast'
 components:
   schemas:
     ActionStateResponse:
@@ -2560,21 +2561,4 @@ components:
         col:
           type: integer
           format: int32
-      additionalProperties: false
-    WeatherForecast:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        temperatureC:
-          type: integer
-          format: int32
-        temperatureF:
-          type: integer
-          format: int32
-          readOnly: true
-        summary:
-          type: string
-          nullable: true
       additionalProperties: false

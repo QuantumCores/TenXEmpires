@@ -58,6 +58,16 @@ namespace TenXEmpires.Server
             // Add memory cache for caching lookup data
             builder.Services.AddMemoryCache();
 
+            // Configure Antiforgery for SPA CSRF protection
+            builder.Services.AddAntiforgery(o =>
+            {
+                o.HeaderName = TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader;
+                o.Cookie.SameSite = SameSiteMode.Lax;
+                o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                o.Cookie.Path = "/";
+                o.SuppressXFrameOptionsHeader = false;
+            });
+
             // Configure CORS
             var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
             var corsAllowCredentials = builder.Configuration.GetValue<bool>("Cors:AllowCredentials", true);
