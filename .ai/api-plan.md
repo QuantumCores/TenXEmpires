@@ -159,6 +159,57 @@ Conventions
   - Response: `204 No Content`.
   - Errors: `401 UNAUTHORIZED` when not signed in.
 
+- POST `/auth/login`
+  - Sign in with email and password; issues auth cookie (`SameSite=Lax; Secure; HttpOnly`).
+  - Request: `{ email: string, password: string, rememberMe?: boolean }`
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `204 No Content` (cookie via `Set-Cookie`).
+  - Errors: `400 INVALID_CREDENTIALS`, `423 ACCOUNT_LOCKED` (if lockout), `429 RATE_LIMIT_EXCEEDED`.
+
+- POST `/auth/logout`
+  - Sign out and clear auth cookie.
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `204 No Content`.
+
+- POST `/auth/register`
+  - Create a new user account; sends verification email.
+  - Request: `{ email: string, password: string }`
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `202 Accepted` (verify email next).
+  - Errors: `400 INVALID_INPUT` (field validation), `409 DUPLICATE_EMAIL`, `429 RATE_LIMIT_EXCEEDED`.
+
+- GET `/auth/verify-email`
+  - Verify email using link parameters.
+  - Query: `userId: string`, `token: string` (URL-safe encoded).
+  - Response: `204 No Content`.
+  - Errors: `400 INVALID_TOKEN`, `410 TOKEN_EXPIRED`.
+
+- POST `/auth/verify-email`
+  - JSON alternative to complete verification.
+  - Request: `{ userId: string, token: string }`
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `204 No Content`.
+  - Errors: `400 INVALID_TOKEN`, `410 TOKEN_EXPIRED`.
+
+- POST `/auth/forgot-password`
+  - Request password reset email. Always returns generic success to prevent account enumeration.
+  - Request: `{ email: string }`
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `204 No Content`.
+  - Errors: `429 RATE_LIMIT_EXCEEDED`.
+
+- POST `/auth/reset-password`
+  - Reset password using token from email.
+  - Request: `{ userId: string, token: string, newPassword: string }`
+  - Headers: `X-XSRF-TOKEN` required.
+  - Response: `204 No Content`.
+  - Errors: `400 INVALID_TOKEN|INVALID_INPUT`, `410 TOKEN_EXPIRED`, `429 RATE_LIMIT_EXCEEDED`.
+
+- GET `/auth/me` (optional)
+  - Return minimal profile for UI bootstrapping.
+  - Response: `200 OK`, `{ userId: string, email: string, emailConfirmed: boolean }`.
+  - Errors: `401 UNAUTHORIZED`.
+
 ## 3. Authentication and Authorization
 
 - Mechanism: Cookie-based ASP.NET Identity authentication. Use `SameSite=Lax`, `Secure`, `HttpOnly` cookies. Enforce TLS.

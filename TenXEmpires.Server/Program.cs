@@ -8,6 +8,9 @@ using TenXEmpires.Server.Infrastructure;
 using TenXEmpires.Server.Infrastructure.Data;
 using TenXEmpires.Server.Infrastructure.Middleware;
 using TenXEmpires.Server.Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using TenXEmpires.Server.Domain.DataContracts;
+using Microsoft.AspNetCore.Identity;
 
 namespace TenXEmpires.Server
 {
@@ -37,6 +40,8 @@ namespace TenXEmpires.Server
             // Register DbContext
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
             builder.Services.AddDbContext<TenXDbContext>(options =>
+                options.UseNpgsql(connectionString));
+            builder.Services.AddDbContext<AppIdentityDbContext>(options =>
                 options.UseNpgsql(connectionString));
 
             // Register configuration settings
@@ -207,6 +212,48 @@ namespace TenXEmpires.Server
                 };
             });
 
+            builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+                .AddCookie(IdentityConstants.ApplicationScheme, options =>
+                {
+                    options.Cookie.Name = "tenx.auth";
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.HttpOnly = true;
+                    options.SlidingExpiration = true;
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+                    options.Events = new CookieAuthenticationEvents
+                    {
+                        OnRedirectToLogin = ctx =>
+                        {
+                            // Return 401 JSON for APIs instead of redirecting
+                            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return ctx.Response.WriteAsJsonAsync(new ApiErrorDto("UNAUTHORIZED", "User must be authenticated."));
+                        },
+                        OnRedirectToAccessDenied = ctx =>
+                        {
+                            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                            return ctx.Response.WriteAsJsonAsync(new ApiErrorDto("FORBIDDEN", "Access is denied."));
+                        }
+                    };
+                });
+
+            builder.Services.AddAuthorization();
+
+            // ASP.NET Core Identity (EF stores in 'auth' schema)
+            builder.Services
+                .AddIdentityCore<IdentityUser<Guid>>(options =>
+                {
+                    options.Password.RequireDigit = true;
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireNonAlphanumeric = true;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireLowercase = true;
+                    options.User.RequireUniqueEmail = true;
+                })
+                .AddRoles<IdentityRole<Guid>>()
+                .AddEntityFrameworkStores<AppIdentityDbContext>()
+                .AddSignInManager()
+                .AddDefaultTokenProviders();
             builder.Services.AddControllers();
 
             // Configure API versioning
@@ -287,6 +334,8 @@ namespace TenXEmpires.Server
             // Enable CORS
             app.UseCors("DefaultCorsPolicy");
 
+            // Enable authn/z
+            app.UseAuthentication();
             app.UseAuthorization();
 
             // Enable RLS context (must be after UseAuthorization)

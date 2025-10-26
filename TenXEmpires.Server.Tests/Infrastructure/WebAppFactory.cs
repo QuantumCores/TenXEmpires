@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc.ViewFeatures.Filters;
@@ -23,6 +27,10 @@ public class WebAppFactory : WebApplicationFactory<TenXEmpires.Server.Program>
         builder.UseEnvironment("Development");
         builder.ConfigureServices(services =>
         {
+            // Ensure authentication is available in test host
+            services.AddAuthentication("Test")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
+            services.AddAuthorization();
             // Ensure MVC ViewFeatures (antiforgery filter services) are available
             services.AddControllersWithViews();
             // Replace Npgsql DbContext with in-memory for tests
@@ -101,5 +109,33 @@ internal sealed class TestAnalyticsService : IAnalyticsService
     {
         var count = command?.Events?.Count ?? 0;
         return Task.FromResult(count);
+    }
+}
+
+internal sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, System.Text.Encodings.Web.UrlEncoder encoder, ISystemClock clock)
+        : base(options, logger, encoder, clock)
+    {
+    }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        // Require an opt-in header to authenticate; otherwise treat as unauthenticated
+        if (!Request.Headers.TryGetValue("X-Test-Auth", out var values) || values.FirstOrDefault() != "1")
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+
+        var username = Request.Headers.TryGetValue("X-Test-User", out var u) ? (u.FirstOrDefault() ?? "integration-user") : "integration-user";
+
+        var identity = new System.Security.Claims.ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, username),
+            new System.Security.Claims.Claim("sub", "00000000-0000-0000-0000-000000000001")
+        }, "Test");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "Test");
+        return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

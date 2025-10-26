@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Controllers;
 using TenXEmpires.Server.Domain.Constants;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
@@ -26,6 +27,9 @@ public class AuthControllerTests
                 HttpContext = new DefaultHttpContext()
             }
         };
+        // Ensure RequestServices is available to avoid InvalidOperationException in tests
+        _controller.HttpContext.RequestServices = new Microsoft.Extensions.DependencyInjection.ServiceCollection()
+            .BuildServiceProvider();
     }
 
     [Fact]
@@ -70,5 +74,24 @@ public class AuthControllerTests
 
         var obj = result.Should().BeOfType<ObjectResult>().Subject;
         obj.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+    }
+
+    [Fact]
+    public async Task KeepAlive_ShouldReturn204_AndNoStore()
+    {
+        // Arrange: mark user as authenticated (Authorize attribute is not executed in unit tests)
+        var identity = new System.Security.Claims.ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "test-user")
+        }, authenticationType: "Test");
+        _controller.ControllerContext.HttpContext.User = new System.Security.Claims.ClaimsPrincipal(identity);
+
+        // Act
+        var result = await _controller.KeepAlive();
+
+        // Assert
+        result.Should().BeOfType<NoContentResult>();
+        _controller.Response.Headers["Cache-Control"].ToString()
+            .Should().Contain("no-store");
     }
 }

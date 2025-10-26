@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7341567+00:00
-                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
+                occurredAt: 2025-10-26T20:17:57.9724624+00:00
+                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7342693+00:00
-                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
+                occurredAt: 2025-10-26T20:17:57.9725521+00:00
+                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7341567+00:00
-                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
+                occurredAt: 2025-10-26T20:17:57.9724624+00:00
+                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7342693+00:00
-                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
+                occurredAt: 2025-10-26T20:17:57.9725521+00:00
+                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7341567+00:00
-                clientRequestId: e1c13fd2-7cae-49c2-a66b-604ebd543a73
+                occurredAt: 2025-10-26T20:17:57.9724624+00:00
+                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T19:02:10.7342693+00:00
-                clientRequestId: 527f396d-127c-438b-a48b-2c499916556c
+                occurredAt: 2025-10-26T20:17:57.9725521+00:00
+                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
                 payload: 
       responses:
         202:
@@ -125,6 +125,45 @@ paths:
               example:
                 code: CSRF_ISSUE_FAILED
                 message: Unable to issue CSRF token.
+  /v1/auth/keepalive:
+    get:
+      tags:
+      - v1
+      summary: Refreshes the authenticated session to extend sliding expiration.
+      description: >-
+        No response body. Used by the UI idle banner when the user opts to stay signed in.
+
+        Response is marked no-store to prevent caching.
+      responses:
+        204:
+          description: Session refreshed (or already valid). No content.
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+        429:
+          description: Too many requests (rate limited).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: RATE_LIMIT_EXCEEDED
+                message: Too many requests. Please try again later.
+        500:
+          description: Unable to refresh session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: KEEPALIVE_FAILED
+                message: Unable to refresh session.
   /v1/games:
     get:
       tags:
