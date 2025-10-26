@@ -1,0 +1,21 @@
+1. Yes—use five canvases: base tiles (rare redraw on zoom/DPR change), hex grid (on/off by user), tile features like buildings, resources, cities (rare redraw on zoom/DPR change), units (per action), and overlays (hover/paths); size each at `CSSpx * devicePixelRatio`, zoom via CSS transforms, and handle rerender when zoom crosses thresholds (e.g., 0.9/1.1/1.5).
+
+2. Yes—use `setPointerCapture` on mousedown with a 4–6 px movement threshold; treat movement beyond threshold as pan, otherwise as click; release on pointerup/cancel; right-click/ESC cancels; show a “Map Focused” indicator to gate Arrow/WASD.
+
+3. Yes—pre-render base hex fills/outlines/tile features and grid at 75%, 100%, 150% scales (and current theme) to offscreen buffers; reuse sprites for paint; fallback to main-thread pre-render when OffscreenCanvas is unavailable.
+
+4. Always keep on main thread (20x15 grid is trivial). We will limit path preview to some max distance (e.g. 6 hexes);
+
+5. Use `['unit-defs']` (staleTime: Infinity), `['map-tiles', code]` (Infinity with ETag), `['game', id]` (staleTime: 0), `['saves', id]` (1 min); write mutation results directly into `['game', id]`, invalidate `['saves', id]` on save/delete, and refetch `['game', id]` after end-turn completes.
+
+6. Yes—queue mutations (move/attack/end-turn/save/load) per game; disable conflicting UI while pending; attach an `Idempotency-Key` per action; drop duplicates client-side if the same unit/action is in-flight.
+
+7. Use `pushState` to open primary modals (`?modal=saves|settings|account-delete|help`) and `replaceState` for ephemeral confirmations (`?modal=confirm`) so Back closes confirm first, then the source modal, then the map.
+
+8. Provide GET `/auth/csrf` that sets `XSRF-TOKEN`; call on app init; send `X-XSRF-TOKEN` on non-GET; on `401/419`, fetch CSRF once and retry the failed request; avoid periodic refresh to conserve the 60 req/min budget.
+
+9. Default to no analytics before consent; buffer in memory and drop on decline; if “essential” is required (e.g., uptime), document it explicitly in Privacy/Cookie pages and ensure payloads are non-identifying.
+
+10. Set CI gate at 500 KB gzip for MVP (stretch goal 300 KB), hard cap 1 MB; update PRD; allow TanStack Query and Zustand; prefer lightweight headless primitives (or custom) over full UI kits; avoid large rendering/libs (e.g., Pixi/Konva); code-split modals and help.
+
+

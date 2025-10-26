@@ -1,0 +1,22 @@
+1.  There is only `POST /games/{id}/end-turn` returning `{ state: GameState }`; document `409 TURN_IN_PROGRESS` and `AI_TIMEOUT` handling.
+
+2. Use `Idempotency-Key` (UUIDv4), 60 s dedupe window; server echoes via `X-Idempotency-Key` and returns the same result for duplicates; client reuses the key only for a single retry of the same action.
+
+3. Set cookie `XSRF-TOKEN` on `GET /auth/csrf`; require header `X-XSRF-TOKEN` on all non-GET; return `419` on missing/invalid; SPA calls `/auth/csrf` on init.
+
+4. Yes the backend will enforce “only one active game”
+
+5. Treat `mapCode` as server-default on `POST /games` (omit in request); after creation, read `state.map.code` and use it for `GET /maps/{code}/tiles`.
+
+6. Add `expiresAt` to items from `GET /games/{id}/saves` (manual and autosaves) reflecting the 3‑month policy; client renders relative time from this field.
+
+7.  Provide `{ pendingUnits?: number, delayedProductions?: Array<{ cityId, reason }>, notes?: string[] }`; client surfaces counts in toasts and the city panel.
+
+8. Yes—standardize `POST /games`, `/end-turn`, `/actions/move`, `/actions/attack`, `/saves/manual`, and `/saves/{id}/load` to return `{ state }`; document any exceptions.
+
+9. Not in MVP
+
+10. es—emit seconds-only UTC in all payloads; client displays ISO 8601 consistently and uses the same format in tooltips and copied details.
+
+
+Now we will have FINAL round of questions and answers. Ask only very important last questions! 

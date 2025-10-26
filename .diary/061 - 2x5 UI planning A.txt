@@ -1,0 +1,20 @@
+1. Prioritize Units > City > Tile Feature > Base Tile > Grid; route all pointer events through a single controller that computes picking against world coords and disables pointer events on non-interactive canvases. I'm not sure how canvas work but Unit graphics will smaller than tile feaures which in turn are smaller than Base tiles. If that helps.
+
+2. Default grid OFF; persist a non-sensitive preference in `localStorage` (e.g., `grid=0|1`) and mirror in the UI store; expose a quick toggle (G) with tooltip.
+
+3. Draw static reach rings on the Tile Features canvas (rare redraw); on ownership change or siege state change, re-render affected cities; use a distinct tint for “under siege” tiles.
+
+4. Cycle only units with `hasActed=false` in row-major order; if off-screen, auto-pan with a short eased animation; skip eliminated or zero-HP units.
+
+5. Yes—while any action is pending, show a subtle “Action in progress…” banner, disable conflicting controls, and register a `beforeunload` guard to prevent losing in-flight requests.
+
+6.  Mount the map shell immediately for perceived performance, then overlay a full-screen loading veil while prefetching state/tiles/defs; fade in once caches are ready.
+
+7. Store consent in a cookie (e.g., `consent=accepted; max-age=15552000`) to align with policy pages; read once on app init and gate batching accordingly.
+
+8.  Yes—add a collapsible side panel (closed by default) showing the last ~20 resolved events with icons and concise text; keep toasts for transient notices.
+
+9. Treat rename as re-saving the current state into the same slot with a new `name`, showing an overwrite confirmation; limit name length (e.g., 40 chars) and sanitize input.
+
+10.  Clear ETag caches for tiles/defs, invalidate `['game', id]`, and present a blocking dialog offering “Start New Game” (primary) and “View Details” (secondary); after starting a new game, refresh lookups before entering the map.
+

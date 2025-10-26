@@ -1,0 +1,19 @@
+1. No—use the map shell as the primary surface; redirect `/hub` to `/game/current`, and open `?modal=start-new` when no active game exists.
+
+2. Add a minimal “Forgot Password” modal/route and email verification notice post‑register; both redirect back to `/login?returnUrl=/game/current` on completion.
+
+3. Use a two‑step confirm modal requiring the user to type DELETE (or their email) and a final “Delete my account” button; on success, log out and route to `/about`.
+
+4. At T-60 s of inactivity, show a small countdown banner with “Stay signed in” (focus trap safe); if expired, show a blocking re‑auth modal preserving return URL to `/game/current`.
+
+5. Yes—show “Expires in ~N days” for each save per 3‑month policy and a footnote linking to Privacy; sort by newest and surface a warning badge when <14 days remain.
+
+6. In the city panel, show “Production: Warrior/Slinger” with progress (e.g., 7/10) and a “Delayed: adjacent tiles blocked” badge; pull concise reasons from `turnSummary` when available.
+
+7. Show predicted damage bars only.
+
+8. Target ≥900p height in landscape; if below, show a gentle “Best viewed ≥900p” banner and reduce nonessential HUD text to icons; no portrait layout in MVP.
+
+9. No
+
+10. Only by email in MVP.

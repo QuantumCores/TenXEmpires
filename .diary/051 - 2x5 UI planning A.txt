@@ -1,0 +1,25 @@
+1. Use guarded routes with a PublicLayout (`/about`, `/gallery`, `/privacy`, `/cookies`, `/login`, `/register`) and an AppLayout for authenticated (`/hub`, `/game/:id`, `/account/delete`); unauthenticated access to gameplay routes redirects to `/login`.
+
+2. Allow only one active game;
+
+3. Yes—treat the server projection as source of truth; bootstrap with `/games/{id}/state`, lazy-load `/maps/{code}/tiles` and cache by `code` with ETag; re-render from returned `GameState` after every action.
+
+4. I'm not sure. I thought in memory should be enough. But please present me options with pros and cons. Remember that I'm no a frontend developer and you have to guide a little bit in this matter.
+
+5. Add explicit End Turn action (confirm endpoint path, e.g., POST `/games/{id}/actions/end-turn`), disable inputs when `turnInProgress=true`, show “AI thinking…” overlay (<500 ms), then refetch `/games/{id}/state`; surface `turnSummary` in an aria-live toast.
+
+6. Provide a “Saves” modal in-game and a `/hub/saves` view both backed by GET `/games/{id}/saves`; support POST `/games/{id}/saves/manual` with overwrite confirmation, DELETE manual slot, and load via POST `/saves/{saveId}/load`; handle `SCHEMA_MISMATCH` with a clear blocking dialog. We prefer modals over views. We want to have Civ VI or HumanKind desktop game expirence where map is the main view.
+
+7. Ties do not go to winner. On ties both units die if their health is < 0. Compute previews client-side using `/unit-definitions` for UX but always reconcile with server results; show path previews, first click to freeze path preview; second click to approve movement and move; invalid move/attack hints, and never apply optimistic damage.
+
+8. Attach `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie on all non-GET requests; intercept `401/419` to prompt re-auth (preserve intended route); show a non-blocking 429 rate-limit notice and backoff; never store auth in `localStorage`; enforce CORS-origin constraints.
+
+9. Support keyboard end-turn (E), focus management (`:focus-visible`), aria-live toasts, and color-safe highlights; target 1080p but adapt down to ~900p via scalable SVG and 75–150% zoom; use Tailwind tokens for consistent spacing/typography without a heavy UI kit.
+
+10. Centralize error mapping for codes (`ILLEGAL_MOVE`, `ONE_UNIT_PER_TILE`, `SCHEMA_MISMATCH`, etc.) to friendly messages; only retry idempotent GETs/reads with jitter; send a unique `Idempotency-Key` for actions/saves; cache lookups (`/unit-definitions`, tiles) with ETags; batch analytics via `/analytics/batch` once per turn.
+
+
+
+
+
+

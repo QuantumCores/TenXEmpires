@@ -1,0 +1,19 @@
+1. Use 5% per wheel notch with exponential scaling (factor 1.05), clamp to 0.75–1.5, ignore deltas <0.001 to prevent jitter, and ease zoom over 120–180 ms; for pinch, apply the same clamp with linear mapping of scale deltas.
+
+2. After 2 s show “Still thinking…” with a subtle progress shimmer; at 5 s show “Taking longer than expected” with a Retry button that refetches `/games/{id}/state`; on `AI_TIMEOUT`, present a blocking dialog with Retry and Report Issue.
+
+3. Sample rAF over 1 s; if average FPS < 45 for two consecutive samples or frame budget > 16.7 ms by 30% during modal open, switch to dim-only for the session; cache this in memory (not persisted).
+
+4. Yes—when the map has focus, intercept Ctrl/Meta + wheel (`preventDefault`) to apply map zoom; when unfocused, let the browser handle page zoom to respect accessibility.
+
+5. Just verify if unit has moved or not; If none remain, show a non-blocking toast offering End Turn.
+
+6. Add `--hex-reach`, `--hex-path`, `--target-valid`, `--target-invalid`, `--selection`, `--focus`, `--siege`, and `--grid` tokens with CVD-safe variants; document in the Help modal and ensure ≥4.5:1 contrast.
+
+7. Store ETags in React Query metadata per key (`['map-tiles', code]`, `['unit-defs']`), send `If-None-Match` on fetch, treat `304` as cache hit, and clear tags on `SCHEMA_MISMATCH` or map code change.
+
+8. Deduplicate by `turnNo` and suppress repeats within 2 s; keep toast near End Turn for 1.5 s with a “Saves” link opening `?modal=saves`.
+
+9. Yes—rotate on login; broadcast the new `XSRF-TOKEN` via `BroadcastChannel` (fallback `localStorage` event); store only in memory and cookies, never in `localStorage`.
+
+10. Target Chrome/Edge 115+, Firefox 115+, Safari 16.4+; if unsupported (no Canvas 2D or required APIs), show a blocking “Unsupported browser” screen with the matrix and no fallback rendering.

@@ -1,0 +1,21 @@
+1. Use Reads: 10 s with a single auto-retry (1 s backoff) and a visible Retry button; Actions: 10 s with inline spinner; keep messages minimal and consistent.
+
+2. Yes—emit/display `YYYY-MM-DDTHH:mm:ssZ` (UTC, no milliseconds) everywhere; show the same in tooltips and copied details.
+
+3. Yes—trap focus in the result overlay, set initial focus to “Start New Game”, and enable Tab/Shift+Tab navigation; no custom shortcuts.
+
+4. se a single 200 ms ease-out translation to the unit’s center (the sole animation exception); all other panning remains instantaneous.
+
+5. es—add a toggle in Settings (default OFF) and persist per user/session; apply immediately to wheel/pinch handling.
+
+6. Clear selection and overlays on empty tile click; keep selection when clicking UI chrome; ESC/right-click also clears.
+
+7. Yes—second click on a valid enemy immediately executes the attack (no confirmations per PRD); on invalid, show a brief inline hint.
+
+8. Yes—allow pan/zoom and inspection; disable all actions and selection changes; keep the AI overlay non-blocking with input lock for actions only.
+
+9. Read backend code in @CacheKeys.cs to apply same patterns or just use generated a UUID per user action, keep it in memory for 30 s (or until mutation resolves), and reuse only for the same retried request; never persist to storage.
+
+10 Rely entirely on server-managed headers (CSP, Referrer-Policy, X-Frame-Options); the SPA should not inject client-side CSP/meta for MVP.
+
+Now we will have 2 final rounds of question and answers. Ask only very important questions. 

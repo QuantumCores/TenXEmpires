@@ -1,0 +1,18 @@
+1. Use world-space hit radii that scale with zoom (e.g., unit radius ~0.5 hex width, feature ~0.8) and test in priority order (Units > City > Feature > Tile > Grid); if multiple hits occur, choose the nearest by center distance; implement a single picking function shared by all canvases. Make it a configurable feature with centralized source.
+
+2. Clamp pan so the map stays fully visible with a small margin; add optional inertial easing (short decay) for mouse drag; disable edge-scroll by default; pause panning when any modal is open and when user is editing text.
+
+3. Listen for DPR or size changes (ResizeObserver + polling DPR each rAF or media query), reallocate all canvases at `CSSpx * DPR`, rebuild offscreen caches, and trigger a full redraw; debounce to 50–100 ms to avoid thrashing.
+
+5. Yes—enable one-finger pan, two-finger pinch-zoom, and tap-to-select; map long-press to cancel (right-click); keep keyboard/mouse primary, with touch as progressive enhancement; document unsupported gestures explicitly.
+
+6. Laouts should be simmilat to those in civ VI and humankind games; Use a minimal top bar (turn number, status pill); bottom central panel should show selected city information (resources, city tiles count, city health bar with numbers); top right-side vertical action rail (Saves, Help); bottom-right current turn and End turn action; ensure all controls remain reachable at 900p, and hide non-critical text under icons with tooltips.
+
+7. On End Turn, compute pending items (units with `hasActed=false`, blocked productions) and show a summary toast with counts and “Go to next unit” CTA; offer a “Don’t warn again this turn” option; do not hard-block end turn.
+
+8. We don't want turn history for MVP. W only care for turn log which where log entries are kept on the front.
+
+9. Yes—use `BroadcastChannel` to detect another active tab; allow only one “controlling” tab to send actions; other tabs enter a read-only state with a banner and a “Make this tab active” takeover button.
+
+10. Yes—behind a dev flag, add overlays for FPS, pointer `{row,col}`, path costs, and A*/range visualization; toggle via `?debug=1` or a keyboard chord; strip from production builds to keep under the 500 KB target.
+

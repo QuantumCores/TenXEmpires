@@ -1,0 +1,20 @@
+1. Use CSS transforms for 75–150% zoom per PRD, but size canvases at `CSSpx * devicePixelRatio`; on large zoom changes, re-render the base (tiles) layer to avoid blur while keeping overlays/units real-time
+
+2. Use math-based conversion (odd-r → axial/cube) to map pointer to `{row,col}`; precompute neighbor tables; avoid pixel readbacks; run lightweight A* for previews using `/unit-definitions`, clamped to unit movement/attack rules.
+
+3. Left-click selects/acts; middle-mouse or Space+drag pans; two-finger trackpad pans the container; right-click/ESC cancels; show a subtle “Map Focused” indicator so Arrow/WASD only pan when the map has focus.
+
+4. Keep one modal at a time; encode as `?modal=saves|settings|account-delete|help` with optional `&tab=manual|autosaves`; navigate to a separate `?modal=confirm` for overwrite to keep Back behavior predictable.
+
+5. Yes—after resolving the active game, prefetch `/games/{id}/state`, `/unit-definitions`, and `/maps/{code}/tiles` in parallel; show a full-screen loading overlay; if none active, open `?modal=start-new` instead of navigating away from the map shell.
+
+6. Use a centered blocking overlay (map blurred) with CTAs: Retry, Login (401/403), Start New (404/finished), Learn More (422 `SCHEMA_MISMATCH`); include error code and a copy-to-clipboard details link.
+
+7. Yes—N: next unit without action, G: toggle grid, R: reset camera, ?: help modal; display shortcuts in a cheatsheet within `?modal=help` and reference them via `aria-describedby` on buttons.
+
+8. Show a cookie/analytics banner on first visit; queue events in memory until accepted; after consent, send `/analytics/batch` once per turn with `clientRequestId`; if declined, log only essential technical events.
+
+9. Add a small status pill (Online/Offline/Limited) and a non-blocking toast on `429`; back off polling to 2–3 s during limits; disable action buttons with a countdown and re-enable automatically after backoff.
+
+
+10. Do stress about 300kb budget we can rise it to 500kb or 1MB if needed. Just keep in mind that smaller bundle is prefered but it's mandatory.

@@ -1,0 +1,31 @@
+<pytania>
+1. What should the top-level view hierarchy and routes be (public vs. authenticated: About, Gallery, Privacy/Cookie, Login/Register; Hub; Game; Account/Delete)?
+Recommendation: Use guarded routes with a PublicLayout (`/about`, `/gallery`, `/privacy`, `/cookies`, `/login`, `/register`) and an AppLayout for authenticated (`/hub`, `/game/:id`, `/account/delete`); unauthenticated access to gameplay routes redirects to `/login`.
+
+2. Should users have multiple concurrent games (surfaced via GET `/games`) or a single active game with only save slots?
+Recommendation: Allow multiple games; in `/hub` show “Continue last” and a paginated list from GET `/games` with status/turnNo; confirm if any cap exists to reflect “GAME_LIMIT_REACHED”.
+
+3. Should the UI consume server state primarily via GET `/games/{id}/state` and fetch `/maps/{code}/tiles` only once per map for rendering?
+Recommendation: Yes—treat the server projection as source of truth; bootstrap with `/games/{id}/state`, lazy-load `/maps/{code}/tiles` and cache by `code` with ETag; re-render from returned `GameState` after every action.
+
+4. What client state management pattern should separate server-state from UI-state?
+Recommendation: Use TanStack Query for API caching/invalidation (keys: `['game', id]`, `['turns', id]`, `['tiles', code]`, `['defs']`) and a light store (e.g., Zustand) for ephemeral UI (selection, hover, camera/zoom, dialogs); avoid Redux to keep bundle small.
+
+5. How should end-turn and AI processing be handled in the UI flow?
+Recommendation: Add explicit End Turn action (confirm endpoint path, e.g., POST `/games/{id}/actions/end-turn`), disable inputs when `turnInProgress=true`, show “AI thinking…” overlay (<500 ms), then refetch `/games/{id}/state`; surface `turnSummary` in an aria-live toast.
+
+6. How and where should Save/Load be surfaced (manual slots and autosaves)?
+Recommendation: Provide a “Saves” modal in-game and a `/hub/saves` view backed by GET `/games/{id}/saves`; support POST `/games/{id}/saves/manual` with overwrite confirmation, DELETE manual slot, and load via POST `/saves/{saveId}/load`; handle `SCHEMA_MISMATCH` with a clear blocking dialog.
+
+7. How should movement/combat previews be computed and displayed, and what is the tie rule?
+Recommendation: Clarify tie resolution (PRD vs API conflict) to keep previews accurate; compute previews client-side using `/unit-definitions` for UX but always reconcile with server results; show path previews, invalid move/attack hints, and never apply optimistic damage.
+
+8. What security behaviors should the client implement for cookie auth, CSRF, and session expiry?
+Recommendation: Attach `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie on all non-GET requests; intercept `401/419` to prompt re-auth (preserve intended route); show a non-blocking 429 rate-limit notice and backoff; never store auth in `localStorage`; enforce CORS-origin constraints.
+
+9. What accessibility and responsiveness guarantees should the MVP meet?
+Recommendation: Support keyboard end-turn (E), focus management (`:focus-visible`), aria-live toasts, and color-safe highlights; target 1080p but adapt down to ~900p via scalable SVG and 75–150% zoom; use Tailwind tokens for consistent spacing/typography without a heavy UI kit.
+
+10. How should errors, retries, and performance be handled for API communications and analytics?
+Recommendation: Centralize error mapping for codes (`ILLEGAL_MOVE`, `ONE_UNIT_PER_TILE`, `SCHEMA_MISMATCH`, etc.) to friendly messages; only retry idempotent GETs/reads with jitter; send a unique `Idempotency-Key` for actions/saves; cache lookups (`/unit-definitions`, tiles) with ETags; batch analytics via `/analytics/batch` once per turn.
+</pytania>

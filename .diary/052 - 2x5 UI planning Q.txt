@@ -1,0 +1,31 @@
+<pytania>
+1. Should modals (Saves, Settings, Account/Delete) be deep-linkable with back/forward support?
+Recommendation: Yes—open modals via URL state (e.g., `?modal=saves`) with focus trap and `aria-modal=true`; closing removes the query using `history.replaceState` so Back closes the modal before leaving the map.
+
+2. With only one active game, what is the exact lifecycle when starting a new game?
+Recommendation: On “Start New Game”, confirm and then either DELETE the existing active game (`DELETE /games/{id}`) or mark finished before `POST /games`; if server returns `409 GAME_LIMIT_REACHED`, prompt the user to finish/delete; after login, auto-route to `/game/current` when an active game exists.
+
+3. Should the client rely exclusively on `GET /games/{id}/state` (including `unitDefinitions`) and only fetch `/maps/{code}/tiles` once per map?
+Recommendation: Yes—treat `state` as the single source of truth (including unit stats and `turnSummary`), fetch tiles once per `code` with ETag/If-None-Match, and align combat preview logic to the clarified tie rule (both units die if HP < 0).
+
+4. Which client state management approach should we adopt?
+Recommendation: Prefer “TanStack Query + small UI store” (Option B). Options: A) Plain React Context + custom fetcher (Pros: zero deps; Cons: manual caching, dedupe, retries, race handling). B) TanStack Query for server-state + Zustand for UI (Pros: small, robust caching/invalidation, retries, focus/refetch, devtools optional; Cons: adds 2 libs). C) Redux Toolkit/RTK Query (Pros: batteries-included; Cons: heavier, more boilerplate). Choose B to keep bundle small and logic clear.
+
+5. How should we poll during AI turns while respecting 60 req/min?
+Recommendation: After `POST /games/{id}/actions/end-turn`, show an overlay and poll `GET /games/{id}/state` at 1 Hz while `turnInProgress=true`, backing off to 2–3 s if it exceeds ~10 s; stop when `turnInProgress=false` or on `AI_TIMEOUT`.
+
+6. What are the exact Save/Load constraints in the UI?
+Recommendation: Expose a “Saves” modal using `GET /games/{id}/saves`; allow manual save with confirmation on overwrite; disallow Save/Load when `turnInProgress=true` (surface `409 TURN_IN_PROGRESS` inline); on Load (`POST /saves/{saveId}/load`), clear selection and reload `state`; block with dialog on `422 SCHEMA_MISMATCH`.
+
+7. What is the detailed interaction model for selection, path preview, and cancels?
+Recommendation: Left-click selects and freezes path; second left-click confirms move; ESC or right-click cancels selection/preview; show range/validity hints; never optimistic-apply damage; use consistent colors for reachable tiles, path, targets, and blocked cells.
+
+8. What accessibility and keyboard baseline should we commit to?
+Recommendation: Provide keyboard E for end-turn, ESC to cancel, Arrow/WASD pan, +/- zoom; maintain focus outlines (`:focus-visible`), label controls with `aria-label`, announce turn summaries via `aria-live="polite"`, and meet contrast guidelines; ensure modals trap focus and restore it on close.
+
+9. How should CSRF/session handling work in the SPA?
+Recommendation: On app init, fetch or rely on a server endpoint that sets `XSRF-TOKEN`; send `X-XSRF-TOKEN` on all non-GET; on `401/419`, refresh CSRF then retry once and redirect to `/login?returnUrl=...` if still unauthorized; never store auth in `localStorage`.
+
+10. What caching, performance, and analytics strategies should we use?
+Recommendation: Cache tiles and lookups via ETag with `staleTime: Infinity` and long `cacheTime`; avoid service workers; code-split by route and lazy-load modals to meet the ~300 KB gzip budget; batch analytics once per turn to `/analytics/batch` with `clientRequestId`, and instrument `game_start`, `turn_end`, `manual_save/load`, `autosave`, and `game_finish`.
+</pytania>

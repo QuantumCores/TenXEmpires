@@ -1,0 +1,19 @@
+1. Yes—prevent default on the map canvases so right-click acts as cancel; keep the browser menu enabled on UI chrome and inputs.
+
+2.  Yes—use cursor states (default, move, attack, not-allowed) and a subtle hex hover outline; switch based on current selection and legality.
+
+3. Show a full‑screen result overlay (turns, cities captured) with primary “Start New Game” and secondary “View Saves” and “About”; disable map inputs behind it and emit `game_finish` analytics.
+
+4.  Ensure ≥32×32 CSS px interactive targets; expand unit/city hit radii if visuals are smaller; keep spacing consistent with Tailwind tokens.
+
+5. No.
+
+6. No.
+
+7. Actions: 10 s timeout with inline spinner on the triggering control; Reads: 10 s; on timeout, show time out information only.
+
+8. Actions: 10 s timeout with inline spinner on the triggering control; Reads: 20 s with top‑bar progress; on timeout, show retry with preserved intent.
+
+9. Yes—use locale-aware `ISO 8601 standard` formatting; display relative time (“Expires in ~N days”) and absolute timestamps in tooltips; keep number abbreviations consistent.
+
+10. Yes—set `user-select: none` and disable image dragging within the map container; allow selection in modals/inputs as normal.

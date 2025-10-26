@@ -503,7 +503,7 @@ As a player, I want ties to resolve predictably. That is if attacker and target 
 
 Acceptance Criteria
 
-- When outcomes tie, the attacker wins.
+- When outcomes tie, if attacker and target have less than 0 health they both die.
 - Rule enforced server-side.
 
 US-040: City regeneration and siege

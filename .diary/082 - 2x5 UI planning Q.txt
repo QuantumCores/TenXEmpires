@@ -1,0 +1,31 @@
+<pytania>
+1. Will frontend and API be served from the same origin to ensure cookie auth works without `SameSite=None`?
+Recommendation: Prefer same-origin hosting; if cross-origin, set cookies `SameSite=None; Secure`, enable CORS with credentials, and scope CSRF cookie/header to the SPA origin.
+
+2. What endpoint will the “Stay signed in” banner call to refresh the session before idle expiry?
+Recommendation: Add `GET /auth/keepalive` (no body, returns 204) that refreshes the auth cookie; call only on user intent to conserve the 60 req/min budget.
+
+3. Should `GET /games/{id}/state` support ETag/If-None-Match to reduce poll payload during AI turns?
+Recommendation: Yes—emit strong ETag and return `304` when unchanged; the client polls with `If-None-Match` to save bandwidth and CPU.
+
+4. What is the definitive criterion for “Next Unit” selection: units that haven’t moved or `hasActed=false`?
+Recommendation: Use `hasActed=false` from server state to avoid mismatches (a unit that attacked should not be surfaced as next).
+
+5. Should we return `turnSummary` on all state-changing responses or only after end-turn?
+Recommendation: Include `turnSummary` whenever it changes (move/attack/end-turn) so UI toasts/panels stay consistent without extra fetches.
+
+6. Is `419` the final status for CSRF failures in .NET, or should we map to `401/403` for broader client/tool compatibility?
+Recommendation: Prefer `403` with `{ code: 'CSRF_INVALID' }`; if `419` is retained, document it clearly and ensure interceptors treat it like `401/403`.
+
+7. Should saves endpoints include `expiresAt` in UTC seconds-only ISO 8601, and is it authoritative for client countdowns?
+Recommendation: Yes—return `expiresAt` (e.g., `2025-12-31T23:59:59Z`) as the source of truth; the client shows “Expires in ~N days” based on this field.
+
+8. For single active game enforcement, what error should `POST /games` return and what message should clients show?
+Recommendation: Return `409 GAME_LIMIT_REACHED`; client opens the “Start New Game” confirm or offers “Delete current game” per the finalized UX.
+
+9. Should `/auth/csrf` also rotate token on login and broadcast to other tabs via `BroadcastChannel` hint header?
+Recommendation: Yes—rotate token on login and respond with a header (e.g., `X-Csrf-Rotated: 1`) so the SPA broadcasts the new value immediately across tabs.
+
+10. Do we standardize action responses to always echo `X-Idempotency-Key` and reuse the original result for duplicates within 60 s?
+Recommendation: Yes—echo the key on success and return the first response for duplicates; client retries at most once with the same UUID, never persisting keys.
+</pytania>

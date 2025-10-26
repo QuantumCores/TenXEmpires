@@ -1,0 +1,31 @@
+<pytania>
+1. Where should the configurable picking settings (hit radii, priority) live and how are they adjustable at runtime?
+Recommendation: Centralize in `ui/interactionConfig` (exporting radii by zoom and entity type) and expose a debug UI (dev-only) to tweak values live; read-only in production.
+
+2. How large should the safe-area margins be for pan clamping given HUD overlays (top bar, bottom center panel, right rails)?
+Recommendation: Compute clamp bounds from the visible “map viewport” after subtracting HUD rectangles; use 8–16 px interior margin and recalc on layout changes and window resize.
+
+3. What memory cap and eviction policy should offscreen caches use across DPR/zoom thresholds?
+Recommendation: Cap combined offscreen bitmaps to ~32–64 MB; cache hex shapes/icons (not full-map images); use LRU keyed by theme+DPR+scale bucket (0.75/1.0/1.5); evict on DPR change or memory pressure.
+
+4. How should touch gesture handling avoid page scroll/zoom conflicts on mobile/trackpads?
+Recommendation: Set `touch-action: none` on the map container; register pointer events with `{ passive: false }` where needed; support one-finger pan, two-finger pinch, and tap; provide a settings toggle to disable gestures if problematic.
+
+5. How do we reconcile city vs unit selection in the bottom center panel when both are under the cursor?
+Recommendation: Prioritize unit selection; bottom panel shows Unit details by default, with a toggle to switch to City when both are present; when nothing is selected, show contextual help or last turn summary.
+
+6. What should the “pending actions” pre–End Turn check include without duplicating server logic?
+Recommendation: Client checks only “units with hasActed=false”; for production blocks and siege/adjacency nuances, display information from the last server `turnSummary` where available; never block End Turn.
+
+7. Should the in-memory Turn Log survive reloads or remain ephemeral?
+Recommendation: Persist up to the last 50 entries per game in `sessionStorage` (keyed by gameId) to survive reloads in the same session; clear on game finish or when loading a different save.
+
+8. What is the fallback if `BroadcastChannel` is unavailable to enforce single controlling tab?
+Recommendation: Use `localStorage` “heartbeat + storage event” fallback with a 2–3 s lease; if both fail, allow multiple tabs with a warning banner and disable write actions on background tabs.
+
+9. Which build-time mechanism gates dev overlays and ensures they tree-shake from production?
+Recommendation: Guard with `import.meta.env.DEV` and a `?debug=1` flag; keep overlays in a separately imported module so production builds omit the code via dead-code elimination.
+
+10. What is the definitive End Turn API contract we target in the UI?
+Recommendation: Use POST `/games/{id}/actions/end-turn` with `Idempotency-Key` and CSRF header; treat `200` with `{ state: GameState }` as authoritative, handle `409 TURN_IN_PROGRESS` by polling `GET /games/{id}/state` until `turnInProgress=false`, then refresh.
+</pytania>

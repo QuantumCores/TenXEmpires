@@ -1,0 +1,19 @@
+1. Use a single confirm modal: “Starting a new game will finish or delete your current game.” Require a checkbox “I understand” plus a primary “Start New Game” button; include a smaller link “Delete current game instead.” Persist “Don’t show again” per session.
+
+2. Use modals (`/login?modal=forgot` and `/login?modal=verify`) with focus trap; on completion, route to `/login?returnUrl=/game/current`; support direct deep links for emails.
+
+3. Reset on keypress, pointer move/click, wheel, touch, and any successful authenticated API call; do not reset on background network retries or when the tab is hidden; visibility change to visible should reset.
+
+4. Within the bars, highlight lethal segments and overlay a small skull icon on bars reaching 0 HP; for mutual lethal (tie), show skulls on both bars; no additional labels.
+
+5. Collapse entirely to maximize map space; reserve the area strictly for Unit/City details; avoid placeholders or tips in MVP.
+
+6. Use two tabs: Manual (default) with three fixed slots and inline rename/overwrite confirm; Autosaves showing the latest five with “Expires in ~N days”; sort newest first; include a “Load” (for both) and “Delete” (manual only).
+
+7.  The newest tab requests control; current controller shows a banner and yields on user click “Make other tab active” or after a 3 s lease expiry; background tabs enter read-only until they take control.
+
+8. Yes—append short hints in tooltips (e.g., “End Turn (E)”, “Saves (?)”); also list all in the Help modal; no key remapping in MVP.
+
+9. Open `mailto:` with a prefilled subject “[TenX Empires] Error <CODE>” and body containing JSON (code, message, requestId, gameId, turnNo, browser/version, timestamp); include “Copy details” to clipboard.
+
+10. Yes—use instantaneous panning only;

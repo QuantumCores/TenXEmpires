@@ -1,0 +1,19 @@
+1. Anchor zoom at the pointer (fallback to center if outside canvas); adjust pan to keep the world coordinate under the pointer stable; clamp to map bounds.
+
+2. Defer overlay until >150 ms; once shown, keep visible for ≥250 ms; otherwise show a subtle spinner on the End Turn button.
+
+3. Prefer a light blur (backdrop-filter: blur(2px)) with a reduced-transparency fallback to dim on low-power/unsupported devices; detect and disable blur when frames drop
+
+4. Yes—scope hotkeys to the map; when any modal opens or an input has focus, disable map hotkeys (E, WASD, +/-) and restore on close/blur.
+
+5. Unit: type icon/name, HP bar with numbers, attack/defence, remaining move points, range (for ranged); City: HP bar with numbers, worked tiles count, resource amounts, production progress, siege indicator; include actions to center camera and “Next unit” or “Next city”.
+
+6. Yes—define Tailwind theme tokens for reach/path/targets/blocked (CVD-safe), plus focus/selection states; include a legend in the Help modal and ensure ≥4.5:1 contrast on all backgrounds.
+
+7. Fetch all tiles in a single request (20x15 is small), cache by ETag with `staleTime: Infinity`, and invalidate on schema/map code change.
+
+8. Show a small toast near the End Turn area for 1.5 s; dedupe multiple autosaves per turn; “Saves” button should be in upper right with link that opens `?modal=saves`.
+
+9. Yes—broadcast new token via `BroadcastChannel` (fallback to `localStorage` event); tabs update in-memory token immediately to prevent 401/419 loops.
+
+10. No graceful fallback. We want to keep it simple.

@@ -1,0 +1,31 @@
+<pytania>
+1. Which exact endpoint do we use for ending a turn and what is the response contract?
+Recommendation: Align to API plan with `POST /games/{id}/end-turn` returning `{ state: GameState }`; deprecate `/actions/end-turn` if present; document `409 TURN_IN_PROGRESS` and `AI_TIMEOUT` handling.
+
+2. What are the final idempotency details (header name, TTL, echo) across all action endpoints?
+Recommendation: Use `Idempotency-Key` (UUIDv4), 60 s dedupe window; server echoes via `X-Idempotency-Key` and returns the same result for duplicates; client reuses the key only for a single retry of the same action.
+
+3. What CSRF names and bootstrap endpoint should the SPA target?
+Recommendation: Set cookie `XSRF-TOKEN` on `GET /auth/csrf`; require header `X-XSRF-TOKEN` on all non-GET; return `419` on missing/invalid; SPA calls `/auth/csrf` on init.
+
+4. Will the backend enforce “only one active game” and return a consistent error when violated?
+Recommendation: Enforce at the DB/service layer and return `409 GAME_LIMIT_REACHED` on `POST /games`; client resolves current via `GET /games?status=active&sort=lastTurnAt&order=desc&pageSize=1`.
+
+5. How should the client discover the fixed map code for tile fetches and new games?
+Recommendation: Treat `mapCode` as server-default on `POST /games` (omit in request); after creation, read `state.map.code` and use it for `GET /maps/{code}/tiles`.
+
+6. Can the saves list include retention metadata so we can show “Expires in ~N days” correctly?
+Recommendation: Add `expiresAt` to items from `GET /games/{id}/saves` (manual and autosaves) reflecting the 3‑month policy; client renders relative time from this field.
+
+7. What is the minimal, stable `turnSummary` schema included in `GameState` after actions/end-turn?
+Recommendation: Provide `{ pendingUnits?: number, delayedProductions?: Array<{ cityId, reason }>, notes?: string[] }`; client surfaces counts in toasts and the city panel.
+
+8. Do all state‑changing endpoints return `{ state: GameState }` on success for cache writes?
+Recommendation: Yes—standardize `POST /games`, `/end-turn`, `/actions/move`, `/actions/attack`, `/saves/manual`, and `/saves/{id}/load` to return `{ state }`; document any exceptions.
+
+9. Will rate‑limit headers be present so the client can adapt polling/backoff?
+Recommendation: Include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` on all responses; client throttles polling when remaining is low and honors `429` backoff.
+
+10. Can we standardize timestamps to `YYYY-MM-DDTHH:mm:ssZ` (UTC, no milliseconds) in all API responses?
+Recommendation: Yes—emit seconds-only UTC in all payloads; client displays ISO 8601 consistently and uses the same format in tooltips and copied details.
+</pytania>

@@ -1,0 +1,31 @@
+<pytania>
+1. How should we implement picking tolerance given units are smaller than tile features?
+Recommendation: Use world-space hit radii that scale with zoom (e.g., unit radius ~0.35 hex width, feature ~0.5) and test in priority order (Units > City > Feature > Tile > Grid); if multiple hits occur, choose the nearest by center distance; implement a single picking function shared by all canvases.
+
+2. What are the exact camera bounds, clamping, and inertial pan behaviors?
+Recommendation: Clamp pan so the map stays fully visible with a small margin; add optional inertial easing (short decay) for mouse drag; disable edge-scroll by default; pause panning when any modal is open and when user is editing text.
+
+3. How should we handle devicePixelRatio changes and resizes (e.g., dragging across monitors)?
+Recommendation: Listen for DPR or size changes (ResizeObserver + polling DPR each rAF or media query), reallocate all canvases at `CSSpx * DPR`, rebuild offscreen caches, and trigger a full redraw; debounce to 50–100 ms to avoid thrashing.
+
+4. Do we support basic touch/trackpad gestures in MVP?
+Recommendation: Yes—enable one-finger pan, two-finger pinch-zoom, and tap-to-select; map long-press to cancel (right-click); keep keyboard/mouse primary, with touch as progressive enhancement; document unsupported gestures explicitly.
+
+5. What is the HUD layout for core info and actions at 1080p (min ~900p)?
+Recommendation: Use a minimal top bar (turn number, resources, status pill) and a right-side vertical action rail (End Turn, Saves, Help); ensure all controls remain reachable at 900p, and hide non-critical text under icons with tooltips.
+
+6. How do we source and render unit/tile visuals to balance fidelity and size?
+Recommendation: Use an SVG sprite atlas for units/features, pre-rasterized to offscreen bitmaps per DPR for Canvas draws; apply tinting for ownership/siege via multiply/overlay; keep the atlas under ~100 KB gzip to respect the bundle budget.
+
+7. How should “pending actions” warnings before End Turn be surfaced?
+Recommendation: On End Turn, compute pending items (units with `hasActed=false`, blocked productions) and show a summary toast with counts and “Go to next unit” CTA; offer a “Don’t warn again this turn” option; do not hard-block end turn.
+
+8. How should we expose the turn history from GET `/games/{id}/turns`?
+Recommendation: Add a collapsible “Turn Log” panel listing recent turns with duration and summary highlights; lazy-load on first open; link items to center the camera on notable events when possible.
+
+9. Do we guard against multi-tab conflicts for the same active game?
+Recommendation: Yes—use `BroadcastChannel` to detect another active tab; allow only one “controlling” tab to send actions; other tabs enter a read-only state with a banner and a “Make this tab active” takeover button.
+
+10. Should we add developer/debug overlays to aid testing without bloating the bundle?
+Recommendation: Yes—behind a dev flag, add overlays for FPS, pointer `{row,col}`, path costs, and A*/range visualization; toggle via `?debug=1` or a keyboard chord; strip from production builds to keep under the 500 KB target.
+</pytania>

@@ -1,0 +1,31 @@
+<pytania>
+1. What is a “deep link” in our context and which states should be linkable?
+Recommendation: Treat a deep link as a shareable URL that opens the app directly to a specific screen/state (e.g., `/game/current?modal=saves` or `/login?returnUrl=/game/current`). Use query (`?modal=saves|settings|account-delete`) or hash fragments for modals; ensure Back closes the modal before leaving the map.
+
+2. How should `/game/current` routing resolve the single active game and handle missing/finished games?
+Recommendation: Implement a guard that requests the most recent active game via `GET /games?status=active&sort=lastTurnAt&order=desc&pageSize=1`; if none, redirect to a “Start New Game” prompt. Internally resolve to `/game/:id` to keep URLs canonical.
+
+3. How will the SPA bootstrap CSRF/session reliably on first load?
+Recommendation: Provide a lightweight GET that sets `XSRF-TOKEN` (e.g., `/auth/csrf` or piggyback on an existing public GET with a Set-Cookie). Call it on app init; attach `X-XSRF-TOKEN` on non-GET; on `401/419` refresh once, then redirect to `/login?returnUrl=…`.
+
+4. How should we update client caches after actions to avoid redundant refetches?
+Recommendation: For move/attack/save/load/end-turn endpoints that return `{ state: GameState }`, write the returned state directly into the `['game', id]` query cache and only refetch on mismatch or error; keep tiles/defs under long-lived caches keyed by `code`.
+
+5. Which rendering approach should we use for the 20x15 hex grid (SVG vs Canvas) and how should layers be organized?
+Recommendation: Use SVG (sufficient for ~300 tiles) with layered groups: base tiles, overlays (reach/path/targets), units, selection, UI hints. Disable pointer events on non-interactive layers; keep hit targets on tiles/units for clean interactions.
+
+6. How should pan/zoom and input focus behave to avoid conflicts with text inputs and accessibility?
+Recommendation: Apply CSS transforms for zoom (75–150%) on the map container; only capture Arrow/WASD/+/- when the map region has focus; provide ESC to cancel selection and release focus; preserve `:focus-visible` outlines and ensure keyboard reachability of end-turn/save controls.
+
+7. What is the exact copy and severity mapping for domain errors and when do we use toast vs modal?
+Recommendation: Map non-blocking errors (`ILLEGAL_MOVE`, `ONE_UNIT_PER_TILE`, `OUT_OF_RANGE`) to inline hints/toasts; use blocking modal for `SCHEMA_MISMATCH`, `TURN_IN_PROGRESS` (when user tries Save/Load), and authentication expiry; include retry guidance and codes for support.
+
+8. Should we persist camera position/zoom and UI preferences per game?
+Recommendation: Yes—store camera (row/col focus, scale) and UI toggles (grid on/off) in a small UI store with optional `sessionStorage` persistence keyed by gameId; reset on Load or new state to avoid visual mismatch.
+
+9. Do we want default naming and safeguards for manual saves in the modal?
+Recommendation: Yes—default name to `Turn {turnNo}` with inline edit; confirm overwrite; disable manual save when `turnInProgress=true`; after successful POST, optimistically update the `['saves', gameId]` cache with server values.
+
+10. Should we reconcile the tie-resolution rule across PRD/API to prevent preview/server mismatch?
+Recommendation: Yes—codify “on ties where both drop below 0 HP, both die” in both UI logic and server messages; update any conflicting docs and ensure previews use the same rule set as `/unit-definitions` plus clarified tie behavior.
+</pytania>

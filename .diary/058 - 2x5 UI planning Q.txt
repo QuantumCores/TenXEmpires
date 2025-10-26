@@ -1,0 +1,31 @@
+<pytania>
+1. Should we implement multi-canvas layering (tiles, units, overlays) to minimize redraws and keep DPR crispness?
+Recommendation: Yes—use three canvases: base tiles (rare redraw on zoom/DPR change), units (per action), and overlays (hover/paths); size each at `CSSpx * devicePixelRatio`, zoom via CSS transforms, and handle rerender when zoom crosses thresholds (e.g., 0.9/1.1/1.5).
+
+2. Do we standardize pointer capture and a drag threshold to separate click vs pan across devices?
+Recommendation: Yes—use `setPointerCapture` on mousedown with a 4–6 px movement threshold; treat movement beyond threshold as pan, otherwise as click; release on pointerup/cancel; right-click/ESC cancels; show a “Map Focused” indicator to gate Arrow/WASD.
+
+3. Should hex tiles and outlines be pre-rendered (e.g., OffscreenCanvas) for faster draws at common zooms?
+Recommendation: Yes—pre-render base hex fills/outlines and grid at 75%, 100%, 150% scales (and current theme) to offscreen buffers; reuse sprites for paint; fallback to main-thread pre-render when OffscreenCanvas is unavailable.
+
+4. Do we keep A* previews on the main thread or move them to a Web Worker?
+Recommendation: Keep on main thread initially (20x15 grid is trivial); if preview cost >2–3 ms or frames drop, add a feature-flagged Worker for path/range calculation; throttle recompute to rAF and debounce pointer-move.
+
+5. What exact React Query keys, stale times, and invalidation rules should we adopt?
+Recommendation: Use `['unit-defs']` (staleTime: Infinity), `['map-tiles', code]` (Infinity with ETag), `['game', id]` (staleTime: 0), `['saves', id]` (1 min); write mutation results directly into `['game', id]`, invalidate `['saves', id]` on save/delete, and refetch `['game', id]` after end-turn completes.
+
+6. Should gameplay actions be serialized to prevent concurrent mutations and duplicate submissions?
+Recommendation: Yes—queue mutations (move/attack/end-turn/save/load) per game; disable conflicting UI while pending; attach an `Idempotency-Key` per action; drop duplicates client-side if the same unit/action is in-flight.
+
+7. How should modal routing use push vs replace to keep Back behavior intuitive?
+Recommendation: Use `pushState` to open primary modals (`?modal=saves|settings|account-delete|help`) and `replaceState` for ephemeral confirmations (`?modal=confirm`) so Back closes confirm first, then the source modal, then the map.
+
+8. Which endpoint will issue `XSRF-TOKEN`, and do we refresh proactively or only on failure?
+Recommendation: Provide GET `/auth/csrf` that sets `XSRF-TOKEN`; call on app init; send `X-XSRF-TOKEN` on non-GET; on `401/419`, fetch CSRF once and retry the failed request; avoid periodic refresh to conserve the 60 req/min budget.
+
+9. What counts as “essential technical events” before consent, if any, and is sending them permitted?
+Recommendation: Default to no analytics before consent; buffer in memory and drop on decline; if “essential” is required (e.g., uptime), document it explicitly in Privacy/Cookie pages and ensure payloads are non-identifying.
+
+10. What is the final JS bundle budget for the CI gate and allowed libraries?
+Recommendation: Set CI gate at 500 KB gzip for MVP (stretch goal 300 KB), hard cap 1 MB; allow TanStack Query and Zustand; prefer lightweight headless primitives (or custom) over full UI kits; avoid large rendering/libs (e.g., Pixi/Konva); code-split modals and help.
+</pytania>

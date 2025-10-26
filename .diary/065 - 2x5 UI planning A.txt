@@ -1,0 +1,20 @@
+1. Centralize in `ui/interactionConfig` (exporting radii by zoom and entity type) and expose a debug UI (dev-only) to tweak values live; read-only in production.
+
+2. Compute clamp bounds from the visible “map viewport” after subtracting HUD rectangles; use 8–16 px interior margin and recalc on layout changes and window resize.
+
+3. Cap combined offscreen bitmaps to ~32–64 MB; cache hex shapes/icons (not full-map images); use LRU keyed by theme+DPR+scale bucket (0.75/1.0/1.5); evict on DPR change or memory pressure.
+
+4. Set `touch-action: none` on the map container; register pointer events with `{ passive: false }` where needed; support one-finger pan, two-finger pinch, and tap; provide a settings toggle to disable gestures if problematic.
+
+5. Prioritize unit selection; bottom panel shows Unit details by default, with a toggle to switch to City when both are present; when nothing is selected, do not anything. This place is reserved only for units and cities
+
+6. Client checks only “units with hasActed=false”; for production blocks and siege/adjacency nuances, display information from the last server `turnSummary` where available; never block End Turn.
+
+7.  Persist up to the last 20 entries per game in `sessionStorage` (keyed by gameId) to survive reloads in the same session; clear on game finish or when loading a different save. Persisted log count should be configurable in one centralized place.
+
+8. Use `localStorage` “heartbeat + storage event” fallback with a 2–3 s lease; if both fail, allow multiple tabs with a warning banner and disable write actions on background tabs.
+
+9. Guard with `import.meta.env.DEV` and a `?debug=1` flag; keep overlays in a separately imported module so production builds omit the code via dead-code elimination.
+
+10. Use POST `/games/{id}/actions/end-turn` with `Idempotency-Key` and CSRF header; treat `200` with `{ state: GameState }` as authoritative, handle `409 TURN_IN_PROGRESS` by polling `GET /games/{id}/state` until `turnInProgress=false`, then refresh.
+ 

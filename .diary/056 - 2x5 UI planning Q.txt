@@ -1,0 +1,31 @@
+<pytania>
+1. Should Canvas zoom use only CSS transforms or also adjust pixel density for crispness?
+Recommendation: Use CSS transforms for 75–150% zoom per PRD, but size canvases at `CSSpx * devicePixelRatio`; on large zoom changes, re-render the base (tiles) layer to avoid blur while keeping overlays/units real-time.
+
+2. How should we implement precise hex hit-testing and path previews on Canvas?
+Recommendation: Use math-based conversion (odd-r → axial/cube) to map pointer to `{row,col}`; precompute neighbor tables; avoid pixel readbacks; run lightweight A* for previews using `/unit-definitions`, clamped to unit movement/attack rules.
+
+3. What is the definitive pan gesture across mouse and trackpads without conflicting with selection/cancel?
+Recommendation: Left-click selects/acts; middle-mouse or Space+drag pans; two-finger trackpad pans the container; right-click/ESC cancels; show a subtle “Map Focused” indicator so Arrow/WASD only pan when the map has focus.
+
+4. Do we allow stacking modals (e.g., Saves → Confirm Overwrite) and how is this expressed in the URL?
+Recommendation: Keep one modal at a time; encode as `?modal=saves|settings|account-delete|help` with optional `&tab=manual|autosaves`; navigate to a separate `?modal=confirm` for overwrite to keep Back behavior predictable.
+
+5. Should the `/game/current` guard prefetch state and lookups before rendering to minimize first paint?
+Recommendation: Yes—after resolving the active game, prefetch `/games/{id}/state`, `/unit-definitions`, and `/maps/{code}/tiles` in parallel; show a full-screen loading overlay; if none active, open `?modal=start-new` instead of navigating away from the map shell.
+
+6. How should we present critical errors (401/403/404/422) without breaking immersion?
+Recommendation: Use a centered blocking overlay (map blurred) with CTAs: Retry, Login (401/403), Start New (404/finished), Learn More (422 `SCHEMA_MISMATCH`); include error code and a copy-to-clipboard details link.
+
+7. Do we add more shortcuts for fast play beyond E/ESC?
+Recommendation: Yes—N: next unit without action, G: toggle grid, R: reset camera, ?: help modal; display shortcuts in a cheatsheet within `?modal=help` and reference them via `aria-describedby` on buttons.
+
+8. How will analytics respect consent while batching one payload per turn?
+Recommendation: Show a cookie/analytics banner on first visit; queue events in memory until accepted; after consent, send `/analytics/batch` once per turn with `clientRequestId`; if declined, log only essential technical events or drop all per policy.
+
+9. Should we show a connectivity/rate-limit status and throttle actions accordingly?
+Recommendation: Add a small status pill (Online/Offline/Limited) and a non-blocking toast on `429`; back off polling to 2–3 s during limits; disable action buttons with a countdown and re-enable automatically after backoff.
+
+10. Which headless UI primitives should we standardize on for accessible modals/tooltips without exceeding the 300 KB budget?
+Recommendation: Use Radix UI primitives (Dialog, Tooltip, VisuallyHidden) or Headless UI plus Floating UI for positioning; keep styling in Tailwind; avoid full UI kits; create internal components for Button, Modal, Toast, and Tabs for consistency.
+</pytania>

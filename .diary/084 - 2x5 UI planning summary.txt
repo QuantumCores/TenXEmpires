@@ -1,0 +1,94 @@
+<conversation_summary>
+<decisions>
+
+Use the map shell as the primary surface; redirect /hub to /game/current; open ?modal=start-new when no active game exists.
+Deep-link modals via query (e.g., ?modal=saves|settings|account-delete|help); pushState for primary modals, replaceState for confirms.
+Enforce a single active game server-side; POST /games returns 409 GAME_LIMIT_REACHED if violated.
+Start New Game uses a confirm modal with “I understand” checkbox; offer “Delete current game instead”; “Don’t show again” persists per session.
+Public routes: /about, /gallery, /privacy, /cookies, /login, /register; Auth: /game/current (resolves to /game/:id), account delete via modal.
+Add modals for Forgot Password and Verify Email under /login; both return to /login?returnUrl=/game/current.
+Rendering uses five canvases: base tiles, grid, tile features (cities/resources), units, overlays; all sized CSSpx * devicePixelRatio; zoom via CSS transforms.
+Pre-render hex shapes/features/grid to offscreen buffers at 0.75/1.0/1.5; LRU cache capped ~32–64 MB; rebuild on DPR/zoom-threshold change.
+Zoom anchored at pointer; 5% per wheel notch (factor 1.05), clamped 0.75–1.5, eased over ~120–180 ms; pinch-zoom supported.
+Pan/zoom allowed during AI turns; actions and selection disabled; AI overlay appears after 150 ms, escalates at 2 s and 5 s, blocks on AI_TIMEOUT.
+Pointer handling uses setPointerCapture with 4–6 px threshold; right-click/ESC cancels; suppress native context menu on canvases only.
+Picking priority: Units > City > Feature > Tile > Grid with world-space radii; centralized in ui/interactionConfig (tweakable in dev).
+Input model: left-click selects and freezes path; second left-click commits move/attack; clicking empty clears; hotkeys scoped to map.
+“Next Unit” (N) re-centers instantly with a single 200 ms ease-out; skip units with hasActed=true or 0 HP.
+HUD layout: minimal top bar (turn, status pill); bottom center panel for Unit/City only (collapses when none); top-right actions (Saves, Help); bottom-right End Turn.
+Grid toggle lives in Settings; default OFF; hotkey G documented in Help; grid can be turned on/off by user.
+End-turn shows a non-blocking pending-actions toast (units with hasActed=false); do not block end turn; autosave toast near End Turn for 1.5 s (dedup by turnNo).
+Turn Log is in-memory only; persist last 20 entries per game in sessionStorage (configurable); no server turn history in MVP.
+Use GET /games/{id}/state as source of truth; support strong ETag/If-None-Match; fetch all tiles once (20x15) with ETag; GET /unit-definitions cached.
+All state-changing endpoints return { state: GameState } and include turnSummary when it changes (move/attack/end-turn).
+End turn endpoint is POST /games/{id}/end-turn; handle 409 TURN_IN_PROGRESS by polling /games/{id}/state; surface AI_TIMEOUT in a blocking dialog.
+Tie rule: if both drop below 0 HP, both die; client previews reflect this and reconcile with server.
+State management: TanStack Query for server state (['game', id], ['map-tiles', code], ['unit-defs'], ['saves', id]); Zustand for UI/ephemeral state.
+Mutations serialized per game; attach Idempotency-Key (UUIDv4), 60 s dedupe; server echoes X-Idempotency-Key and returns the original result for duplicates.
+CSRF: GET /auth/csrf sets XSRF-TOKEN cookie; client sends X-XSRF-TOKEN on non-GET; prefer 403 with { code: 'CSRF_INVALID' }.
+Add GET /auth/keepalive (204) used only on user intent (idle T-60 s “Stay signed in”).
+Reads: 10 s timeout with one auto-retry (1 s backoff) + visible Retry; Actions: 10 s timeout with inline spinner; preserve intent.
+Timestamps: ISO 8601 UTC seconds only (YYYY-MM-DDTHH:mm:ssZ) across all payloads and UI/tooltips.
+Saves API includes expiresAt (UTC seconds-only ISO) for manual and autosaves; UI shows “Expires in ~N days”.
+Multi-tab control: BroadcastChannel (fallback localStorage heartbeat + 2–3 s lease) allows one controlling tab; others are read-only with takeover.
+Analytics: cookie-based consent; batch /analytics/batch once per turn; no events before consent; report issues by mailto with prefilled JSON.
+Accessibility: focus traps in modals; aria-live polite for toasts, assertive for session expiry/schema mismatch/AI timeout; ≥32×32 px hit targets; color-blind-safe tokens.
+Security: rely on server-managed headers (CSP, Referrer-Policy, frame-ancestors); SPA does not inject CSP; rate-limit headers omitted in MVP.
+No rendering fallback: if required APIs absent, show “Unsupported browser” screen (Chrome/Edge 115+, Firefox 115+, Safari 16.4+). </decisions>
+<matched_recommendations>
+
+Deep-link modals via query with push/replace semantics and Back closing modals first.
+Single active game model with guard at /game/current and confirm flow to start a new game.
+Use GameState projection as the authoritative source; fetch tiles once with ETag; reconcile previews with server.
+Canvas-first rendering with five layers and offscreen pre-rendered sprites; CSS transform zoom with DPR-aware sizing.
+Centralized picking and interaction configuration; pointer capture threshold; consistent cursor/hover states.
+Pan/zoom allowed during AI; overlay timing/escalation and non-blocking behavior.
+React Query + Zustand state split; normalized query keys; write mutation results directly to cache.
+Idempotency-Key (UUIDv4) with 60 s dedupe and echo header across all actions.
+CSRF bootstrap via /auth/csrf and header X-XSRF-TOKEN; 403 CSRF_INVALID; keepalive endpoint for idle extension.
+Timeouts policy: Reads 10 s + single retry; Actions 10 s; minimal, consistent messaging.
+Saves UX via modal only; tabs for Manual/Autosaves; overwrite confirmation and expiresAt-driven copy.
+Turn Log as in-memory/sessionStorage only; no server turn history in MVP.
+Accessibility baseline: focus-visible, aria-live levels, keyboard scoping, 32×32 targets, color tokens.
+Analytics consent gating with per-turn batching; mailto-based error reporting.
+No service worker or rendering fallback; unsupported browser block with minimum matrix.
+</matched_recommendations>
+<ui_architecture_planning_summary>
+Main UI architecture requirements:
+Single active game; map shell is the primary surface; public/auth routes are guarded with modal-based flows for auth, saves, settings, help, and account deletion.
+Five-canvas rendering pipeline with DPR-aware sizing, CSS transform zoom, offscreen pre-renders, and centralized picking/interaction config.
+Strict deterministic client behavior aligned to server rules (tie → both die), no optimistic damage; GameState is the sole source of truth.
+Key views, screens, and flows:
+
+Public: About, Gallery, Privacy, Cookies, Login/Register (with Forgot/Verify modals).
+Authenticated: Game (/game/current → /game/:id), Account Delete (modal).
+In-game modals: Saves (Manual/Autosaves tabs), Settings (grid toggle, invert zoom), Help (hotkeys/legend), Start New Game confirm, error dialogs (AI timeout/schema mismatch).
+Flows: Login → /game/current guard (active or start-new modal); Start New Game confirm; gameplay loop (select → preview → commit move/attack → end turn); autosave on end-turn; load/save via modal; victory/defeat overlay; session idle warning and keepalive.
+API integration and state management:
+
+Read: GET /games/{id}/state (ETag-enabled) polled during AI; GET /maps/{code}/tiles (full fetch, ETag); GET /unit-definitions (cache forever).
+Mutations: POST /games, POST /games/{id}/end-turn, POST /games/{id}/actions/{move|attack}, POST /games/{id}/saves/manual, POST /saves/{id}/load — all return { state } and turnSummary when changed.
+Errors: handle 409 TURN_IN_PROGRESS (poll), 403 CSRF_INVALID (refresh token or re-auth), 422 SCHEMA_MISMATCH (block with details), 429 backoff; centralized error-to-copy mapping.
+State: TanStack Query for server state (precise keys, staleTime/ETag metadata); Zustand for UI state (selection, camera, modals, grid); mutation queue per game; Idempotency-Key with 60 s dedupe.
+Timeouts: Reads 10 s with single auto-retry (1 s backoff) + Retry button; Actions 10 s inline spinner.
+Responsiveness, accessibility, and security:
+
+Target 1080p, usable down to ~900p; pointer-anchored zoom (0.75–1.5); instant panning with a single 200 ms ease for Next Unit.
+A11y: focus trap in modals, aria-live polite/assertive as appropriate, ≥32×32 targets, keyboard-scoped hotkeys; grid toggle only in Settings; bottom panel collapses when nothing selected.
+Security: cookie auth, CSRF via /auth/csrf and X-XSRF-TOKEN; prefer 403 for CSRF errors; /auth/keepalive to extend sessions on demand; server-managed CSP and headers; BroadcastChannel CSRF/token rotation and single-controller tab.
+Other UX details:
+
+Autosave toast deduped per turn; pending-actions toast on end turn (not blocking).
+Turn Log: ephemeral, sessionStorage (20 items), configurable.
+Analytics: consent banner; batch /analytics/batch once per turn; mailto-based issue reporting with prefilled JSON.
+ISO 8601 UTC (seconds-only) across UI and payloads; copy-to-clipboard details use the same format.
+</ui_architecture_planning_summary>
+<unresolved_issues>
+
+Hosting/CORS model: same-origin vs cross-origin (cookie SameSite=None; Secure, CORS with credentials) is TBD.
+Backend tasks to implement: /auth/csrf (sets cookie), /auth/keepalive (204), strong ETag support for /games/{id}/state, expiresAt in saves payloads, X-Csrf-Rotated header on login, echo X-Idempotency-Key on actions.
+Final color token values (CVD-safe palette) and exact city/feature visual tints need definition.
+Start New Game server-side behavior: “finish” vs “delete” semantics and messaging confirmation.
+Performance thresholds (FPS-based blur→dim switch) and offscreen cache size may need tuning on target hardware.
+</unresolved_issues>
+</conversation_summary>

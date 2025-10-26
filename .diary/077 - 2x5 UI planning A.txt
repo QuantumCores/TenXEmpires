@@ -1,0 +1,19 @@
+1. Actions: 10 s timeout with inline spinner on the triggering control; Reads: 10 s; on timeout, show time out information only.
+
+2. Strictly ISO 8601
+
+3. No
+
+4.  Yes—instantly center (with animation - this is one exception); if none remain, show a non‑blocking toast offering End Turn.
+
+5. Keep the toggle in Settings only (hotkey “G” documented in Help) to reduce HUD clutter; reflect current state in the Settings switch and hotkey tooltip.
+
+6. Enforce 1–40 chars; allow letters, numbers, spaces, hyphen, underscore; trim and collapse whitespace; escape HTML; show old/new names in overwrite confirm.
+
+7. Auto-retry `GET /games/{id}/state` once if online; display a Retry button otherwise; on `429`, back off per headers; on offline, show a banner and disable actions until online.
+
+8. Yes—disable End Turn (E), Next Unit (N), move/attack gestures; keep Esc available only if it does not cancel a submitted request; re‑enable immediately on resolution.
+
+9. Use `aria-live="polite"` for autosave and non-blocking hints; `aria-live="assertive"` for session expiry, schema mismatch, and AI timeout dialogs; ensure focus moves to dialogs.
+
+10. I'm not sure. I'm leaning towrds `NO` answer.

@@ -1,0 +1,31 @@
+<pytania>
+1. Do we still need a separate Hub route with a single active game?
+Recommendation: No—use the map shell as the primary surface; redirect `/hub` to `/game/current`, and open `?modal=start-new` when no active game exists.
+
+2. Should we include “Forgot Password” and email verification flows with ASP.NET Identity?
+Recommendation: Add a minimal “Forgot Password” modal/route and email verification notice post‑register; both redirect back to `/login?returnUrl=/game/current` on completion.
+
+3. What confirmation pattern should Account Delete use to prevent mistakes?
+Recommendation: Use a two‑step confirm modal requiring the user to type DELETE (or their email) and a final “Delete my account” button; on success, log out and route to `/about`.
+
+4. Do we warn before session idle expiry and offer a quick re-auth path?
+Recommendation: At T‑60 s of inactivity, show a small countdown banner with “Stay signed in” (focus trap safe); if expired, show a blocking re‑auth modal preserving return URL to `/game/current`.
+
+5. Should the Saves UI display retention metadata and impending purge dates?
+Recommendation: Yes—show “Expires in ~N days” for each save per 3‑month policy and a footnote linking to Privacy; sort by newest and surface a warning badge when <14 days remain.
+
+6. How should we expose city auto‑production status and adjacency blocks in the UI?
+Recommendation: In the city panel, show “Production: Warrior/Slinger” with progress (e.g., 7/10) and a “Delayed: adjacent tiles blocked” badge; pull concise reasons from `turnSummary` when available.
+
+7. What details should combat previews include to match server rules?
+Recommendation: Show predicted damage bars, counterattack indicator (hidden for ranged), and tie outcome (“Both die on tie”); compute client‑side from `/unit-definitions`, reconcile with server state after action.
+
+8. Should we constrain minimum viewport and enforce landscape for clarity?
+Recommendation: Target ≥900p height in landscape; if below, show a gentle “Best viewed ≥900p” banner and reduce nonessential HUD text to icons; no portrait layout in MVP.
+
+9. Do we allow user‑configurable hotkeys and UI toggles beyond grid?
+Recommendation: Provide a lightweight Settings modal with toggles for Grid, Tooltips, and Hotkey hints; keep key bindings fixed in MVP, with a plan to allow remapping later.
+
+10. How should users report issues from in‑app errors (e.g., AI timeout, schema mismatch)?
+Recommendation: Add a “Report Issue” button on blocking error modals that opens a prefilled report (JSON snippet: error code, request id, client env) and optional text; send via a support endpoint or mailto link.
+</pytania>

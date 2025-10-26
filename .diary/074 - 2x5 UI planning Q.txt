@@ -1,0 +1,31 @@
+<pytania>
+1. Should we suppress the native context menu on right‑click within the map region?
+Recommendation: Yes—prevent default on the map canvases so right‑click acts as cancel; keep the browser menu enabled on UI chrome and inputs.
+
+2. Do we standardize cursor states and hover hints for move/attack/invalid to reduce misclicks?
+Recommendation: Yes—use cursor states (default, move, attack, not‑allowed) and a subtle hex hover outline; switch based on current selection and legality.
+
+3. What should the Victory/Defeat flow present and which actions are available?
+Recommendation: Show a full‑screen result overlay (turns, cities captured) with primary “Start New Game” and secondary “View Saves” and “About”; disable map inputs behind it and emit `game_finish` analytics.
+
+4. What minimum interactive target sizes do we enforce for accessibility on 1080p?
+Recommendation: Ensure ≥32×32 CSS px interactive targets; expand unit/city hit radii if visuals are smaller; keep spacing consistent with Tailwind tokens.
+
+5. Do we allow double‑click/tap‑and‑hold to center the camera on a tile/unit?
+Recommendation: Yes—double‑click centers on desktop; long‑press centers on touch; do not zoom on double‑click to avoid conflicts.
+
+6. Should we add a first‑run onboarding hint to teach core actions (click to move, E to end turn)?
+Recommendation: Yes—show 2–3 lightweight, dismissible tooltips once per account/session; “Don’t show again” stored in a cookie or user setting.
+
+7. What request timeouts and user feedback do we apply for actions vs. reads?
+Recommendation: Actions: 10 s timeout with inline spinner on the triggering control; Reads: 20 s with top‑bar progress; on timeout, show retry with preserved intent.
+
+8. How do we handle temporary offline states without offline gameplay?
+Recommendation: Detect offline via navigator events; show an “Offline” banner, disable action buttons, and prevent submissions; do not queue actions—re‑enable automatically when back online.
+
+9. Should we standardize date/time and number formatting for saves and UI stats?
+Recommendation: Yes—use locale‑aware `en-US` formatting; display relative time (“Expires in ~N days”) and absolute timestamps in tooltips; keep number abbreviations consistent.
+
+10. Do we disable the browser text selection/drag image behaviors over the map to avoid accidental drags?
+Recommendation: Yes—set `user-select: none` and disable image dragging within the map container; allow selection in modals/inputs as normal.
+</pytania>

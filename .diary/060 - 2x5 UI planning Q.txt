@@ -1,0 +1,31 @@
+<pytania>
+1. How should pointer hit-testing prioritize overlapping targets across the five canvases (unit on city tile with overlays)?
+Recommendation: Prioritize Units > City > Tile Feature > Base Tile > Grid; route all pointer events through a single controller that computes picking against world coords and disables pointer events on non-interactive canvases.
+
+2. Should the grid be on or off by default, and where do we persist this preference?
+Recommendation: Default grid OFF; persist a non-sensitive preference in `localStorage` (e.g., `grid=0|1`) and mirror in the UI store; expose a quick toggle (G) with tooltip.
+
+3. Where should we render the always-visible city reach (radius-2) and siege-status visuals?
+Recommendation: Draw static reach rings on the Tile Features canvas (rare redraw); on ownership change or siege state change, re-render affected cities; use a distinct tint for “under siege” tiles.
+
+4. What is the exact behavior of “Next Unit” (N) and should camera auto-pan?
+Recommendation: Cycle only units with `hasActed=false` in row-major order; if off-screen, auto-pan with a short eased animation; skip eliminated or zero-HP units.
+
+5. Should we block route changes and window unload when a mutation is in-flight?
+Recommendation: Yes—while any action is pending, show a subtle “Action in progress…” banner, disable conflicting controls, and register a `beforeunload` guard to prevent losing in-flight requests.
+
+6. Should `/game/current` mount the map shell immediately or wait for prefetch completion?
+Recommendation: Mount the map shell immediately for perceived performance, then overlay a full-screen loading veil while prefetching state/tiles/defs; fade in once caches are ready.
+
+7. Where do we store analytics consent and how long should it persist?
+Recommendation: Store consent in a cookie (e.g., `consent=accepted; max-age=15552000`) to align with policy pages; read once on app init and gate batching accordingly.
+
+8. Do we want a lightweight “Turn Log” in addition to toasts for combat/result feedback?
+Recommendation: Yes—add a collapsible side panel (closed by default) showing the last ~10 resolved events with icons and concise text; keep toasts for transient notices.
+
+9. How should manual save renaming work given no dedicated rename endpoint?
+Recommendation: Treat rename as re-saving the current state into the same slot with a new `name`, showing an overwrite confirmation; limit name length (e.g., 40 chars) and sanitize input.
+
+10. How should we handle `SCHEMA_MISMATCH`/`MAP_SCHEMA_MISMATCH` beyond messaging?
+Recommendation: Clear ETag caches for tiles/defs, invalidate `['game', id]`, and present a blocking dialog offering “Start New Game” (primary) and “View Details” (secondary); after starting a new game, refresh lookups before entering the map.
+</pytania>

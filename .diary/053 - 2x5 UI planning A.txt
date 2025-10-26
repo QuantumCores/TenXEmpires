@@ -1,0 +1,20 @@
+1. Yes—open modals via URL state (e.g., `?modal=saves`) with focus trap and `aria-modal=true`; closing removes the query using `history.replaceState` so Back closes the modal before leaving the map. BTW what is a deep link?
+
+2. On “Start New Game”, show message that previous game will be deleted or finished; confirm and then either DELETE the existing active game (`DELETE /games/{id}`) or mark finished before `POST /games`; if server returns `409 GAME_LIMIT_REACHED`, prompt the user to finish/delete; after login, auto-route to `/game/current` when an active game exists.
+
+3. Yes—treat `state` as the single source of truth (including unit stats and `turnSummary`), fetch tiles once per `code` with ETag/If-None-Match, and align combat preview logic to the clarified tie rule (both units die if HP < 0).
+
+4. Prefer “TanStack Query + small UI store”. TanStack Query for server-state + Zustand for UI (Pros: small, robust caching/invalidation, retries, focus/refetch, devtools optional; Cons: adds 2 libs).
+
+5. After `POST /games/{id}/actions/end-turn`, show an overlay and poll `GET /games/{id}/state` at 1 request/second while `turnInProgress=true`, backing off to 2–3 s if it exceeds ~10 s; stop when `turnInProgress=false` or on `AI_TIMEOUT`.
+
+6. Expose a “Saves” modal using `GET /games/{id}/saves`; allow manual save with confirmation on overwrite; disallow Save/Load when `turnInProgress=true` (surface `409 TURN_IN_PROGRESS` inline); on Load (`POST /saves/{saveId}/load`), clear selection and reload `state`; block with dialog on `422 SCHEMA_MISMATCH`.
+
+7. Left-click selects and freezes path; second left-click confirms move; ESC or right-click cancels selection/preview; show range/validity hints; never optimistic-apply damage; use consistent colors for reachable tiles, path, targets, and blocked cells.
+
+8. Provide keyboard E for end-turn, ESC to cancel, Arrow/WASD pan, +/- zoom; maintain focus outlines (`:focus-visible`), label controls with `aria-label`, announce turn summaries via `aria-live="polite"`, and meet contrast guidelines; ensure modals trap focus and restore it on close.
+
+9. On app init, fetch or rely on a server endpoint that sets `XSRF-TOKEN`; send `X-XSRF-TOKEN` on all non-GET; on `401/419`, refresh CSRF then retry once and redirect to `/login?returnUrl=...` if still unauthorized; never store auth in `localStorage`.
+
+10. Cache tiles and lookups via ETag with `staleTime: Infinity` and long `cacheTime`; avoid service workers; code-split by route and lazy-load modals to meet the ~300 KB gzip budget; batch analytics once per turn to `/analytics/batch` with `clientRequestId`, and instrument `game_start`, `turn_end`, `manual_save/load`, `autosave`, and `game_finish`.
+

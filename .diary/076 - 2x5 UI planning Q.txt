@@ -1,0 +1,31 @@
+<pytania>
+1. Points 7 and 8 conflict on read timeouts and retry behavior; which final policy do we adopt?
+Recommendation: Standardize on Actions: 10 s (inline spinner), Reads: 20 s with a single auto‑retry (1 s backoff) and a visible Retry button; always preserve intent after success.
+
+2. Should timestamps in the UI be localized or strictly ISO 8601?
+Recommendation: Show localized short date/time in UI, with ISO 8601 in tooltips and “Copy details”; use a single `formatDate` utility to ensure consistency.
+
+3. Should the Victory/Defeat overlay support keyboard actions for faster flow?
+Recommendation: Yes—Enter: Start New Game; Shift+Enter: View Saves; Esc: About; restore focus to the primary button and disable map inputs behind the overlay.
+
+4. When pressing “Next Unit” (N), should the camera re‑center instantly on that unit?
+Recommendation: Yes—instantly center (no animation) to match “instant panning only”; if none remain, show a non‑blocking toast offering End Turn.
+
+5. Where should the Grid toggle be exposed in the UI?
+Recommendation: Keep the toggle in Settings only (hotkey “G” documented in Help) to reduce HUD clutter; reflect current state in the Settings switch and hotkey tooltip.
+
+6. What naming rules should manual saves enforce to avoid bad input?
+Recommendation: Enforce 1–40 chars; allow letters, numbers, spaces, hyphen, underscore; trim and collapse whitespace; escape HTML; show old/new names in overwrite confirm.
+
+7. On read timeouts or transient 5xx, do we auto‑retry or require manual retry?
+Recommendation: Auto‑retry `GET /games/{id}/state` once if online; display a Retry button otherwise; on `429`, back off per headers; on offline, show a banner and disable actions until online.
+
+8. During “Action in progress…”, should hotkeys be disabled?
+Recommendation: Yes—disable End Turn (E), Next Unit (N), move/attack gestures; keep Esc available only if it does not cancel a submitted request; re‑enable immediately on resolution.
+
+9. What aria‑live priorities should we use for different notifications?
+Recommendation: Use `aria-live="polite"` for autosave and non‑blocking hints; `aria-live="assertive"` for session expiry, schema mismatch, and AI timeout dialogs; ensure focus moves to dialogs.
+
+10. Should we add a baseline front‑end security header policy beyond CSRF?
+Recommendation: Yes—set CSP (`default-src 'self'`; `connect-src` API origin; `img-src 'self' data:`; `style-src 'self' 'unsafe-inline'` or hashed; `script-src 'self'`; `frame-ancestors 'none'`) and `Referrer-Policy: no-referrer`; enforce via server headers.
+</pytania>
