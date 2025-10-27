@@ -18,8 +18,20 @@ When introducing changes to the project, always follow the directory structure b
 - `./tenxempires.client/src` - source code
 - `./tenxempires.client/src/layouts` - layouts
 - `./tenxempires.client/src/pages` - pages
+- `./tenxempires.client/src/pages/public` - public pages (landing, login, register, etc.)
+- `./tenxempires.client/src/pages/game` - game-related pages
 - `./tenxempires.client/src/pages/api` - API endpoints
 - `./tenxempires.client/src/components` - client-side components
+- `./tenxempires.client/src/components/auth` - authentication-related components (forms, modals)
+- `./tenxempires.client/src/components/modals` - modal containers and managers
+- `./tenxempires.client/src/components/landing` - landing page components
+- `./tenxempires.client/src/components/layouts` - layout components
+- `./tenxempires.client/src/components/ui` - shared UI components
+- `./tenxempires.client/src/types` - TypeScript type definitions
+- `./tenxempires.client/src/api` - API client utilities
+- `./tenxempires.client/src/features` - feature-specific code (auth, analytics, etc.)
+- `./tenxempires.client/src/router` - routing configuration
+- `./tenxempires.client/src/providers` - React context providers
 - `./tenxempires.client/src/assets` - static internal assets
 - `./tenxempires.client/public` - public assets
 

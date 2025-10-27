@@ -1,3 +1,4 @@
+27.10
 There should be order fo implementation in the ui-plan.md
 I added that order in the file naming and added one more task to prepare client for server comunication thte is 01 ui implementation plan
 
@@ -18,3 +19,7 @@ npm run lint
 
 5. Find process
 Get-Process | Where-Object {$_.ProcessName -like "*node*"} | Select-Object ProcessName, Id, CPU
+
+Fixed the problems with Sonet 4.5 because GPT Codex failed. 
+
+Starting to implement login view

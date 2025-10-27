@@ -7,16 +7,16 @@ globs: **/*.tsx, **/*.jsx
 
 ### General Guidelines
 
-- Use Tailwind components for static content and layout
+- Use !Tailwind 4! components for static content and layout
 - Implement framework components in React only when interactivity is needed
 
 ### Guidelines for Styling
 
-#### Tailwind
+#### Tailwind 4
 
 - Use the @layer directive to organize styles into components, utilities, and base layers
 - Use arbitrary values with square brackets (e.g., w-[123px]) for precise one-off designs
-- Implement the Tailwind configuration file for customizing theme, plugins, and variants
+- Implement the Tailwind 4 configuration file for customizing theme, plugins, and variants
 - Leverage the theme() function in CSS for accessing Tailwind theme values
 - Implement dark mode with the dark: variant
 - Use responsive variants (sm:, md:, lg:, etc.) for adaptive designs
