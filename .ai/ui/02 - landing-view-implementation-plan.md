@@ -20,7 +20,7 @@ The view also links to public pages (About, Gallery, Privacy, Cookies) and shows
 ## 3. Component Structure
 - `LandingPage`
   - `LandingNavbar` (links: About, Gallery, Privacy, Cookies; optional logo)
-  - `LandingHero`
+  - `LandingIntro`
     - `AuthAwareCTA` (Play or Login/Register)
   - `LandingHighlights` (optional short blurb/features from PRD; keep lightweight)
   - `ConsentBanner` (analytics opt-in)
@@ -28,8 +28,8 @@ The view also links to public pages (About, Gallery, Privacy, Cookies) and shows
 
 ## 4. Component Details
 ### LandingPage
-- Component description: Root container for the landing route. Coordinates auth status detection, renders hero and CTAs, and shows consent banner.
-- Main elements: `<main>`, hero section, nav, footer; responsive single-column layout.
+- Component description: Root container for the landing route. Coordinates auth status detection, renders intro section and CTAs, and shows consent banner.
+- Main elements: `<main>`, intro section, nav, footer; responsive single-column layout.
 - Handled interactions:
   - On mount, triggers auth status query.
   - Navigation clicks to other routes.
@@ -45,8 +45,8 @@ The view also links to public pages (About, Gallery, Privacy, Cookies) and shows
 - Types: None.
 - Props: Optional `compact?: boolean`.
 
-### LandingHero
-- Component description: Hero block with product name, blurb, and the `AuthAwareCTA`.
+### LandingIntro
+- Component description: Main introductory section with product name, blurb, and the `AuthAwareCTA`.
 - Main elements: Title, subtitle, CTA area.
 - Handled interactions: Delegated to `AuthAwareCTA`.
 - Handled validation: None.
@@ -155,7 +155,7 @@ The view also links to public pages (About, Gallery, Privacy, Cookies) and shows
 1. Add route `/` to the router and point to `LandingPage`.
 2. Create `LandingPage` with semantic structure and responsive layout.
 3. Implement `LandingNavbar` with links to `/about`, `/gallery`, `/privacy`, `/cookies`.
-4. Implement `LandingHero` and `AuthAwareCTA` components; wire CTAs to the router.
+4. Implement `LandingIntro` and `AuthAwareCTA` components; wire CTAs to the router.
 5. Add React Query hook `useAuthStatusQuery` (key `['auth-status']`) calling `GET /games?...` per spec; map to `AuthStatus` view model.
 6. Handle loading/unknown by rendering Login/Register by default; if `isAuthenticated` becomes true, replace with Play.
 7. Implement `ConsentBanner` with accept/decline handlers; store consent in cookie and UI store.

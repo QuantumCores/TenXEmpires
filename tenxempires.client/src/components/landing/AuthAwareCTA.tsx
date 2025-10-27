@@ -12,7 +12,7 @@ export function AuthAwareCTA({ auth }: Props) {
     return (
       <Link
         to="/game/current"
-        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         Play
       </Link>
@@ -24,17 +24,16 @@ export function AuthAwareCTA({ auth }: Props) {
     <>
       <Link
         to={`/login?returnUrl=${returnUrl}`}
-        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         Login
       </Link>
       <Link
         to={`/register?returnUrl=${returnUrl}`}
-        className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        className="inline-flex items-center justify-center rounded-md border border-slate-600 bg-slate-800 px-6 py-3 text-base font-semibold text-slate-100 shadow-lg hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         Register
       </Link>
     </>
   )
 }
-

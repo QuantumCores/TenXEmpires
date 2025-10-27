@@ -44,7 +44,7 @@
   - Path: `/`
   - Purpose: Default entry point with clear CTA.
   - Key info: Short product blurb; primary Play button for authenticated users; Login and Register buttons for visitors.
-  - Components: Page shell, hero/CTA, auth-aware action area.
+  - Components: Page shell, intro/CTA, auth-aware action area.
   - UX/A11y/Security: Public; Play routes to `/game/current` if authenticated, otherwise `/login?returnUrl=/game/current`.
 
 - About

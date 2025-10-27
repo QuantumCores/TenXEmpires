@@ -1,0 +1,20 @@
+There should be order fo implementation in the ui-plan.md
+I added that order in the file naming and added one more task to prepare client for server comunication thte is 01 ui implementation plan
+
+
+MASSIVE PROBLEMS WITH UI 
+
+1. Set location
+Set-Location D:\Source\TenXEmpires\tenxempires.client
+
+2. Run the TypeScript compiler check from this directory.
+npx tsc --noEmit
+
+
+3. Run the linter to make sure there are no linting issues.
+npm run lint
+
+4. Start the dev server to verify everything runs smoothly:
+
+5. Find process
+Get-Process | Where-Object {$_.ProcessName -like "*node*"} | Select-Object ProcessName, Id, CPU
