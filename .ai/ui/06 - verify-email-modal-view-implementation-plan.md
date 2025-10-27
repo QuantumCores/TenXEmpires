@@ -1,5 +1,7 @@
 # View Implementation Plan Verify Email Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 A simple modal shown after registration (or when login detects an unverified account) instructing the user to verify their email. Provides a “Resend verification email” action.
 
@@ -51,4 +53,3 @@ A simple modal shown after registration (or when login detects an unverified acc
 1. Implement `VerifyEmailModal` with focus trap and ARIA roles.
 2. Wire Resend action to server endpoint with CSRF; show success feedback.
 3. Integrate with registration success flow and `/login?modal=verify` deep link.
-

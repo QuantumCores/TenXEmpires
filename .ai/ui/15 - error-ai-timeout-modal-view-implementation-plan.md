@@ -1,5 +1,7 @@
 # View Implementation Plan Error AI Timeout Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Blocks the UI when the AI exceeds allowed time or backend returns `AI_TIMEOUT`. Offers Retry and Report Issue.
 
@@ -41,4 +43,3 @@ Blocks the UI when the AI exceeds allowed time or backend returns `AI_TIMEOUT`. 
 ## 11. Implementation Steps
 1. Implement modal with actions.
 2. Wire end-turn mutation error handler to open modal on `AI_TIMEOUT`.
-

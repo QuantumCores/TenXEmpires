@@ -1,5 +1,7 @@
 # View Implementation Plan Help Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Help modal showing hotkeys, color legend, and brief control tips.
 
@@ -42,4 +44,3 @@ Help modal showing hotkeys, color legend, and brief control tips.
 ## 11. Implementation Steps
 1. Implement modal with sections and color tokens display.
 2. Link to Privacy/Cookies.
-

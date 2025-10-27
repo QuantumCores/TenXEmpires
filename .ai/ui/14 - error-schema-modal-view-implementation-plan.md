@@ -1,5 +1,7 @@
 # View Implementation Plan Error Schema Mismatch Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Blocks the UI when a save/load schemaVersion is incompatible. Offers to start a new game or view details.
 
@@ -42,4 +44,3 @@ Blocks the UI when a save/load schemaVersion is incompatible. Offers to start a 
 ## 11. Implementation Steps
 1. Implement modal and error store slice.
 2. Wire saves/load and game bootstrap handlers to open this modal on 422.
-

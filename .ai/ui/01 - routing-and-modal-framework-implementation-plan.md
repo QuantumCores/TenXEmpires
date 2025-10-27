@@ -1,5 +1,7 @@
 # View Implementation Plan Routing and Modal Framework
 
+Reference: This plan (01 - routing-and-modal-framework-implementation-plan.md) is the authoritative source for route configuration, guards, and modal framework. All other UI plans in this folder reference it for shared behavior and implementation status.
+
 ## 1. Overview
 The Routing and Modal Framework provides application-wide navigation and modal behavior for the TenX Empires MVP. It defines public and authenticated routes, the `/game/current` guard that resolves to `/game/:id`, and a query-parameter-driven modal system (`?modal=...`) with Back/Forward support, ESC/backdrop close, and focus trapping. This framework underpins all views and modals so downstream screens remain simple and consistent.
 
@@ -161,4 +163,3 @@ The Routing and Modal Framework provides application-wide navigation and modal b
 8. Verify A11y: focus trap, labelled-by, restore focus on close; tab order; `aria-live` for banners.
 9. Performance check: ensure no heavy prefetch in router/modals; lazy-load modal components if needed.
 10. Document usage patterns for downstream views and reference this plan from UI architecture.
-

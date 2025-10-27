@@ -1,5 +1,7 @@
 # View Implementation Plan Register
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Registration page for creating an account with email/password. After success, show verify email notice and route back to login or start flow.
 

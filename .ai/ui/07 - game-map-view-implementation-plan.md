@@ -1,5 +1,7 @@
 # View Implementation Plan Game Map
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 The Game Map view is the primary authenticated gameplay surface. It renders the fixed 20x15 hex map, units, and cities; supports selection → preview → commit for move/attack; manages turn flow including End Turn and AI processing; exposes in-game modals (Saves, Settings, Help); and surfaces toasts, banners, and a collapsible Turn Log. It treats the server GameState as the sole source of truth.
 
@@ -134,4 +136,3 @@ The Game Map view is the primary authenticated gameplay surface. It renders the 
 7. Wire hotkeys and modal query handling; suspend hotkeys while any modal is open.
 8. Handle error codes and CSRF/idle flows; test rate-limit/offline.
 9. Performance pass: cache sprites offscreen; ETag use; verify 1080p and ≥900p.
-

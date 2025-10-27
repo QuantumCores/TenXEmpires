@@ -1,5 +1,7 @@
 # View Implementation Plan Forgot Password Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 A focused modal that lets users request a password reset email by entering their account email. After submission, the modal switches to a confirmation state explaining that, if the email exists, instructions were sent.
 

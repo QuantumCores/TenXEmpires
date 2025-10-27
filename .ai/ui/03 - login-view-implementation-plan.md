@@ -1,5 +1,7 @@
 # View Implementation Plan Login
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Login page for email/password authentication via ASP.NET Identity; includes support modals for Forgot Password and Verify Email.
 
@@ -64,4 +66,3 @@ Login page for email/password authentication via ASP.NET Identity; includes supp
 1. Build LoginPage and LoginForm with validation.
 2. Wire submit to server login route and handle redirects.
 3. Add support modals for Forgot/Verify via query param.
-

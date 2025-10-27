@@ -1,5 +1,7 @@
 # View Implementation Plan Account Delete Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Irreversible deletion confirmation flow requiring typed confirmation before enabling final action.
 
@@ -45,4 +47,3 @@ Irreversible deletion confirmation flow requiring typed confirmation before enab
 1. Implement modal with validation gating.
 2. Wire submit to server delete endpoint.
 3. On success, log out client and navigate to `/about`.
-

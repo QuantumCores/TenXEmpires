@@ -1,5 +1,7 @@
 # View Implementation Plan Saves Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 The Saves modal allows players to manage manual saves (slots 1..3) and load autosaves (last five). It is map-first and opens as a modal so the map remains visible.
 
@@ -86,4 +88,3 @@ The Saves modal allows players to manage manual saves (slots 1..3) and load auto
 3. Wire validations and disabled states; overwrite confirm flow.
 4. On Load success, write `{ state }` to cache and close modal; clear selection.
 5. Add expiresAt display and relative time.
-

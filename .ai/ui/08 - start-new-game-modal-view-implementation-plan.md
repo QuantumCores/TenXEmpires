@@ -1,5 +1,7 @@
 # View Implementation Plan Start New Game Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Confirms creating a new game when only one active game is allowed. Provides a primary "Start New Game" action and a link to delete the current active game instead.
 
@@ -50,4 +52,3 @@ Confirms creating a new game when only one active game is allowed. Provides a pr
 2. Wire `POST /games` mutation with Idempotency‑Key and write‑through cache.
 3. Handle `409 GAME_LIMIT_REACHED` with delete‑current flow (calls `DELETE /games/{id}`).
 4. Route to `/game/:id` on success and close modal.
-

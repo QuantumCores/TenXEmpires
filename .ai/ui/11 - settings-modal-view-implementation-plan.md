@@ -1,5 +1,7 @@
 # View Implementation Plan Settings Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Modal providing player preferences that affect client-only behavior: Grid toggle (default OFF), Invert scroll zoom, and optional dev-only debug toggle.
 
@@ -45,4 +47,3 @@ Modal providing player preferences that affect client-only behavior: Grid toggle
 1. Implement modal with focus trap and ARIA roles.
 2. Wire toggles to UI store and persistence.
 3. Ensure grid/invertZoom take effect immediately on map.
-

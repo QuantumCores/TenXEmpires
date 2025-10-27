@@ -1,5 +1,7 @@
 # View Implementation Plan Privacy
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Public Privacy page describing data retention, analytics behavior, and delete-account effects per PRD.
 
@@ -43,4 +45,3 @@ Public Privacy page describing data retention, analytics behavior, and delete-ac
 ## 11. Implementation Steps
 1. Build page with sections per PRD requirements.
 2. Add anchor TOC and links to Cookies.
-

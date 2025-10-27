@@ -1,5 +1,7 @@
 # View Implementation Plan Victory/Defeat Overlay
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Fullscreen overlay shown when a game ends (victory/defeat). Presents summary and next actions.
 
@@ -42,4 +44,3 @@ Fullscreen overlay shown when a game ends (victory/defeat). Presents summary and
 1. Implement overlay with focus trap and disable map inputs.
 2. Wire to `GameState` finish detection; populate summary.
 3. Hook buttons to open modals or navigate as specified.
-

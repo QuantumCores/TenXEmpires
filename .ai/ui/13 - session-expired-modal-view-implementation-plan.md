@@ -1,5 +1,7 @@
 # View Implementation Plan Session Expired Modal
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Prompts users to re-authenticate after idle timeout or CSRF/auth failure. Preserves return URL to continue gameplay.
 
@@ -42,4 +44,3 @@ Prompts users to re-authenticate after idle timeout or CSRF/auth failure. Preser
 1. Implement modal and wire router navigation.
 2. Add auth/CSRF interceptors to open modal on `401/403`.
 3. Add idle timer with T‑60 s banner calling `/auth/keepalive`.
-

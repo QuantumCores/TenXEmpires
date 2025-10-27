@@ -1,5 +1,7 @@
 # View Implementation Plan Unsupported Browser Screen
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Blocking screen shown when required APIs (Canvas 2D, Pointer Events, etc.) are unavailable. Provides supported browser matrix.
 
@@ -42,4 +44,3 @@ Blocking screen shown when required APIs (Canvas 2D, Pointer Events, etc.) are u
 ## 11. Implementation Steps
 1. Implement capability check module and route to `/unsupported` when failing checks.
 2. Build page content with supported matrix.
-

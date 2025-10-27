@@ -1,5 +1,7 @@
 # View Implementation Plan Cookies
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Public Cookies page describing cookie usage and consent; links back to Privacy.
 
@@ -42,4 +44,3 @@ Public Cookies page describing cookie usage and consent; links back to Privacy.
 ## 11. Implementation Steps
 1. Build page content.
 2. Link to Privacy.
-

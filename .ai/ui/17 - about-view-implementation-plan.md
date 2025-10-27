@@ -1,5 +1,7 @@
 # View Implementation Plan About
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 Public informational page describing TenX Empires MVP, linking to Privacy and Cookie policies, with a Play CTA that routes to login or game depending on auth state.
 

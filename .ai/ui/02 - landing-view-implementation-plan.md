@@ -1,5 +1,7 @@
 # View Implementation Plan Landing
 
+Reference: See [01 - routing-and-modal-framework-implementation-plan.md](./01 - routing-and-modal-framework-implementation-plan.md) for shared routing and modal framework implementation details.
+
 ## 1. Overview
 The Landing view is the unauthenticated default entry point at the root path (`/`). It introduces the product and provides clear calls to action:
 - For authenticated users: a primary Play button that routes to `/game/current`.
