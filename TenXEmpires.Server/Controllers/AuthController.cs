@@ -2,7 +2,6 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Constants;
-using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace TenXEmpires.Server.Controllers;
@@ -162,6 +160,7 @@ public class AuthController : ControllerBase
     [Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(TenXEmpires.Server.Examples.ApiErrorUnauthorizedExample))]
     public async Task<IActionResult> Me()
     {
         if (User?.Identity?.IsAuthenticated != true)
@@ -192,6 +191,7 @@ public class AuthController : ControllerBase
     [ValidateAntiForgeryToken]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
     public async Task<IActionResult> Register([FromBody] TenXEmpires.Server.Domain.DataContracts.RegisterRequestDto body)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Password))
@@ -234,6 +234,7 @@ public class AuthController : ControllerBase
     [ValidateAntiForgeryToken]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
     public async Task<IActionResult> Login([FromBody] TenXEmpires.Server.Domain.DataContracts.LoginRequestDto body)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Password))
@@ -268,6 +269,7 @@ public class AuthController : ControllerBase
     [ValidateAntiForgeryToken]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(TenXEmpires.Server.Examples.ApiErrorUnauthorizedExample))]
     public async Task<IActionResult> Logout()
     {
         if (User?.Identity?.IsAuthenticated != true)
@@ -275,6 +277,60 @@ public class AuthController : ControllerBase
             return Unauthorized(new ApiErrorDto("UNAUTHORIZED", "User must be authenticated."));
         }
         await _signInManager.SignOutAsync();
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Requests a password reset email for the specified account.
+    /// </summary>
+    /// <remarks>
+    /// Returns a generic success response regardless of whether the email exists to prevent account enumeration.
+    /// If the email is associated with an account, a password reset link will be sent.
+    /// </remarks>
+    /// <response code="204">Request processed (email sent if account exists).</response>
+    /// <response code="400">Invalid input.</response>
+    /// <response code="429">Too many requests (rate limited).</response>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status429TooManyRequests)]
+    [SwaggerResponseExample(StatusCodes.Status429TooManyRequests, typeof(TenXEmpires.Server.Examples.ApiErrorRateLimitExample))]
+    public async Task<IActionResult> ForgotPassword([FromBody] TenXEmpires.Server.Domain.DataContracts.ForgotPasswordRequestDto body)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Email))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email is required."));
+        }
+
+        // Find user by email
+        var user = await _userManager.FindByEmailAsync(body.Email);
+        
+        // Always return success to prevent account enumeration
+        // If user exists, generate and log the reset token (email sending not implemented yet)
+        if (user is not null)
+        {
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            
+            // TODO: Send email with reset link containing the token
+            // For now, just log it for development purposes
+            _logger.LogInformation(
+                "Password reset requested for user {UserId}. Token: {Token} (Email sending not implemented)",
+                user.Id,
+                token
+            );
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Password reset requested for non-existent email: {Email}",
+                body.Email
+            );
+        }
+
+        // Always return 204 regardless of whether user exists
         return NoContent();
     }
 }

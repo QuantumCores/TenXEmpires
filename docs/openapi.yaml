@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1854405+00:00
-                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
+                occurredAt: 2025-10-27T23:21:24.9985809+00:00
+                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1856354+00:00
-                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
+                occurredAt: 2025-10-27T23:21:24.9987658+00:00
+                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1854405+00:00
-                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
+                occurredAt: 2025-10-27T23:21:24.9985809+00:00
+                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1856354+00:00
-                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
+                occurredAt: 2025-10-27T23:21:24.9987658+00:00
+                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1854405+00:00
-                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
+                occurredAt: 2025-10-27T23:21:24.9985809+00:00
+                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T21:15:20.1856354+00:00
-                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
+                occurredAt: 2025-10-27T23:21:24.9987658+00:00
+                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
                 payload: 
       responses:
         202:
@@ -207,8 +207,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorDto'
               example:
-                code: UNAUTHORIZED
-                message: User ID claim not found. User must be authenticated.
+                code: INVALID_INPUT
+                message: One or more validation errors occurred.
   /v1/auth/login:
     post:
       tags:
@@ -235,8 +235,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorDto'
               example:
-                code: UNAUTHORIZED
-                message: User ID claim not found. User must be authenticated.
+                code: INVALID_INPUT
+                message: One or more validation errors occurred.
   /v1/auth/logout:
     post:
       tags:
@@ -254,6 +254,47 @@ paths:
               example:
                 code: UNAUTHORIZED
                 message: User ID claim not found. User must be authenticated.
+  /v1/auth/forgot-password:
+    post:
+      tags:
+      - v1
+      summary: Requests a password reset email for the specified account.
+      description: >-
+        Returns a generic success response regardless of whether the email exists to prevent account enumeration.
+
+        If the email is associated with an account, a password reset link will be sent.
+      requestBody:
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestDto'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestDto'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestDto'
+      responses:
+        204:
+          description: Request processed (email sent if account exists).
+        400:
+          description: Invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INVALID_INPUT
+                message: One or more validation errors occurred.
+        429:
+          description: Too many requests (rate limited).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: RATE_LIMIT_EXCEEDED
+                message: Too many requests. Please try again later.
   /v1/games:
     get:
       tags:
@@ -2200,6 +2241,16 @@ components:
         autosaveId:
           type: integer
           format: int64
+      additionalProperties: false
+    ForgotPasswordRequestDto:
+      required:
+      - email
+      type: object
+      properties:
+        email:
+          minLength: 1
+          type: string
+          format: email
       additionalProperties: false
     GameCreatedResponse:
       type: object

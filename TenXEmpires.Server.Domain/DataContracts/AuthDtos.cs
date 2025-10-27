@@ -12,3 +12,5 @@ public sealed record RegisterRequestDto(
     [property: Required, EmailAddress] string Email,
     [property: Required, MinLength(8)] string Password);
 
+public sealed record ForgotPasswordRequestDto(
+    [property: Required, EmailAddress] string Email);
