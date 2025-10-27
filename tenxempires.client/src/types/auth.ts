@@ -14,6 +14,12 @@ export interface VerifyEmailFormModel {
   email: string
 }
 
+export interface RegisterFormModel {
+  email: string
+  password: string
+  confirm?: string
+}
+
 // Backend ApiErrorDto structure (serialized as camelCase)
 export interface ApiError {
   code: string

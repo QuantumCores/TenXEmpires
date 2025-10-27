@@ -1,92 +1,171 @@
-import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { postJson } from '../../api/http'
-import { useQueryClient } from '@tanstack/react-query'
+import { RegisterForm } from '../../components/auth/RegisterForm'
+import { RegisterSupportLinks } from '../../components/auth/RegisterSupportLinks'
+import { VerifyEmailModal } from '../../components/auth/VerifyEmailModal'
+import type { RegisterFormModel, ApiError } from '../../types/auth'
 
 export default function Register() {
   const navigate = useNavigate()
-  const qc = useQueryClient()
+  const [searchParams] = useSearchParams()
+  
   const returnUrl = useMemo(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('returnUrl') ?? '/'
-  }, [])
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
+    return searchParams.get('returnUrl') ?? '/game/current'
+  }, [searchParams])
+  
+  const modalType = searchParams.get('modal')
+  
   const [error, setError] = useState<string | undefined>()
-  const [submitting, setSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [retryAfter, setRetryAfter] = useState<number | undefined>()
+  const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  // Cleanup retry timer on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        clearInterval(retryTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Handle retry countdown
+  useEffect(() => {
+    if (retryAfter !== undefined && retryAfter > 0) {
+      retryTimerRef.current = setInterval(() => {
+        setRetryAfter((prev) => {
+          if (prev === undefined || prev <= 1) {
+            if (retryTimerRef.current) {
+              clearInterval(retryTimerRef.current)
+              retryTimerRef.current = null
+            }
+            return undefined
+          }
+          return prev - 1
+        })
+      }, 1000)
+
+      return () => {
+        if (retryTimerRef.current) {
+          clearInterval(retryTimerRef.current)
+          retryTimerRef.current = null
+        }
+      }
+    }
+  }, [retryAfter])
+
+  async function handleSubmit(model: RegisterFormModel) {
+    setIsSubmitting(true)
     setError(undefined)
-    if (password !== confirm) {
-      setError('Passwords do not match.')
-      return
-    }
-    setSubmitting(true)
-    const { ok, status, data } = await postJson<{ email: string; password: string }, { code?: string; message?: string }>(
+    
+    const { ok, status, data } = await postJson<RegisterFormModel, ApiError>(
       '/v1/auth/register',
-      { email, password },
+      model,
     )
-    setSubmitting(false)
+    
+    setIsSubmitting(false)
+    
     if (ok) {
-      qc.invalidateQueries({ queryKey: ['auth-status'] })
-      navigate(returnUrl, { replace: true })
+      // Registration successful - redirect to login with verify modal
+      const loginUrl = `/login?modal=verify${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+      navigate(loginUrl, { replace: true })
       return
     }
-    const code = (data as any)?.code || status
-    const message = (data as any)?.message || 'Unable to register.'
-    setError(`${code}: ${message}`)
+    
+    // Handle errors based on status code
+    if (status === 0) {
+      setError('Network error. Please check your connection and try again.')
+      return
+    }
+    
+    if (status === 400) {
+      // Validation errors from backend
+      if (data?.code && data?.message) {
+        // Map common Identity errors to user-friendly messages
+        const errorCode = data.code
+        if (errorCode.includes('DuplicateEmail') || errorCode.includes('DuplicateUserName')) {
+          setError('This email address is already registered. Please sign in or use a different email.')
+        } else if (errorCode.includes('PasswordTooShort')) {
+          setError('Password is too short. Please use at least 8 characters.')
+        } else if (errorCode.includes('PasswordRequiresNonAlphanumeric')) {
+          setError('Password must contain at least one symbol (!@#$%^&*, etc.).')
+        } else if (errorCode.includes('PasswordRequiresDigit')) {
+          setError('Password must contain at least one digit (0-9).')
+        } else if (errorCode.includes('PasswordRequiresUpper')) {
+          setError('Password must contain at least one uppercase letter (A-Z).')
+        } else if (errorCode.includes('PasswordRequiresLower')) {
+          setError('Password must contain at least one lowercase letter (a-z).')
+        } else if (errorCode.includes('InvalidEmail')) {
+          setError('Please enter a valid email address.')
+        } else {
+          setError(data.message)
+        }
+      } else {
+        setError('Invalid input. Please check your information and try again.')
+      }
+      return
+    }
+    
+    if (status === 409) {
+      // Conflict - email already exists (avoid account enumeration in message)
+      setError('An account with this email may already exist. Please try signing in or use the "Forgot password" option.')
+      return
+    }
+    
+    if (status === 429) {
+      // Rate limit exceeded
+      // Try to parse Retry-After header from response
+      // For now, we'll default to 60 seconds if not provided
+      const retrySeconds = 60 // TODO: Parse from headers when available
+      setRetryAfter(retrySeconds)
+      setError(`Too many registration attempts. Please wait ${retrySeconds} seconds before trying again.`)
+      return
+    }
+    
+    if (status >= 500) {
+      // Server error
+      setError('Server error. Please try again later.')
+      return
+    }
+    
+    // Fallback for any other errors
+    if (data?.message) {
+      setError(data.message)
+    } else {
+      setError('Unable to create account. Please try again.')
+    }
+  }
+
+  function closeModal() {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('modal')
+    navigate(url.pathname + (url.search ? `?${url.searchParams.toString()}` : ''), { replace: true })
   }
 
   return (
-    <main className="mx-auto max-w-md p-6">
-      <h1 className="text-2xl font-semibold">Create account</h1>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Email</label>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Password</label>
-          <input
-            type="password"
-            required
-            autoComplete="new-password"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700">Confirm password</label>
-          <input
-            type="password"
-            required
-            autoComplete="new-password"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-          />
-        </div>
-        {error && <div role="alert" className="rounded-md border border-rose-300 bg-rose-50 p-2 text-sm text-rose-700">{error}</div>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50"
-        >
-          {submitting ? 'Creating account…' : 'Create account'}
-        </button>
-      </form>
-      <div className="mt-4 text-xs text-slate-500">After registration you will be sent to: <code>{returnUrl}</code></div>
-    </main>
+    <>
+      <main className="mx-auto max-w-md p-6">
+        <h1 id="register-heading" className="text-2xl font-semibold">Create account</h1>
+        <p className="mt-2 text-slate-600">Sign up to start playing TenX Empires.</p>
+        
+        <RegisterForm 
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+          retryAfter={retryAfter}
+        />
+        
+        <RegisterSupportLinks />
+        
+        {import.meta.env.DEV && (
+          <div className="mt-4 text-xs text-slate-500">
+            After registration you will be sent to: <code>{returnUrl}</code>
+          </div>
+        )}
+      </main>
+
+      {modalType === 'verify' && <VerifyEmailModal onRequestClose={closeModal} />}
+    </>
   )
 }
