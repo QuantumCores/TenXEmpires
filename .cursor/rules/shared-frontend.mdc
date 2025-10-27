@@ -23,7 +23,7 @@ When introducing changes to the project, always follow the directory structure b
 - `./tenxempires.client/src/assets` - static internal assets
 - `./tenxempires.client/public` - public assets
 
-When modifying the directory structure, always update this section.
+When modifying the directory structure, always update this section!
 
 ## Coding practices
 

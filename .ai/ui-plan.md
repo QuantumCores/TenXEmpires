@@ -258,6 +258,8 @@
   - `ToastCenter` (aria-live polite)
   - `Banners` (idle keepalive, offline, multi-tab controller, rate-limit)
   - `ConsentBanner` (analytics opt-in)
+  - `Router` (public/auth routes, `/game/current` guard to `/game/:id`, legacy redirect `/hub`  `/game/current`)
+  - `ModalManager` (query-param modals `?modal=...`, Back/Forward semantics using `pushState`/`replaceState`, ESC/backdrop close, focus trap via `ModalContainer`)
 
 - API compatibility and mappings (UI → API)
   - Game bootstrap: `GET /games?status=active&sort=lastTurnAt&order=desc&pageSize=1` → guard → `GET /games/{id}/state`, `GET /unit-definitions`, `GET /maps/{code}/tiles`.
