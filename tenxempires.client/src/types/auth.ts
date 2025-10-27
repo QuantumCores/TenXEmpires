@@ -10,8 +10,8 @@ export interface ForgotPasswordFormModel {
   email: string
 }
 
-export interface VerifyEmailFormModel {
-  email: string
+export interface ResendVerificationRequest {
+  email?: string
 }
 
 export interface RegisterFormModel {

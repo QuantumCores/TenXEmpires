@@ -18,6 +18,7 @@ export default function Login() {
   }, [searchParams])
   
   const modalType = searchParams.get('modal')
+  const emailParam = searchParams.get('email') ?? undefined
   
   const [error, setError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -83,7 +84,7 @@ export default function Login() {
       </main>
 
       {modalType === 'forgot' && <ForgotPasswordModal onRequestClose={closeModal} />}
-      {modalType === 'verify' && <VerifyEmailModal onRequestClose={closeModal} />}
+      {modalType === 'verify' && <VerifyEmailModal email={emailParam} onRequestClose={closeModal} />}
     </>
   )
 }

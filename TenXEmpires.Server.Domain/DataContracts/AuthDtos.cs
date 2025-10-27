@@ -14,3 +14,6 @@ public sealed record RegisterRequestDto(
 
 public sealed record ForgotPasswordRequestDto(
     [property: Required, EmailAddress] string Email);
+
+public sealed record ResendVerificationRequestDto(
+    [property: EmailAddress] string? Email);

@@ -1,56 +1,50 @@
 import { useState, useId } from 'react'
-import type { FormEvent } from 'react'
-import { z } from 'zod'
 import { ModalContainer } from '../modals/ModalContainer'
-// import { postJson } from '../../api/http'
-// import type { VerifyEmailFormModel, ApiError } from '../../types/auth'
-
-const verifyEmailSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-})
+import { postJson } from '../../api/http'
+import type { ResendVerificationRequest, ApiError } from '../../types/auth'
 
 interface VerifyEmailModalProps {
+  email?: string
   onRequestClose: () => void
 }
 
-export function VerifyEmailModal({ onRequestClose }: VerifyEmailModalProps) {
+export function VerifyEmailModal({ email, onRequestClose }: VerifyEmailModalProps) {
   const titleId = useId()
-  const [email, setEmail] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | undefined>()
-  const [validationError, setValidationError] = useState<string | undefined>()
+  const [isResending, setIsResending] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | undefined>()
+  const [errorMessage, setErrorMessage] = useState<string | undefined>()
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setValidationError(undefined)
-    setError(undefined)
+  async function handleResend() {
+    setSuccessMessage(undefined)
+    setErrorMessage(undefined)
+    setIsResending(true)
 
-    // Client-side validation
-    const result = verifyEmailSchema.safeParse({ email })
-    if (!result.success) {
-      setValidationError(result.error.issues[0]?.message)
+    const { ok, status, data } = await postJson<ResendVerificationRequest, ApiError>(
+      '/v1/auth/resend-verification',
+      { email },
+    )
+
+    setIsResending(false)
+
+    if (ok || status === 204) {
+      setSuccessMessage('Verification email sent! Please check your inbox.')
       return
     }
 
-    setIsSubmitting(true)
+    // Handle network errors
+    if (status === 0) {
+      setErrorMessage('Network error. Please check your connection and try again.')
+      return
+    }
 
-    // TODO: Backend endpoint /v1/auth/resend-verification not yet implemented
-    // For now, show a placeholder message
-    await new Promise(resolve => setTimeout(resolve, 500)) // Simulate API call
-    
-    setIsSubmitting(false)
-    setError('Email verification functionality is not yet available. All new accounts are automatically verified.')
-    
-    // TODO: Uncomment when backend endpoint is ready:
-    // const { ok, data } = await postJson<VerifyEmailFormModel, ApiError>(
-    //   '/v1/auth/resend-verification',
-    //   { email },
-    // )
-    // if (ok) {
-    //   onRequestClose()
-    //   return
-    // }
-    // setError(data?.message || 'Unable to send verification email. Please try again.')
+    // Handle rate limiting (429)
+    if (status === 429) {
+      setErrorMessage('Too many attempts. Please wait a moment before trying again.')
+      return
+    }
+
+    // Handle other errors
+    setErrorMessage(data?.message || 'Unable to send verification email. Please try again.')
   }
 
   return (
@@ -58,7 +52,7 @@ export function VerifyEmailModal({ onRequestClose }: VerifyEmailModalProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="text-lg font-semibold">
-            Verify Email Address
+            Verify Your Email
           </h2>
           <button
             type="button"
@@ -69,57 +63,60 @@ export function VerifyEmailModal({ onRequestClose }: VerifyEmailModalProps) {
             ✕
           </button>
         </div>
-        <p className="text-sm text-slate-600">
-          Enter your email address to receive a new verification link.
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="verify-email" className="block text-sm font-medium text-slate-700">
-              Email
-            </label>
-            <input
-              id="verify-email"
-              type="email"
-              required
-              autoComplete="email"
-              aria-invalid={!!validationError}
-              aria-describedby={validationError ? 'verify-email-error' : undefined}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-            />
-            {validationError && (
-              <p id="verify-email-error" role="alert" className="mt-1 text-sm text-rose-600">
-                {validationError}
-              </p>
-            )}
-          </div>
 
-          {error && (
-            <div role="alert" className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
-              {error}
+        {/* Instructions */}
+        <div className="space-y-3">
+          <p className="text-sm text-slate-700">
+            We've sent a verification email to your account. Please check your inbox and click the verification link to activate your account.
+          </p>
+
+          {email && (
+            <div className="rounded-md bg-slate-50 border border-slate-200 p-3">
+              <p className="text-sm text-slate-600">
+                Email sent to: <strong className="text-slate-900">{email}</strong>
+              </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onRequestClose}
-              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Sending…' : 'Send Verification Email'}
-            </button>
+          <p className="text-sm text-slate-600">
+            Didn't receive the email? Check your spam folder or request a new verification link.
+          </p>
+        </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div role="alert" className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-700">
+            {successMessage}
           </div>
-        </form>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div role="alert" className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Resend Section */}
+        <div className="flex justify-between items-center pt-2 border-t border-slate-200">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isResending ? 'Sending…' : 'Resend Verification Email'}
+          </button>
+
+          {/* Footer Actions */}
+          <button
+            type="button"
+            onClick={onRequestClose}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          >
+            Back to Login
+          </button>
+        </div>
       </div>
     </ModalContainer>
   )

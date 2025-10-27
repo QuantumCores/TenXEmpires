@@ -19,6 +19,7 @@ export default function Register() {
   const [error, setError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryAfter, setRetryAfter] = useState<number | undefined>()
+  const [registeredEmail, setRegisteredEmail] = useState<string | undefined>()
   const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Cleanup retry timer on unmount
@@ -67,9 +68,8 @@ export default function Register() {
     setIsSubmitting(false)
     
     if (ok) {
-      // Registration successful - redirect to login with verify modal
-      const loginUrl = `/login?modal=verify${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
-      navigate(loginUrl, { replace: true })
+      // Registration successful - save email and show verify modal
+      setRegisteredEmail(model.email)
       return
     }
     
@@ -138,6 +138,13 @@ export default function Register() {
   }
 
   function closeModal() {
+    // If on verify modal after registration, navigate to login
+    if (registeredEmail) {
+      const loginUrl = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+      navigate(loginUrl, { replace: true })
+      return
+    }
+    
     const url = new URL(window.location.href)
     url.searchParams.delete('modal')
     navigate(url.pathname + (url.search ? `?${url.searchParams.toString()}` : ''), { replace: true })
@@ -165,7 +172,8 @@ export default function Register() {
         )}
       </main>
 
-      {modalType === 'verify' && <VerifyEmailModal onRequestClose={closeModal} />}
+      {modalType === 'verify' && <VerifyEmailModal email={searchParams.get('email') ?? undefined} onRequestClose={closeModal} />}
+      {registeredEmail && <VerifyEmailModal email={registeredEmail} onRequestClose={closeModal} />}
     </>
   )
 }

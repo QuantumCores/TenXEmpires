@@ -333,4 +333,84 @@ public class AuthController : ControllerBase
         // Always return 204 regardless of whether user exists
         return NoContent();
     }
+
+    /// <summary>
+    /// Resends the email verification link to the user's email address.
+    /// </summary>
+    /// <remarks>
+    /// If authenticated, uses the current user's email. If not authenticated and email is provided,
+    /// sends verification email to that address. Returns success regardless of whether account exists
+    /// to prevent account enumeration.
+    /// </remarks>
+    /// <response code="204">Verification email sent (if account exists and is unverified).</response>
+    /// <response code="400">Invalid input.</response>
+    /// <response code="429">Too many requests (rate limited).</response>
+    [HttpPost("resend-verification")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status429TooManyRequests)]
+    [SwaggerResponseExample(StatusCodes.Status429TooManyRequests, typeof(TenXEmpires.Server.Examples.ApiErrorRateLimitExample))]
+    public async Task<IActionResult> ResendVerification([FromBody] TenXEmpires.Server.Domain.DataContracts.ResendVerificationRequestDto body)
+    {
+        string? targetEmail = null;
+
+        // If user is authenticated, use their email
+        if (User?.Identity?.IsAuthenticated == true)
+        {
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser is not null)
+            {
+                targetEmail = await _userManager.GetEmailAsync(currentUser);
+            }
+        }
+        // Otherwise, use the provided email from the request body
+        else if (body is not null && !string.IsNullOrWhiteSpace(body.Email))
+        {
+            targetEmail = body.Email;
+        }
+
+        // If no email could be determined, return bad request
+        if (string.IsNullOrWhiteSpace(targetEmail))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email is required."));
+        }
+
+        // Find user by email
+        var user = await _userManager.FindByEmailAsync(targetEmail);
+
+        // Always return success to prevent account enumeration
+        // If user exists and email is not confirmed, generate and log the verification token
+        if (user is not null && !user.EmailConfirmed)
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            
+            // TODO: Send email with verification link containing the token
+            // For now, just log it for development purposes
+            _logger.LogInformation(
+                "Email verification requested for user {UserId}. Token: {Token} (Email sending not implemented)",
+                user.Id,
+                token
+            );
+        }
+        else if (user is not null && user.EmailConfirmed)
+        {
+            _logger.LogInformation(
+                "Verification email requested for already verified user: {UserId}",
+                user.Id
+            );
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Verification email requested for non-existent email: {Email}",
+                targetEmail
+            );
+        }
+
+        // Always return 204 regardless of whether user exists or is already verified
+        return NoContent();
+    }
 }
