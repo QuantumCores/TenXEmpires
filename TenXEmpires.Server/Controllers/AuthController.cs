@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Constants;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -27,14 +29,23 @@ public class AuthController : ControllerBase
 {
     private readonly IAntiforgery _antiforgery;
     private readonly ILogger<AuthController> _logger;
+    private readonly SignInManager<IdentityUser<Guid>> _signInManager;
+    private readonly UserManager<IdentityUser<Guid>> _userManager;
 
+    [ActivatorUtilitiesConstructor]
     public AuthController(
         IAntiforgery antiforgery,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        SignInManager<IdentityUser<Guid>> signInManager,
+        UserManager<IdentityUser<Guid>> userManager)
     {
         _antiforgery = antiforgery;
         _logger = logger;
+        _signInManager = signInManager;
+        _userManager = userManager;
     }
+
+    
 
     /// <summary>
     /// Issues or refreshes the CSRF token cookie for the SPA.
@@ -116,47 +127,20 @@ public class AuthController : ControllerBase
             // Mark response as non-cacheable
             Response.Headers[StandardHeaders.CacheControl] = "no-store";
 
-            // If ASP.NET Identity is configured, proactively extend cookie lifetime.
+            // If user is authenticated, re-issue auth cookie to extend sliding expiration.
             if (HttpContext.User?.Identity?.IsAuthenticated == true)
             {
-                var signInManager = HttpContext.RequestServices.GetService(typeof(SignInManager<IdentityUser<Guid>>)) as SignInManager<IdentityUser<Guid>>;
-                if (signInManager is not null)
+                // Only attempt sign-in refresh if an auth service is available in the host
+                var authService = HttpContext.RequestServices.GetService(typeof(IAuthenticationService));
+                if (authService is not null)
                 {
-                    var user = await signInManager.UserManager.GetUserAsync(User);
-                    if (user is not null)
+                    var props = new AuthenticationProperties
                     {
-                        await signInManager.RefreshSignInAsync(user);
-                    }
-                    else
-                    {
-                        // Fallback: re-issue cookie for current principal
-                        var authService = HttpContext.RequestServices.GetService(typeof(IAuthenticationService));
-                        if (authService is not null)
-                        {
-                            var props = new AuthenticationProperties
-                            {
-                                IsPersistent = true,
-                                AllowRefresh = true,
-                                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
-                            };
-                            await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, HttpContext.User!, props);
-                        }
-                    }
-                }
-                else
-                {
-                    // As a last resort, attempt to re-issue cookie using the configured cookie auth scheme
-                    var authService = HttpContext.RequestServices.GetService(typeof(IAuthenticationService));
-                    if (authService is not null)
-                    {
-                        var props = new AuthenticationProperties
-                        {
-                            IsPersistent = true,
-                            AllowRefresh = true,
-                            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
-                        };
-                        await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, HttpContext.User!, props);
-                    }
+                        IsPersistent = true,
+                        AllowRefresh = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                    };
+                    await HttpContext.SignInAsync(IdentityConstants.ApplicationScheme, HttpContext.User!, props);
                 }
             }
 
@@ -167,5 +151,130 @@ public class AuthController : ControllerBase
             _logger.LogWarning(ex, "Failed to refresh session on keepalive.");
             return StatusCode(StatusCodes.Status500InternalServerError, new { code = "KEEPALIVE_FAILED", message = "Unable to refresh session." });
         }
+    }
+
+    /// <summary>
+    /// Returns information about the current authenticated user.
+    /// </summary>
+    /// <response code="200">Returns the current user info.</response>
+    /// <response code="401">Unauthorized - user is not authenticated.</response>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Me()
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            return Unauthorized(new ApiErrorDto("UNAUTHORIZED", "User must be authenticated."));
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+        {
+            return Unauthorized(new ApiErrorDto("UNAUTHORIZED", "User not found."));
+        }
+
+        return Ok(new
+        {
+            id = user.Id,
+            email = await _userManager.GetEmailAsync(user)
+        });
+    }
+
+    /// <summary>
+    /// Registers a new account and signs the user in.
+    /// </summary>
+    /// <response code="204">Registered and signed in.</response>
+    /// <response code="400">Invalid input or user already exists.</response>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Register([FromBody] TenXEmpires.Server.Domain.DataContracts.RegisterRequestDto body)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Password))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email and password are required."));
+        }
+
+        var existing = await _userManager.FindByEmailAsync(body.Email);
+        if (existing is not null)
+        {
+            return BadRequest(new ApiErrorDto("USER_EXISTS", "An account with this email already exists."));
+        }
+
+        var user = new IdentityUser<Guid>
+        {
+            Id = Guid.NewGuid(),
+            UserName = body.Email,
+            Email = body.Email,
+            EmailConfirmed = false,
+        };
+
+        var createResult = await _userManager.CreateAsync(user, body.Password);
+        if (!createResult.Succeeded)
+        {
+            var message = string.Join("; ", createResult.Errors.Select(e => e.Description));
+            return BadRequest(new ApiErrorDto("REGISTRATION_FAILED", message));
+        }
+
+        await _signInManager.SignInAsync(user, isPersistent: true);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Authenticates a user with email and password.
+    /// </summary>
+    /// <response code="204">Signed in.</response>
+    /// <response code="400">Invalid credentials.</response>
+    [HttpPost("login")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Login([FromBody] TenXEmpires.Server.Domain.DataContracts.LoginRequestDto body)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Password))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email and password are required."));
+        }
+
+        // PasswordSignInAsync requires a user name; we use email as username
+        var user = await _userManager.FindByEmailAsync(body.Email);
+        if (user is null)
+        {
+            return BadRequest(new ApiErrorDto("INVALID_CREDENTIALS", "Invalid email or password."));
+        }
+
+        var result = await _signInManager.CheckPasswordSignInAsync(user, body.Password, lockoutOnFailure: false);
+        if (!result.Succeeded)
+        {
+            return BadRequest(new ApiErrorDto("INVALID_CREDENTIALS", "Invalid email or password."));
+        }
+
+        await _signInManager.SignInAsync(user, isPersistent: body.RememberMe);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Signs the current user out.
+    /// </summary>
+    /// <response code="204">Signed out.</response>
+    /// <response code="401">Unauthorized.</response>
+    [HttpPost("logout")]
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Logout()
+    {
+        if (User?.Identity?.IsAuthenticated != true)
+        {
+            return Unauthorized(new ApiErrorDto("UNAUTHORIZED", "User must be authenticated."));
+        }
+        await _signInManager.SignOutAsync();
+        return NoContent();
     }
 }

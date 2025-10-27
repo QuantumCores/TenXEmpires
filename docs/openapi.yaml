@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9724624+00:00
-                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
+                occurredAt: 2025-10-27T21:15:20.1854405+00:00
+                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9725521+00:00
-                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
+                occurredAt: 2025-10-27T21:15:20.1856354+00:00
+                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9724624+00:00
-                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
+                occurredAt: 2025-10-27T21:15:20.1854405+00:00
+                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9725521+00:00
-                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
+                occurredAt: 2025-10-27T21:15:20.1856354+00:00
+                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9724624+00:00
-                clientRequestId: cf13a93b-c830-46ba-afff-c1451a8da3ce
+                occurredAt: 2025-10-27T21:15:20.1854405+00:00
+                clientRequestId: 7428eaa8-bd27-4ccf-8a6c-036aa8191a9d
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-26T20:17:57.9725521+00:00
-                clientRequestId: 6673c140-9d98-4144-a160-f7285737e4e2
+                occurredAt: 2025-10-27T21:15:20.1856354+00:00
+                clientRequestId: a49d5e05-28a7-4116-a50a-2c83f81c0ec5
                 payload: 
       responses:
         202:
@@ -164,6 +164,96 @@ paths:
               example:
                 code: KEEPALIVE_FAILED
                 message: Unable to refresh session.
+  /v1/auth/me:
+    get:
+      tags:
+      - v1
+      summary: Returns information about the current authenticated user.
+      responses:
+        200:
+          description: Returns the current user info.
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+  /v1/auth/register:
+    post:
+      tags:
+      - v1
+      summary: Registers a new account and signs the user in.
+      requestBody:
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestDto'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestDto'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestDto'
+      responses:
+        204:
+          description: Registered and signed in.
+        400:
+          description: Invalid input or user already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+  /v1/auth/login:
+    post:
+      tags:
+      - v1
+      summary: Authenticates a user with email and password.
+      requestBody:
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDto'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDto'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDto'
+      responses:
+        204:
+          description: Signed in.
+        400:
+          description: Invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
+  /v1/auth/logout:
+    post:
+      tags:
+      - v1
+      summary: Signs the current user out.
+      responses:
+        204:
+          description: Signed out.
+        401:
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: UNAUTHORIZED
+                message: User ID claim not found. User must be authenticated.
   /v1/games:
     get:
       tags:
@@ -2326,6 +2416,22 @@ components:
         state:
           $ref: '#/components/schemas/GameStateDto'
       additionalProperties: false
+    LoginRequestDto:
+      required:
+      - email
+      - password
+      type: object
+      properties:
+        email:
+          minLength: 1
+          type: string
+          format: email
+        password:
+          minLength: 8
+          type: string
+        rememberMe:
+          type: boolean
+      additionalProperties: false
     MapDto:
       type: object
       properties:
@@ -2439,6 +2545,20 @@ components:
           type: string
           nullable: true
       additionalProperties: {}
+    RegisterRequestDto:
+      required:
+      - email
+      - password
+      type: object
+      properties:
+        email:
+          minLength: 1
+          type: string
+          format: email
+        password:
+          minLength: 8
+          type: string
+      additionalProperties: false
     SaveAutosaveDto:
       type: object
       properties:

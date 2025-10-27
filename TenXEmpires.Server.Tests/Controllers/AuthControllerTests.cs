@@ -20,7 +20,7 @@ public class AuthControllerTests
     {
         _antiforgeryMock = new Mock<IAntiforgery>();
         _loggerMock = new Mock<ILogger<AuthController>>();
-        _controller = new AuthController(_antiforgeryMock.Object, _loggerMock.Object)
+        _controller = new AuthController(_antiforgeryMock.Object, _loggerMock.Object, null!, null!)
         {
             ControllerContext = new ControllerContext
             {

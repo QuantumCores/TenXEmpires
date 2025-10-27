@@ -18,3 +18,7 @@ export interface GameSummary {
   lastTurnAt?: string | null
 }
 
+export interface CurrentUser {
+  id: string
+  email: string | null
+}

@@ -25,3 +25,52 @@ export async function getJson<T>(path: string, init?: RequestInit): Promise<Http
   }
 }
 
+function readCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'))
+  return match ? decodeURIComponent(match[1]) : undefined
+}
+
+async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE', body?: TReq, init?: RequestInit): Promise<HttpResult<TRes>> {
+  try {
+    const headers: HeadersInit = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {}),
+    }
+
+    const token = readCookie('XSRF-TOKEN')
+    if (token) {
+      // Server expects this header name per SecurityConstants.XsrfHeader
+      ;(headers as any)['X-XSRF-TOKEN'] = token
+    }
+
+    const res = await fetch(path, {
+      ...defaultInit,
+      ...init,
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+    const status = res.status
+    const contentType = res.headers.get('content-type') || ''
+    if (!contentType.includes('application/json')) {
+      return { ok: res.ok, status }
+    }
+    const data = (await res.json()) as TRes
+    return { ok: res.ok, status, data }
+  } catch {
+    return { ok: false, status: 0 }
+  }
+}
+
+export function postJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit) {
+  return sendJson<TReq, TRes>(path, 'POST', body, init)
+}
+
+export function putJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit) {
+  return sendJson<TReq, TRes>(path, 'PUT', body, init)
+}
+
+export function deleteJson<TRes>(path: string, init?: RequestInit) {
+  return sendJson<undefined, TRes>(path, 'DELETE', undefined, init)
+}
