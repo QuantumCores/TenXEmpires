@@ -1,0 +1,82 @@
+/**
+ * Game Map Page styles
+ * Ensures proper sizing and rendering at 1080p (1920x1080) and 900p+ resolutions
+ */
+
+/* Ensure full viewport usage */
+.game-map-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Map container takes all available space */
+.game-map-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0; /* Important for flex container to shrink */
+}
+
+/* Canvas stack fills container */
+.game-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure crisp rendering on high-DPI displays */
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Responsive breakpoints */
+
+/* 900p (1600x900) and up */
+@media (min-width: 1600px) and (min-height: 900px) {
+  .game-map-page {
+    font-size: 16px;
+  }
+}
+
+/* 1080p (1920x1080) and up */
+@media (min-width: 1920px) and (min-height: 1080px) {
+  .game-map-page {
+    font-size: 16px;
+  }
+
+  /* Scale up UI elements slightly for larger screens */
+  .game-map-ui-button {
+    font-size: 0.925rem;
+    padding: 0.625rem 1rem;
+  }
+}
+
+/* Smaller laptops */
+@media (max-width: 1366px) {
+  .game-map-page {
+    font-size: 14px;
+  }
+
+  .game-map-ui-button {
+    font-size: 0.825rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
+/* Prevent text selection during gameplay */
+.game-map-page {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Allow text selection in panels and modals */
+.game-map-panel,
+.game-map-modal {
+  user-select: text;
+  -webkit-user-select: text;
+}
+

@@ -1,6 +1,7 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 export function LoginSupportLinks() {
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
   // Preserve returnUrl when navigating
@@ -16,8 +17,8 @@ export function LoginSupportLinks() {
       <button
         type="button"
         onClick={() => {
-          // Use window.location to open modal via query param
-          window.location.href = forgotPasswordUrl
+          // Use React Router navigate for SPA navigation
+          navigate(forgotPasswordUrl, { replace: true })
         }}
         className="text-indigo-600 hover:text-indigo-500 hover:underline focus:outline-none focus:underline"
       >

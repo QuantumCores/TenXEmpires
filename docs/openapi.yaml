@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9985809+00:00
-                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
+                occurredAt: 2025-10-28T19:13:25.1658755+00:00
+                clientRequestId: 88a24459-9611-4062-bd7e-e7d03767832e
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9987658+00:00
-                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
+                occurredAt: 2025-10-28T19:13:25.1659657+00:00
+                clientRequestId: f46cc7e6-aec0-45db-84b7-6d362f7cc242
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9985809+00:00
-                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
+                occurredAt: 2025-10-28T19:13:25.1658755+00:00
+                clientRequestId: 88a24459-9611-4062-bd7e-e7d03767832e
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9987658+00:00
-                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
+                occurredAt: 2025-10-28T19:13:25.1659657+00:00
+                clientRequestId: f46cc7e6-aec0-45db-84b7-6d362f7cc242
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9985809+00:00
-                clientRequestId: 923cacbc-9175-4ac4-9b89-b552753a6d11
+                occurredAt: 2025-10-28T19:13:25.1658755+00:00
+                clientRequestId: 88a24459-9611-4062-bd7e-e7d03767832e
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-27T23:21:24.9987658+00:00
-                clientRequestId: 80c2e557-4141-4cae-ad45-73fbd92858bb
+                occurredAt: 2025-10-28T19:13:25.1659657+00:00
+                clientRequestId: f46cc7e6-aec0-45db-84b7-6d362f7cc242
                 payload: 
       responses:
         202:
@@ -277,6 +277,49 @@ paths:
       responses:
         204:
           description: Request processed (email sent if account exists).
+        400:
+          description: Invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: INVALID_INPUT
+                message: One or more validation errors occurred.
+        429:
+          description: Too many requests (rate limited).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorDto'
+              example:
+                code: RATE_LIMIT_EXCEEDED
+                message: Too many requests. Please try again later.
+  /v1/auth/resend-verification:
+    post:
+      tags:
+      - v1
+      summary: Resends the email verification link to the user's email address.
+      description: >-
+        If authenticated, uses the current user's email. If not authenticated and email is provided,
+
+        sends verification email to that address. Returns success regardless of whether account exists
+
+        to prevent account enumeration.
+      requestBody:
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestDto'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestDto'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestDto'
+      responses:
+        204:
+          description: Verification email sent (if account exists and is unverified).
         400:
           description: Invalid input.
           content:
@@ -2609,6 +2652,14 @@ components:
         password:
           minLength: 8
           type: string
+      additionalProperties: false
+    ResendVerificationRequestDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          nullable: true
       additionalProperties: false
     SaveAutosaveDto:
       type: object

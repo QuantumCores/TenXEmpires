@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getJson } from '../../api/http'
-import type { GameSummary, PagedResult } from '../../types/api'
+import { fetchGames } from '../../api/games'
 
 export function GameCurrentGuardRoute() {
   const navigate = useNavigate()
@@ -9,13 +8,12 @@ export function GameCurrentGuardRoute() {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const url = new URL('/v1/games', window.location.origin)
-      url.searchParams.set('status', 'active')
-      url.searchParams.set('sort', 'lastTurnAt')
-      url.searchParams.set('order', 'desc')
-      url.searchParams.set('pageSize', '1')
-
-      const { ok, status, data } = await getJson<PagedResult<GameSummary>>(url.toString())
+      const { ok, status, data } = await fetchGames({
+        status: 'active',
+        sort: 'lastTurnAt',
+        order: 'desc',
+        pageSize: 1,
+      })
 
       if (cancelled) return
 

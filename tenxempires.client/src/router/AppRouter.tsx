@@ -5,7 +5,7 @@ import {
   Navigate,
 } from 'react-router-dom'
 import { GameCurrentGuardRoute } from '../pages/game/GameCurrentGuardRoute'
-import { GameShell } from '../pages/game/GameShell'
+import { GameMapPage } from '../pages/game/GameMapPage'
 import { GameAuthGuard } from '../pages/game/GameAuthGuard'
 
 // Public pages (lightweight stubs for now)
@@ -35,10 +35,10 @@ const router = createBrowserRouter([
   // Guarded route for current game
   { path: '/game/current', element: <GameCurrentGuardRoute /> },
 
-  // Game shell host
+  // Game map page
   { path: '/game/:id', element: (
     <GameAuthGuard>
-      <GameShell />
+      <GameMapPage />
     </GameAuthGuard>
   ) },
 ])
