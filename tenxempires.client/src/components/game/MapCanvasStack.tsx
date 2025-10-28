@@ -15,6 +15,7 @@ import {
 } from '../../features/game/hexGeometry'
 import { findPath, getReachableTiles, getAttackableTiles } from '../../features/game/pathfinding'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
+import { computeZoomUpdate } from '../../features/game/zoom'
 import { useMoveUnit, useAttackUnit } from '../../features/game/useGameQueries'
 import {
   getGlobalSpriteCache,
@@ -69,7 +70,9 @@ export function MapCanvasStack({
   const [hoverTile, setHoverTile] = useState<GridPosition | null>(null)
   const [preview, setPreview] = useState<PreviewState>({ kind: null })
 
-  const { setSelection, clearSelection } = useGameMapStore()
+  const { setSelection, clearSelection, setCamera } = useGameMapStore()
+  const debug = useGameMapStore((s) => s.debug)
+  const invertScrollZoom = useGameMapStore((s) => s.invertZoom)
   const moveUnitMutation = useMoveUnit(gameState.game.id)
   const attackUnitMutation = useAttackUnit(gameState.game.id)
 
@@ -228,8 +231,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderOverlay(ctx, selection, gameState, preview, hoverTile, camera, dimensions)
-  }, [selection, gameState, preview, hoverTile, camera, dimensions])
+    renderOverlay(ctx, selection, gameState, preview, hoverTile, camera, dimensions, debug)
+  }, [selection, gameState, preview, hoverTile, camera, dimensions, debug])
 
   // Handle pointer move
   const handlePointerMove = useCallback(
@@ -382,12 +385,39 @@ export function MapCanvasStack({
       onPointerMove={handlePointerMove}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
+      onWheel={(e) => {
+        const container = containerRef.current
+        if (!container) return
+        e.preventDefault()
+
+        const rect = container.getBoundingClientRect()
+        const sX = e.clientX - rect.left
+        const sY = e.clientY - rect.top
+
+        const result = computeZoomUpdate(
+          camera,
+          { x: sX, y: sY },
+          { width: dimensions.width, height: dimensions.height },
+          invertScrollZoom,
+          e.deltaY
+        )
+        if (!result) return
+        setCamera(result)
+      }}
     >
       <canvas ref={tileCanvasRef} className="absolute inset-0" />
       <canvas ref={gridCanvasRef} className="absolute inset-0" />
       <canvas ref={featureCanvasRef} className="absolute inset-0" />
       <canvas ref={unitCanvasRef} className="absolute inset-0" />
       <canvas ref={overlayCanvasRef} className="absolute inset-0" />
+      {debug && (
+        <div className="pointer-events-none absolute left-2 top-2 rounded bg-black/60 p-2 text-[11px] text-white">
+          <div>Scale: {camera.scale.toFixed(3)}</div>
+          <div>Offset: ({Math.round(camera.offsetX)}, {Math.round(camera.offsetY)})</div>
+          <div>Hover: {hoverTile ? `${hoverTile.row}, ${hoverTile.col}` : '—'}</div>
+          <div>Selection: {selection.kind ? `${selection.kind}:${selection.id ?? '—'}` : 'none'}</div>
+        </div>
+      )}
     </div>
   )
 }
@@ -574,9 +604,10 @@ function renderOverlay(
   selection: SelectionState,
   gameState: GameStateDto,
   preview: PreviewState,
-  _hoverTile: GridPosition | null,
+  hoverTile: GridPosition | null,
   camera: CameraState,
-  viewport: { width: number; height: number }
+  viewport: { width: number; height: number },
+  debug: boolean
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
@@ -688,6 +719,79 @@ function renderOverlay(
     ctx.stroke()
 
     ctx.restore()
+  }
+
+  if (debug) {
+    renderDebug(ctx, gameState, hoverTile, selection, camera, viewport)
+  }
+}
+
+function renderDebug(
+  ctx: CanvasRenderingContext2D,
+  gameState: GameStateDto,
+  hoverTile: GridPosition | null,
+  selection: SelectionState,
+  camera: CameraState,
+  viewport: { width: number; height: number }
+) {
+  // Crosshair at center of every tile (light color)
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+  ctx.lineWidth = 1
+  for (let row = 0; row < gameState.map.height; row++) {
+    for (let col = 0; col < gameState.map.width; col++) {
+      const pos = oddrToPixel(col, row)
+      const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+      const s = 4 * camera.scale
+      ctx.beginPath()
+      ctx.moveTo(screen.x - s, screen.y)
+      ctx.lineTo(screen.x + s, screen.y)
+      ctx.moveTo(screen.x, screen.y - s)
+      ctx.lineTo(screen.x, screen.y + s)
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+
+  // Emphasize hover tile crosshair (cyan)
+  if (hoverTile) {
+    const pos = oddrToPixel(hoverTile.col, hoverTile.row)
+    const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+    const s = 8 * camera.scale
+    ctx.save()
+    ctx.strokeStyle = 'rgba(34,211,238,0.9)'
+    ctx.lineWidth = Math.max(1, 1.5 * camera.scale)
+    ctx.beginPath()
+    ctx.moveTo(screen.x - s, screen.y)
+    ctx.lineTo(screen.x + s, screen.y)
+    ctx.moveTo(screen.x, screen.y - s)
+    ctx.lineTo(screen.x, screen.y + s)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // Selection bounds: draw AABB of tile sprite area (magenta)
+  if (selection.kind && selection.id) {
+    let row: number | undefined
+    let col: number | undefined
+    if (selection.kind === 'unit') {
+      const unit = gameState.units.find((u) => u.id === selection.id)
+      if (unit) { row = unit.row; col = unit.col }
+    } else if (selection.kind === 'city') {
+      const city = gameState.cities.find((c) => c.id === selection.id)
+      if (city) { row = city.row; col = city.col }
+    }
+    if (row !== undefined && col !== undefined) {
+      const pos = oddrToPixel(col, row)
+      const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+      const hw = HEX_SIZE * 2 * camera.scale
+      const hh = HEX_SIZE * 2 * camera.scale
+      ctx.save()
+      ctx.strokeStyle = 'rgba(236,72,153,0.95)'
+      ctx.lineWidth = Math.max(1, 1.5 * camera.scale)
+      ctx.strokeRect(screen.x - hw, screen.y - hh, hw * 2, hh * 2)
+      ctx.restore()
+    }
   }
 }
 

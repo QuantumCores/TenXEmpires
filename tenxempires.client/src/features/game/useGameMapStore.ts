@@ -39,6 +39,10 @@ interface GameMapState {
   invertZoom: boolean
   toggleInvertZoom: () => void
 
+  // Debug (dev-only surfaces)
+  debug: boolean
+  toggleDebug: () => void
+
   // AI Overlay
   isAiOverlayVisible: boolean
   setAiOverlayVisible: (visible: boolean) => void
@@ -80,7 +84,9 @@ const DEFAULT_SELECTION: SelectionState = {
 // Stores
 // ============================================================================
 
-export const useGameMapStore = create<GameMapState>((set) => ({
+export const useGameMapStore = create<GameMapState>()(
+  persist(
+    (set) => ({
   // Camera
   camera: DEFAULT_CAMERA,
   setCamera: (camera) =>
@@ -95,12 +101,16 @@ export const useGameMapStore = create<GameMapState>((set) => ({
   clearSelection: () => set({ selection: DEFAULT_SELECTION }),
 
   // Grid toggle
-  gridOn: true,
+  gridOn: false,
   toggleGrid: () => set((state) => ({ gridOn: !state.gridOn })),
 
   // Zoom invert
   invertZoom: false,
   toggleInvertZoom: () => set((state) => ({ invertZoom: !state.invertZoom })),
+
+  // Debug
+  debug: false,
+  toggleDebug: () => set((state) => ({ debug: !state.debug })),
 
   // AI Overlay
   isAiOverlayVisible: false,
@@ -117,7 +127,13 @@ export const useGameMapStore = create<GameMapState>((set) => ({
       banners: state.banners.filter((b) => b.id !== id),
     })),
   clearBanners: () => set({ banners: [] }),
-}))
+    }),
+    {
+      name: 'ui-settings',
+      partialize: (state) => ({ gridOn: state.gridOn, invertZoom: state.invertZoom, debug: state.debug }),
+    }
+  )
+)
 
 export const useTurnLogStore = create<TurnLogState>()(
   persist(

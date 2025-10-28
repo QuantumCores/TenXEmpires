@@ -44,6 +44,17 @@ export function useGameHotkeys({
         return
       }
 
+      // Settings toggle (S), allowed even when settings modal is open
+      if (key === 's') {
+        e.preventDefault()
+        if (modalState.modal === 'settings') {
+          closeModal('replace')
+        } else {
+          openModal('settings', undefined, 'replace')
+        }
+        return
+      }
+
       // Suspend other hotkeys when any non-help modal is open
       if (isModalOpen) return
 
