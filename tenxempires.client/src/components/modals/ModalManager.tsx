@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import type React from 'react'
 import { ModalContainer } from './ModalContainer'
 import { StartNewGameModal } from './StartNewGameModal'
+import { SavesModal } from './SavesModal'
 import { useModalParam } from '../../router/query'
 import { useBackstackCloseBehavior } from '../../router/backstack'
 import { fetchGames } from '../../api/games'
+import { useGameState } from '../../features/game/useGameQueries'
 
 export type ModalKey =
   | 'saves'
@@ -37,11 +39,11 @@ function PlaceholderModal({ title, onRequestClose }: { title: string } & ModalPr
 }
 
 const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> = {
-  'saves': (p) => <PlaceholderModal title="Saves" {...p} />,
+  'saves': (p) => <PlaceholderModal title="Saves" {...p} />, // Handled separately
   'settings': (p) => <PlaceholderModal title="Settings" {...p} />,
   'help': (p) => <PlaceholderModal title="Help" {...p} />,
   'account-delete': (p) => <PlaceholderModal title="Delete Account" {...p} />,
-  'start-new': (p) => <StartNewGameModal {...p} />,
+  'start-new': (p) => <StartNewGameModal {...p} />, // Handled separately
   'session-expired': (p) => <PlaceholderModal title="Session Expired" {...p} />,
   'error-schema': (p) => <PlaceholderModal title="Schema Error" {...p} />,
   'error-ai': (p) => <PlaceholderModal title="AI Timeout" {...p} />,
@@ -68,6 +70,9 @@ export function ModalManager({
     : typeof gameIdParam === 'number'
     ? gameIdParam
     : undefined
+
+  // Fetch game state for modals that need it (e.g., saves modal)
+  const { data: gameState } = useGameState(currentGameId, { enabled: !!currentGameId })
 
   // Fetch active game when opening start-new modal to determine if user has one
   useEffect(() => {
@@ -114,6 +119,26 @@ export function ModalManager({
           currentGameId={gameId}
         />
       </ModalContainer>
+    )
+  }
+
+  // For saves modal, pass game-specific context
+  if (modalKey === 'saves') {
+    if (!currentGameId) {
+      // Can't show saves modal without a valid game ID
+      return null
+    }
+
+    const turnInProgress = gameState?.game?.turnInProgress ?? false
+    const initialTab = state.tab === 'autosaves' ? 'autosaves' : 'manual'
+
+    return (
+      <SavesModal
+        onRequestClose={() => closeModal('replace')}
+        gameId={currentGameId}
+        turnInProgress={turnInProgress}
+        initialTab={initialTab}
+      />
     )
   }
 

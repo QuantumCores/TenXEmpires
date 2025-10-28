@@ -25,3 +25,9 @@ Fixed the problems with Sonet 4.5 because GPT Codex failed.
 Starting to implement login, register views
 
 KLOPS: The backend doesn't have a forgot-password endpoint yet (only register, login, logout, keepalive, csrf, me)
+
+28.10
+
+Ghenna. More problems with integration UI-backend. Links are totaly put of thin air. Many warnings and missconfigurations.
+Sonet 4.5 is doing much better work here than GPT 5 did. Tackling one problem at a time.
+Changed the prompt again to include more information

@@ -32,7 +32,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   Game creation: Start new game modal (`?modal=start-new`), game limit handling, delete current game flow
 
 ### Game Modals (In-Game Features)
-- **[09 - saves-modal-view-implementation-plan.md](.ai/ui/09%20-%20saves-modal-view-implementation-plan.md)**  
+- **[09 - saves-modal-view-implementation-plan.md](.ai/ui/09%20-%20saves-modal-view-implementation-plan.md)**  ✅ COMPLETED 
   Save management: Manual saves (slots 1-3), autosaves list, load/delete, expiresAt display
   
 - **[10 - help-modal-view-implementation-plan.md](.ai/ui/10%20-%20help-modal-view-implementation-plan.md)**  
