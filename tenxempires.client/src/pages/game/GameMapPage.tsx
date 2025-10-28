@@ -10,6 +10,7 @@ import { AIOverlay } from '../../components/game/AIOverlay'
 import { TurnLogPanel } from '../../components/game/TurnLogPanel'
 import { ToastsCenter } from '../../components/game/ToastsCenter'
 import { Banners } from '../../components/ui/Banners'
+import { ModalManager } from '../../components/modals/ModalManager'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 import { useGameHotkeys } from '../../features/game/useGameHotkeys'
 import { useEndTurn } from '../../features/game/useGameQueries'
@@ -18,6 +19,7 @@ import './GameMapPage.css'
 export function GameMapPage() {
   const { id } = useParams<{ id: string }>()
   const gameId = id ? parseInt(id, 10) : undefined
+  const isNewGameContext = id === 'new' || !id
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
 
@@ -35,15 +37,18 @@ export function GameMapPage() {
     }
   }, [])
 
-  // Fetch game data with polling during AI turns
+  // Fetch game data with polling during AI turns (skip if in new game context)
   // Slow down polling if rate limited
-  const { data: gameState, isLoading: isLoadingState, error } = useGameState(gameId, {
-    refetchInterval: (query) => {
-      const state = query.state.data
-      if (!state?.game.turnInProgress) return false
-      return isRateLimited ? 2500 : 1000
-    },
-  })
+  const { data: gameState, isLoading: isLoadingState, error } = useGameState(
+    isNewGameContext ? undefined : gameId, 
+    {
+      refetchInterval: (state) => {
+        if (!state?.game.turnInProgress) return false
+        return isRateLimited ? 2500 : 1000
+      },
+      enabled: !isNewGameContext,
+    }
+  )
 
   // Detect rate limiting from query errors
   useEffect(() => {
@@ -61,6 +66,20 @@ export function GameMapPage() {
 
   // Mutations
   const endTurnMutation = useEndTurn(gameId || 0)
+
+  // If we're in the new game context, show minimal shell for modal
+  if (isNewGameContext) {
+    const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
+    return (
+      <div className="game-map-page relative flex min-h-dvh flex-col">
+        <Banners />
+        <div className="flex flex-1 items-center justify-center">
+          <div className="text-slate-600">Starting new game...</div>
+        </div>
+        <ModalManager gameId={id || 'new'} status={status} />
+      </div>
+    )
+  }
 
   const isLoading = isLoadingState || isLoadingDefs || isLoadingTiles
 
@@ -130,6 +149,8 @@ export function GameMapPage() {
     isEndTurnDisabled: isActionsDisabled || endTurnMutation.isPending,
   })
 
+  const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
+
   return (
     <div className="game-map-page relative flex min-h-dvh flex-col">
       <TopBar
@@ -170,7 +191,7 @@ export function GameMapPage() {
 
       <Banners />
 
-      {/* TODO: Add Modals via ModalManager */}
+      <ModalManager gameId={gameId!} status={status} />
     </div>
   )
 }

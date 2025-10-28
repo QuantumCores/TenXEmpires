@@ -78,10 +78,11 @@ namespace TenX.DbMigrate
                     .GetFiles(scriptsPath, "*.sql", SearchOption.TopDirectoryOnly)
                     .OrderBy(Path.GetFileName);
                     
-                foreach (var f in scriptFiles.Select(Path.GetFileName))
+                foreach (var fileName in scriptFiles.Select(Path.GetFileName))
                 {
-                    var marker = executed.Contains(f) ? "[ applied ]" : "[ pending ]";
-                    Console.WriteLine($"{marker} {f}");
+                    if (fileName is null) continue;
+                    var marker = executed.Contains(fileName) ? "[ applied ]" : "[ pending ]";
+                    Console.WriteLine($"{marker} {fileName}");
                 }
                 return 0;
             }

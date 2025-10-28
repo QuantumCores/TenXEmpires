@@ -80,7 +80,7 @@ export function generateTileSprite(terrain: string, hasResource: boolean): strin
  */
 export function drawTileSprite(
   ctx: CanvasRenderingContext2D,
-  terrain: string,
+  _terrain: string,
   hasResource: boolean,
   color: string
 ): void {

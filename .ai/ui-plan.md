@@ -1,5 +1,87 @@
 # UI Architecture for TenX Empires MVP
 
+## Implementation Plans Reference
+
+The following implementation plans in `.ai/ui/` break down the UI into manageable, implementable units. Each plan specifies routing, component structure, types, state management, API integration, validation, error handling, and step-by-step implementation guidance.
+
+### Core Infrastructure (Implement First)
+- **[01 - routing-and-modal-framework-implementation-plan.md](.ai/ui/01%20-%20routing-and-modal-framework-implementation-plan.md)** ✅ COMPLETED  
+  Foundation: Router, `/game/current` guard, modal framework with Back/Forward support, query-param modals, focus trap
+
+### Public Pages (Authentication Flow)
+- **[02 - landing-view-implementation-plan.md](.ai/ui/02%20-%20landing-view-implementation-plan.md)**  ✅ COMPLETED  
+  Entry point: Landing page with Play/Login/Register CTAs, auth-aware routing
+  
+- **[03 - login-view-implementation-plan.md](.ai/ui/03%20-%20login-view-implementation-plan.md)**  ✅ COMPLETED  
+  Authentication: Login form, CSRF bootstrap, session management, returnUrl support
+  
+- **[04 - register-view-implementation-plan.md](.ai/ui/04%20-%20register-view-implementation-plan.md)**  ✅ COMPLETED  
+  Account creation: Registration form, password validation, email verification prompt
+  
+- **[05 - forgot-password-modal-view-implementation-plan.md](.ai/ui/05%20-%20forgot-password-modal-view-implementation-plan.md)**  ✅ COMPLETED  
+  Password recovery: Forgot password modal (`?modal=forgot`), email submission
+  
+- **[06 - verify-email-modal-view-implementation-plan.md](.ai/ui/06%20-%20verify-email-modal-view-implementation-plan.md)**  ✅ COMPLETED  
+  Email verification: Resend verification modal, post-registration guidance
+
+### Game UI (Primary Gameplay Surface)
+- **[07 - game-map-view-implementation-plan.md](.ai/ui/07%20-%20game-map-view-implementation-plan.md)** ✅ COMPLETED  
+  Main game: Map shell, 5-canvas stack, unit/city rendering, selection, actions (move/attack), end turn, top bar, bottom panel, action rail, turn log, AI overlay, banners, toasts
+  
+- **[08 - start-new-game-modal-view-implementation-plan.md](.ai/ui/08%20-%20start-new-game-modal-view-implementation-plan.md)** ✅ COMPLETED  
+  Game creation: Start new game modal (`?modal=start-new`), game limit handling, delete current game flow
+
+### Game Modals (In-Game Features)
+- **[09 - saves-modal-view-implementation-plan.md](.ai/ui/09%20-%20saves-modal-view-implementation-plan.md)**  
+  Save management: Manual saves (slots 1-3), autosaves list, load/delete, expiresAt display
+  
+- **[10 - help-modal-view-implementation-plan.md](.ai/ui/10%20-%20help-modal-view-implementation-plan.md)**  
+  Help system: Hotkeys cheatsheet, color legend, controls guide (`?modal=help`)
+  
+- **[11 - settings-modal-view-implementation-plan.md](.ai/ui/11%20-%20settings-modal-view-implementation-plan.md)**  
+  Preferences: Grid toggle, invert zoom, debug flags (`?modal=settings`)
+  
+- **[12 - victory-defeat-overlay-view-implementation-plan.md](.ai/ui/12%20-%20victory-defeat-overlay-view-implementation-plan.md)**  
+  Game end: Victory/defeat full-screen overlay, stats, next steps
+
+### System Modals (Error & Session Handling)
+- **[13 - session-expired-modal-view-implementation-plan.md](.ai/ui/13%20-%20session-expired-modal-view-implementation-plan.md)**  
+  Session management: Session expired modal, re-auth prompt, keepalive integration (`?modal=session-expired`)
+  
+- **[14 - error-schema-modal-view-implementation-plan.md](.ai/ui/14%20-%20error-schema-modal-view-implementation-plan.md)**  
+  Schema errors: Blocking dialog for MAP_SCHEMA_MISMATCH (`?modal=error-schema`)
+  
+- **[15 - error-ai-timeout-modal-view-implementation-plan.md](.ai/ui/15%20-%20error-ai-timeout-modal-view-implementation-plan.md)**  
+  AI errors: Blocking dialog for AI_TIMEOUT with retry/report options (`?modal=error-ai`)
+  
+- **[16 - account-delete-modal-view-implementation-plan.md](.ai/ui/16%20-%20account-delete-modal-view-implementation-plan.md)**  
+  Account deletion: Two-step confirm, type-to-confirm flow, permanent deletion (`?modal=account-delete`)
+
+### Public Pages (Informational)
+- **[17 - about-view-implementation-plan.md](.ai/ui/17%20-%20about-view-implementation-plan.md)**  
+  About: Product overview, links to privacy/cookies
+  
+- **[18 - gallery-view-implementation-plan.md](.ai/ui/18%20-%20gallery-view-implementation-plan.md)**  
+  Gallery: Screenshots, art, lightbox (optional)
+  
+- **[19 - privacy-view-implementation-plan.md](.ai/ui/19%20-%20privacy-view-implementation-plan.md)**  
+  Privacy: Privacy policy, retention, analytics consent details
+  
+- **[20 - cookies-view-implementation-plan.md](.ai/ui/20%20-%20cookies-view-implementation-plan.md)**  
+  Cookies: Cookie usage, consent options, durations
+  
+- **[21 - unsupported-browser-view-implementation-plan.md](.ai/ui/21%20-%20unsupported-browser-view-implementation-plan.md)**  
+  Browser check: Unsupported browser screen, required API matrix
+
+### Testing & Documentation
+- **[LOGIN-TESTING-GUIDE.md](.ai/ui/LOGIN-TESTING-GUIDE.md)**  
+  Testing guide: Login flow testing scenarios and validation steps
+
+### Implementation Status Legend
+- ✅ **COMPLETED**: Fully implemented and integrated
+- 🚧 **IN PROGRESS**: Currently being worked on
+- 📋 **PLANNED**: Not yet started, ready for implementation
+
 ## 1. UI Structure Overview
 
 - Application model
@@ -261,12 +343,249 @@
   - `Router` (public/auth routes, `/game/current` guard to `/game/:id`, legacy redirect `/hub`  `/game/current`)
   - `ModalManager` (query-param modals `?modal=...`, Back/Forward semantics using `pushState`/`replaceState`, ESC/backdrop close, focus trap via `ModalContainer`)
 
+## 6. Backend API Endpoints Reference
+
+### Authentication & Session (`/v1/auth`)
+All endpoints rate-limited with `PublicApi` policy except where noted.
+
+- **`GET /v1/auth/csrf`**  
+  Purpose: Issues or refreshes CSRF token cookie  
+  Auth: None (public)  
+  Response: 204 No Content + `XSRF-TOKEN` cookie  
+  Use: Bootstrap on app init; client echoes via `X-XSRF-TOKEN` header on mutations  
+  Errors: 429 (rate limit), 500
+
+- **`GET /v1/auth/keepalive`**  
+  Purpose: Refreshes authenticated session to extend sliding expiration  
+  Auth: Required  
+  Response: 204 No Content  
+  Use: Called from idle banner when user opts to stay signed in  
+  Errors: 401 (unauthenticated), 429, 500
+
+- **`GET /v1/auth/me`**  
+  Purpose: Returns current user info  
+  Auth: Required  
+  Response: 200 with user object  
+  Errors: 401, 500
+
+- **`POST /v1/auth/register`**  
+  Purpose: Create new account  
+  Auth: None  
+  Request: `{ email, password }`  
+  Response: 204 No Content (signed in)  
+  Errors: 400 (invalid input or user exists), 500
+
+- **`POST /v1/auth/login`**  
+  Purpose: Sign in with email/password  
+  Auth: None  
+  Requires: CSRF token  
+  Request: `{ email, password }`  
+  Response: 204 No Content  
+  Errors: 400 (invalid credentials), 429, 500
+
+- **`POST /v1/auth/logout`**  
+  Purpose: Sign out  
+  Auth: Required  
+  Requires: CSRF token  
+  Response: 204 No Content  
+  Errors: 401, 500
+
+- **`POST /v1/auth/forgot-password`**  
+  Purpose: Request password reset email  
+  Auth: None  
+  Requires: CSRF token  
+  Request: `{ email }`  
+  Response: 202 Accepted  
+  Errors: 400, 429, 500
+
+- **`POST /v1/auth/resend-verification`**  
+  Purpose: Resend email verification link  
+  Auth: None  
+  Requires: CSRF token  
+  Request: `{ email }`  
+  Response: 202 Accepted  
+  Errors: 400, 429, 500
+
+### Games (`/v1/games`)
+All endpoints require authentication and use `AuthenticatedApi` rate limiting.
+
+- **`GET /v1/games`**  
+  Purpose: List user's games with filtering and pagination  
+  Auth: Required  
+  Query params: `status` (active/finished), `page`, `pageSize`, `sort` (startedAt/lastTurnAt/turnNo), `order` (asc/desc)  
+  Response: 200 with `PagedResult<GameListItemDto>`  
+  Use: Guard queries `?status=active&sort=lastTurnAt&order=desc&pageSize=1` to find latest active game  
+  Errors: 400, 401, 500
+
+- **`POST /v1/games`**  
+  Purpose: Create a new game  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{ mapCode?, settings?, displayName? }`  
+  Response: 201 with `{ id, state: GameStateDto }` + Location header  
+  Use: Creates game, initializes participants/cities/units, returns initial state  
+  Errors: 400, 401, 409 (GAME_LIMIT_REACHED), 422 (MAP_SCHEMA_MISMATCH), 500
+
+- **`GET /v1/games/{id}/state`**  
+  Purpose: Get current game state  
+  Auth: Required  
+  Response: 200 with `GameStateDto` (complete state: game, map, participants, units, cities, resources, unitDefinitions)  
+  Use: Primary state fetch; client renders from this  
+  Errors: 401, 404, 500
+
+- **`GET /v1/games/{id}`**  
+  Purpose: Get game detail metadata  
+  Auth: Required  
+  Supports: ETag conditional requests (If-None-Match)  
+  Response: 200 with `GameDetailDto`, 304 if not modified  
+  Errors: 401, 404, 500
+
+- **`DELETE /v1/games/{id}`**  
+  Purpose: Delete game and all related entities  
+  Auth: Required  
+  Requires: CSRF token + optional `Idempotency-Key`  
+  Response: 204 No Content  
+  Use: Permanent deletion; transactional (all or nothing)  
+  Errors: 401, 404, 500
+
+- **`GET /v1/games/{id}/turns`**  
+  Purpose: List committed turns with pagination  
+  Auth: Required  
+  Query params: `page`, `pageSize`, `sort` (turnNo/committedAt), `order`  
+  Response: 200 with `PagedResult<TurnDto>`  
+  Use: Game history timeline  
+  Errors: 400, 401, 404, 500
+
+- **`POST /v1/games/{id}/actions/move`**  
+  Purpose: Move a unit  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{ unitId, to: { row, col } }`  
+  Response: 200 with `{ state: GameStateDto }`  
+  Use: Write-through cache with returned state  
+  Errors: 400, 401, 404 (unit not found), 409 (NOT_PLAYER_TURN, ONE_UNIT_PER_TILE, NO_ACTIONS_LEFT), 422 (ILLEGAL_MOVE), 500
+
+- **`POST /v1/games/{id}/actions/attack`**  
+  Purpose: Execute attack action  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{ attackerUnitId, targetUnitId }`  
+  Response: 200 with `{ state: GameStateDto }`  
+  Errors: 400, 401, 404, 409 (NOT_PLAYER_TURN, NO_ACTIONS_LEFT), 422 (OUT_OF_RANGE, INVALID_TARGET), 500
+
+- **`POST /v1/games/{id}/end-turn`**  
+  Purpose: End turn, commit, create autosave, advance to next participant  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{}` (empty body)  
+  Response: 200 with `{ state: GameStateDto, turnSummary, autosaveId }`  
+  Use: Triggers end-of-turn systems; polls `/games/{id}/state` while `turnInProgress=true`  
+  Errors: 401, 409 (NOT_PLAYER_TURN, TURN_IN_PROGRESS), 500
+
+### Saves (`/v1/games/{id}/saves`)
+All endpoints require authentication and use `AuthenticatedApi` rate limiting.
+
+- **`GET /v1/games/{id}/saves`**  
+  Purpose: List all saves (manual + autosaves) for a game  
+  Auth: Required  
+  Response: 200 with `{ manual: [], autosaves: [] }` (manual: slots 1-3, autosaves: latest 5)  
+  Use: Saves modal displays both lists with `expiresAt` info  
+  Errors: 401, 404, 500
+
+- **`POST /v1/games/{id}/saves/manual`**  
+  Purpose: Create or overwrite manual save  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{ slot: 1-3, name: string }`  
+  Response: 201 with `SaveCreatedDto` + Location header  
+  Use: Manual save in specified slot; overwrites if exists  
+  Errors: 400 (INVALID_SLOT, INVALID_NAME), 401, 404, 409 (SAVE_CONFLICT), 500
+
+- **`DELETE /v1/games/{id}/saves/manual/{slot}`**  
+  Purpose: Delete manual save in slot  
+  Auth: Required  
+  Requires: CSRF token + optional `Idempotency-Key`  
+  Response: 204 No Content  
+  Errors: 400 (INVALID_SLOT), 401, 404, 500
+
+- **`POST /v1/saves/{saveId}/load`**  
+  Purpose: Load save, replacing current game state  
+  Auth: Required  
+  Requires: CSRF token + `Idempotency-Key` header  
+  Request: `{}` (empty body)  
+  Response: 200 with `{ gameId, state: GameStateDto }`  
+  Use: Schema validation; write-through cache with returned state  
+  Errors: 401, 403 (not owner), 404, 422 (SCHEMA_MISMATCH), 500
+
+### Maps & Lookups (`/v1/maps`, `/v1/unit-definitions`)
+All endpoints are public with `PublicApi` rate limiting and support ETag caching.
+
+- **`GET /v1/maps/{code}`**  
+  Purpose: Get map metadata  
+  Auth: None  
+  Supports: ETag conditional requests  
+  Response: 200 with `MapDto`, 304 if not modified  
+  Cache: 10 minutes (public)  
+  Errors: 400, 404, 500
+
+- **`GET /v1/maps/{code}/tiles`**  
+  Purpose: Get map tiles for rendering  
+  Auth: None  
+  Query params: `page`, `pageSize` (pagination for large maps)  
+  Supports: ETag conditional requests  
+  Response: 200 with `PagedResult<MapTileDto>`, 304 if not modified  
+  Cache: 10 minutes (public)  
+  Use: Bootstrap fetches all tiles for rendering terrain/resources  
+  Errors: 400, 404, 500
+
+- **`GET /v1/unit-definitions`**  
+  Purpose: Get all unit type definitions (stats, ranges, etc.)  
+  Auth: None  
+  Supports: ETag conditional requests  
+  Response: 200 with `{ items: UnitDefinitionDto[] }`, 304 if not modified  
+  Cache: 10 minutes (public)  
+  Use: Bootstrap fetches once; long-term cache  
+  Errors: 500
+
+### Analytics (`/v1/analytics`)
+Public endpoint with `AnalyticsIngest` rate limiting (per identity: userId > deviceId > IP).
+
+- **`POST /v1/analytics/batch`**  
+  Purpose: Ingest analytics events batch  
+  Auth: None (but uses authenticated userId if available)  
+  Requires: CSRF token  
+  Request: `{ events: [ { eventType, gameId?, turnNo?, clientRequestId?, timestamp? } ] }`  
+  Response: 202 Accepted with `{ accepted: number }`  
+  Use: Send once per turn after consent; privacy-preserving pseudonymization  
+  Valid event types: `game_start`, `turn_end`, `autosave`, `manual_save`, `manual_load`, `game_finish`, `custom.*`  
+  Errors: 400 (invalid events), 429, 500
+
+### Error Response Format
+All endpoints return consistent error structure:
+```json
+{
+  "code": "ERROR_CODE",
+  "message": "Human-readable description"
+}
+```
+
+Common error codes: `INVALID_INPUT`, `UNAUTHORIZED`, `FORBIDDEN`, `GAME_NOT_FOUND`, `UNIT_NOT_FOUND`, `NOT_PLAYER_TURN`, `ONE_UNIT_PER_TILE`, `NO_ACTIONS_LEFT`, `ILLEGAL_MOVE`, `OUT_OF_RANGE`, `INVALID_TARGET`, `TURN_IN_PROGRESS`, `GAME_LIMIT_REACHED`, `MAP_SCHEMA_MISMATCH`, `SCHEMA_MISMATCH`, `SAVE_CONFLICT`, `SAVE_NOT_FOUND`, `INVALID_SLOT`, `CSRF_INVALID`, `RATE_LIMIT_EXCEEDED`, `INTERNAL_ERROR`
+
+### Headers & Conventions
+- **Authentication**: Cookie-based (ASP.NET Identity); cookies: `tenx.auth` (HttpOnly), `XSRF-TOKEN` (readable)
+- **CSRF Protection**: Client sends `X-XSRF-TOKEN` header on POST/PUT/DELETE; 403 on mismatch
+- **Idempotency**: `Idempotency-Key` header (recommended: UUIDv4); 60s deduplication window
+- **Rate Limiting**: `429` with `Retry-After` header (seconds); backoff per headers
+- **Caching**: `ETag` header on responses; client sends `If-None-Match`; 304 when unchanged
+- **Timestamps**: ISO 8601 UTC seconds-only (`YYYY-MM-DDTHH:mm:ssZ`)
+- **Versioning**: URL path (`/v1/...`); current version: 1.0
+
 - API compatibility and mappings (UI → API)
-  - Game bootstrap: `GET /games?status=active&sort=lastTurnAt&order=desc&pageSize=1` → guard → `GET /games/{id}/state`, `GET /unit-definitions`, `GET /maps/{code}/tiles`.
-  - Actions: `POST /games/{id}/actions/move` / `attack` / `end-turn` → `{ state }` write-through.
-  - Saves: `GET /games/{id}/saves` (includes `expiresAt`), `POST /games/{id}/saves/manual`, `DELETE /games/{id}/saves/manual/{slot}`, `POST /saves/{saveId}/load`.
-  - Analytics: `POST /analytics/batch` once per turn (after consent).
-  - Auth/session: `GET /auth/csrf`, `GET /auth/keepalive`; Login/Register via Identity endpoints.
+  - Game bootstrap: `GET /v1/games?status=active&sort=lastTurnAt&order=desc&pageSize=1` → guard → `GET /v1/games/{id}/state`, `GET /v1/unit-definitions`, `GET /v1/maps/{code}/tiles`.
+  - Actions: `POST /v1/games/{id}/actions/move` / `attack` / `end-turn` → `{ state }` write-through.
+  - Saves: `GET /v1/games/{id}/saves` (includes `expiresAt`), `POST /v1/games/{id}/saves/manual`, `DELETE /v1/games/{id}/saves/manual/{slot}`, `POST /v1/saves/{saveId}/load`.
+  - Analytics: `POST /v1/analytics/batch` once per turn (after consent).
+  - Auth/session: `GET /v1/auth/csrf`, `GET /v1/auth/keepalive`; Login/Register via Identity endpoints.
 
 - User stories coverage (PRD → UI elements)
   - US‑001/002/003/004: Login/Register/Logout/Idle → Login/Register pages, SessionExpiredModal, Keepalive banner.

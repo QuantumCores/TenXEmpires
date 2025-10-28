@@ -1,4 +1,4 @@
-import { getJson, postJson } from './http'
+import { getJson, postJson, deleteJson } from './http'
 import type {
   GameStateDto,
   UnitDefinitionsResponse,
@@ -10,6 +10,7 @@ import type {
   EndTurnResponse,
   GamesListResponse,
 } from '../types/game'
+import type { CreateGameCommand, GameCreatedResponse } from '../types/games'
 
 const API_BASE = '/api'
 
@@ -93,5 +94,21 @@ export async function fetchGames(params?: ListGamesParams) {
   const url = queryString ? `${API_BASE}/games?${queryString}` : `${API_BASE}/games`
   
   return getJson<GamesListResponse>(url)
+}
+
+// ============================================================================
+// Game Management
+// ============================================================================
+
+export async function createGame(command: CreateGameCommand, idempotencyKey: string) {
+  return postJson<CreateGameCommand, GameCreatedResponse>(
+    `${API_BASE}/games`,
+    command,
+    { headers: { 'Idempotency-Key': idempotencyKey } }
+  )
+}
+
+export async function deleteGame(gameId: number) {
+  return deleteJson<void>(`${API_BASE}/games/${gameId}`)
 }
 

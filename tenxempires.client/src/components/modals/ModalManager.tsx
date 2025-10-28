@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type React from 'react'
 import { ModalContainer } from './ModalContainer'
+import { StartNewGameModal } from './StartNewGameModal'
 import { useModalParam } from '../../router/query'
 import { useBackstackCloseBehavior } from '../../router/backstack'
+import { fetchGames } from '../../api/games'
 
 export type ModalKey =
   | 'saves'
@@ -39,28 +41,83 @@ const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> =
   'settings': (p) => <PlaceholderModal title="Settings" {...p} />,
   'help': (p) => <PlaceholderModal title="Help" {...p} />,
   'account-delete': (p) => <PlaceholderModal title="Delete Account" {...p} />,
-  'start-new': (p) => <PlaceholderModal title="Start New Game" {...p} />,
+  'start-new': (p) => <StartNewGameModal {...p} />,
   'session-expired': (p) => <PlaceholderModal title="Session Expired" {...p} />,
   'error-schema': (p) => <PlaceholderModal title="Schema Error" {...p} />,
   'error-ai': (p) => <PlaceholderModal title="AI Timeout" {...p} />,
 }
 
 export function ModalManager({
-  gameId: _gameId,
+  gameId: gameIdParam,
   status: _status,
-  searchParams: _searchParams,
 }: {
-  gameId: string
+  gameId: string | number
   status?: 'online' | 'offline' | 'limited'
-  searchParams?: URLSearchParams
 }) {
   useNavigate() // ensure hook context; not needed directly here
   const { state, closeModal } = useModalParam()
   useBackstackCloseBehavior()
 
+  const [activeGameId, setActiveGameId] = useState<number | null>(null)
+  const [hasCheckedActiveGame, setHasCheckedActiveGame] = useState(false)
+
+  // Determine if we're in "new game" context or have an actual game
+  const isNewGameContext = gameIdParam === 'new' || gameIdParam === 'undefined'
+  const currentGameId = !isNewGameContext && typeof gameIdParam === 'string' 
+    ? parseInt(gameIdParam, 10) 
+    : typeof gameIdParam === 'number'
+    ? gameIdParam
+    : undefined
+
+  // Fetch active game when opening start-new modal to determine if user has one
+  useEffect(() => {
+    if (state.modal !== 'start-new') return
+    if (hasCheckedActiveGame) return
+
+    let cancelled = false
+    ;(async () => {
+      const result = await fetchGames({
+        status: 'active',
+        sort: 'lastTurnAt',
+        order: 'desc',
+        pageSize: 1,
+      })
+
+      if (cancelled) return
+      
+      if (result.ok && result.data?.items && result.data.items.length > 0) {
+        setActiveGameId(result.data.items[0].id)
+      } else {
+        setActiveGameId(null)
+      }
+      setHasCheckedActiveGame(true)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [state.modal, hasCheckedActiveGame])
+
   const modalKey = useMemo(() => state.modal, [state.modal])
   if (!modalKey) return null
 
+  // For start-new modal, pass active game context
+  if (modalKey === 'start-new') {
+    const hasActiveGame = activeGameId !== null
+    const gameId = activeGameId ?? currentGameId
+
+    return (
+      <ModalContainer onRequestClose={() => closeModal('replace')}>
+        <StartNewGameModal 
+          onRequestClose={() => closeModal('replace')}
+          hasActiveGame={hasActiveGame}
+          currentGameId={gameId}
+        />
+      </ModalContainer>
+    )
+  }
+
+  // For other modals, use the standard component map
   const Comp = ModalComponents[modalKey]
   return (
     <ModalContainer onRequestClose={() => closeModal('replace')}>

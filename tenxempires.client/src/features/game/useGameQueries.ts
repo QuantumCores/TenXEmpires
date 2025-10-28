@@ -33,7 +33,7 @@ export const gameKeys = {
 
 interface UseGameStateOptions {
   enabled?: boolean
-  refetchInterval?: number | false
+  refetchInterval?: number | false | ((data: GameStateDto | undefined) => number | false)
 }
 
 export function useGameState(gameId: number | undefined, options: UseGameStateOptions = {}) {
@@ -63,7 +63,12 @@ export function useGameState(gameId: number | undefined, options: UseGameStateOp
     },
     staleTime: 0, // Always fresh
     enabled: !!gameId && (options.enabled !== false),
-    refetchInterval: options.refetchInterval,
+    refetchInterval: typeof options.refetchInterval === 'function'
+      ? (query) => {
+          const fn = options.refetchInterval as (data: GameStateDto | undefined) => number | false
+          return fn(query.state.data as GameStateDto | undefined)
+        }
+      : options.refetchInterval,
   })
 }
 

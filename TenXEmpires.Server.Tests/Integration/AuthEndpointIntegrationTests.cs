@@ -36,7 +36,7 @@ public class AuthEndpointIntegrationTests : IClassFixture<WebAppFactory>
         setCookie.Should().ContainEquivalentOf("SameSite=Lax");
         setCookie.Should().ContainEquivalentOf("Path=/");
 
-        response.Headers.CacheControl.NoStore.Should().BeTrue();
+        response.Headers.CacheControl?.NoStore.Should().BeTrue();
     }
     [Fact]
     public async Task Post_AnalyticsBatch_WithXsrfHeader_ShouldReturn202()

@@ -1,9 +1,8 @@
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { ModalManager } from '../../components/modals/ModalManager'
 
 export function GameShell() {
   const { id } = useParams<{ id: string }>()
-  const [search] = useSearchParams()
 
   return (
     <div className="relative min-h-dvh">
@@ -19,7 +18,7 @@ export function GameShell() {
         <div className="h-[60vh] w-full rounded border bg-slate-50/60" aria-label="Map placeholder" />
       </main>
 
-      <ModalManager gameId={id ?? ''} status={undefined} searchParams={search} />
+      <ModalManager gameId={id ?? ''} />
     </div>
   )
 }
