@@ -127,14 +127,14 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Default entry point with clear CTA.
   - Key info: Short product blurb; primary Play button for authenticated users; Login and Register buttons for visitors.
   - Components: Page shell, intro/CTA, auth-aware action area.
-  - UX/A11y/Security: Public; Play routes to `/game/current` if authenticated, otherwise `/login?returnUrl=/game/current`.
+  - UX/Security: Public; Play routes to `/game/current` if authenticated, otherwise `/login?returnUrl=/game/current`.
 
 - About
   - Path: `/about`
   - Purpose: Public information about the prototype.
   - Key info: Product overview, links to Privacy/Cookies.
   - Components: Page shell, static content.
-  - UX/A11y/Security: Public, no cookies required.
+  - UX/Security: Public, no cookies required.
   - User stories: US‑005, US‑006.
 
 - Gallery
@@ -142,7 +142,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Public screenshots or art.
   - Key info: Images and captions.
   - Components: Grid of images, lightbox (optional).
-  - UX/A11y/Security: Alt text for images; public.
+  - UX/Security: Alt text for images; public.
   - User stories: US‑005.
 
 - Privacy
@@ -150,7 +150,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Privacy policy and retention details.
   - Key info: Analytics consent, retention window, delete-account effects.
   - Components: Page shell, anchor navigation.
-  - UX/A11y/Security: Public; readable typography.
+  - UX/Security: Public; readable typography.
   - User stories: US‑006.
 
 - Cookies
@@ -158,7 +158,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Cookie and analytics usage.
   - Key info: Consent options, cookie names, durations.
   - Components: Page shell.
-  - UX/A11y/Security: Public; link from consent banner.
+  - UX/Security: Public; link from consent banner.
   - User stories: US‑006.
 
 - Login
@@ -166,7 +166,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Authenticate with email/password.
   - Key info: Email, password; error messaging; verification prompt.
   - Components: Form; modals `?modal=forgot`, `?modal=verify`.
-  - UX/A11y/Security: Trap focus; CSRF bootstrap on app init; redirect to `/game/current` with `returnUrl` support.
+  - UX/Security: Trap focus; CSRF bootstrap on app init; redirect to `/game/current` with `returnUrl` support.
   - User stories: US‑001, US‑002, US‑004, US‑005.
 
 - Register
@@ -174,7 +174,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Create account; prompt email verification.
   - Key info: Email, password; terms acknowledgment.
   - Components: Form; post-register verify notice modal.
-  - UX/A11y/Security: Strong password hints; rate-limit feedback.
+  - UX/Security: Strong password hints; rate-limit feedback.
   - User stories: US‑001, US‑008.
 
 - Game (Map Shell)
@@ -182,7 +182,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Primary gameplay surface, map-first.
   - Key info: Turn number, units/cities with stats, city reach, selection details, pending actions, autosave status.
   - Components: Five-canvas stack (base tiles, grid, features, units, overlays); Top bar (turn, status pill); Bottom center panel (Unit/City details only, collapses when none); Right action rail (Saves, Help); Bottom-right End Turn; Toasts; Turn Log side panel (collapsible, session-scoped); Banners (idle countdown, multi-tab control, offline/rate-limit); Consent banner; AI overlay.
-  - UX/A11y/Security: Pointer-anchored zoom, instant pan; selection → preview → commit; ESC/right-click cancel; ≥32×32 targets; aria-live; CSRF/idempotency on actions; single-controller tab behavior.
+  - UX/Security: Pointer-anchored zoom, instant pan; selection → preview → commit; ESC/right-click cancel; ≥32×32 targets; aria-live; CSRF/idempotency on actions; single-controller tab behavior.
   - User stories: US‑010, US‑020..US‑026, US‑030..US‑034, US‑040..US‑043, US‑015, US‑018.
 
 - Start New Game (Confirm)
@@ -190,7 +190,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Confirm creation when single active game exists.
   - Key info: Message about finishing/deleting current game; checkbox “I understand”.
   - Components: Modal with confirm button; link to “Delete current game instead”.
-  - UX/A11y/Security: Focus trap; session persistence of “Don’t show again”.
+  - UX/Security: Focus trap; session persistence of “Don’t show again”.
   - User stories: US‑010.
 
 - Saves
@@ -198,7 +198,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Manual save, load saves, view autosaves.
   - Key info: Manual slots (1..3) with name, turnNo, timestamp, expiresAt; Autosaves (latest five) with timestamp, expiresAt.
   - Components: Tabs (Manual default, Autosaves); Slot cards; Inline rename with overwrite confirm; Load/Delete (manual only).
-  - UX/A11y/Security: Disabled when `turnInProgress=true`; deduped autosave toasts; expiry copy from `expiresAt`.
+  - UX/Security: Disabled when `turnInProgress=true`; deduped autosave toasts; expiry copy from `expiresAt`.
   - User stories: US‑011, US‑012, US‑013, US‑015, US‑016, US‑017, US‑019.
 
 - Settings
@@ -206,7 +206,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Player preferences.
   - Key info: Grid toggle (default OFF), invert scroll zoom, debug flag (dev-only).
   - Components: Switches; description text.
-  - UX/A11y/Security: Persist safe items per session; no auth secrets stored.
+  - UX/Security: Persist safe items per session; no auth secrets stored.
 
 - Help
   - Path: `/game/:id?modal=help`
@@ -219,7 +219,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   - Purpose: Irreversible delete confirmation.
   - Key info: Data deletion scope; type-to-confirm (DELETE or email).
   - Components: Two-step confirm; final action button.
-  - UX/A11y/Security: Focus trap; post-success logout → `/about`.
+  - UX/Security: Focus trap; post-success logout → `/about`.
   - User stories: US‑007.
 
 - Session Expired / Re-auth

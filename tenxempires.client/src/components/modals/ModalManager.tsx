@@ -4,6 +4,7 @@ import type React from 'react'
 import { ModalContainer } from './ModalContainer'
 import { StartNewGameModal } from './StartNewGameModal'
 import { SavesModal } from './SavesModal'
+import { HelpModal } from './HelpModal'
 import { useModalParam } from '../../router/query'
 import { useBackstackCloseBehavior } from '../../router/backstack'
 import { fetchGames } from '../../api/games'
@@ -41,7 +42,7 @@ function PlaceholderModal({ title, onRequestClose }: { title: string } & ModalPr
 const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> = {
   'saves': (p) => <PlaceholderModal title="Saves" {...p} />, // Handled separately
   'settings': (p) => <PlaceholderModal title="Settings" {...p} />,
-  'help': (p) => <PlaceholderModal title="Help" {...p} />,
+  'help': (p) => <HelpModal {...p} />,
   'account-delete': (p) => <PlaceholderModal title="Delete Account" {...p} />,
   'start-new': (p) => <StartNewGameModal {...p} />, // Handled separately
   'session-expired': (p) => <PlaceholderModal title="Session Expired" {...p} />,
