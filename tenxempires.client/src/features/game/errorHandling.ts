@@ -1,5 +1,6 @@
 import { useNotifications } from '../../components/ui/notifications'
 import { useModalParam } from '../../router/query'
+import { useUiStore } from '../../components/ui/uiStore'
 import type { HttpResult } from '../../api/http'
 
 // Error codes from the backend
@@ -23,6 +24,10 @@ export const ErrorCodes = {
 
   // AI errors
   AI_TIMEOUT: 'AI_TIMEOUT',
+
+  // Schema errors
+  SCHEMA_MISMATCH: 'SCHEMA_MISMATCH',
+  MAP_SCHEMA_MISMATCH: 'MAP_SCHEMA_MISMATCH',
 
   // Save errors
   SAVE_NOT_FOUND: 'SAVE_NOT_FOUND',
@@ -219,6 +224,7 @@ export function getErrorNotification(error: GameError): {
 export function useGameErrorHandler() {
   const notifications = useNotifications()
   const { state, openModal } = useModalParam()
+  const setSchemaError = useUiStore((s) => s.setSchemaError)
 
   return {
     handleError: (result: HttpResult<unknown>) => {
@@ -236,6 +242,23 @@ export function useGameErrorHandler() {
       // Open session-expired modal on unauthorized
       if ((error.status === 401 || error.status === 403) && state.modal !== 'session-expired') {
         openModal('session-expired', undefined, 'replace')
+      }
+
+      // Schema mismatch handling -> open blocking error-schema modal
+      if (result.status === 422) {
+        const dataAny = result.data as any
+        const code = dataAny?.code as string | undefined
+        if (code === ErrorCodes.SCHEMA_MISMATCH || code === ErrorCodes.MAP_SCHEMA_MISMATCH) {
+          // Persist last schema error for the modal
+          setSchemaError({
+            code: code!,
+            message: (dataAny?.message as string) || error.message,
+            details: dataAny?.details,
+          })
+          if (state.modal !== 'error-schema') {
+            openModal('error-schema', undefined, 'replace')
+          }
+        }
       }
 
       return error

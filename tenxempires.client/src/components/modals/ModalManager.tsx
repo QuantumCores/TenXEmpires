@@ -6,6 +6,7 @@ import { StartNewGameModal } from './StartNewGameModal'
 import { SavesModal } from './SavesModal'
 import { HelpModal } from './HelpModal'
 import { SettingsModal } from './SettingsModal'
+import { ErrorSchemaModal } from './ErrorSchemaModal'
 import { SessionExpiredModal } from './SessionExpiredModal'
 import { useModalParam } from '../../router/query'
 import { useBackstackCloseBehavior } from '../../router/backstack'
@@ -48,7 +49,7 @@ const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> =
   'account-delete': (p) => <PlaceholderModal title="Delete Account" {...p} />,
   'start-new': (p) => <StartNewGameModal {...p} />, // Handled separately
   'session-expired': (p) => <SessionExpiredModal {...p} />,
-  'error-schema': (p) => <PlaceholderModal title="Schema Error" {...p} />,
+  'error-schema': (p) => <ErrorSchemaModal {...p} />,
   'error-ai': (p) => <PlaceholderModal title="AI Timeout" {...p} />,
 }
 
@@ -147,7 +148,7 @@ export function ModalManager({
 
   // For other modals, use the standard component map
   const Comp = ModalComponents[modalKey]
-  const isBlocking = modalKey === 'session-expired'
+  const isBlocking = modalKey === 'session-expired' || modalKey === 'error-schema'
   return (
     <ModalContainer onRequestClose={() => closeModal('replace')} closeOnBackdrop={!isBlocking}>
       <Comp onRequestClose={() => closeModal('replace')} />

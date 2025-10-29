@@ -7,6 +7,8 @@ interface UiState {
   setModalState: (key?: ModalKey) => void
   sessionLocked: boolean
   setSessionLocked: (locked: boolean) => void
+  schemaError?: { code: string; message: string; details?: unknown }
+  setSchemaError: (err?: { code: string; message: string; details?: unknown }) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -15,4 +17,6 @@ export const useUiStore = create<UiState>((set) => ({
   setModalState: (key) => set({ isModalOpen: Boolean(key), modalKey: key, sessionLocked: key === 'session-expired' }),
   sessionLocked: false,
   setSessionLocked: (locked) => set({ sessionLocked: locked }),
+  schemaError: undefined,
+  setSchemaError: (err) => set({ schemaError: err }),
 }))

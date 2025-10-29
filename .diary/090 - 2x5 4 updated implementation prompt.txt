@@ -79,3 +79,5 @@ Ensure that your implementation accurately reflects the provided implementation 
 1. When modifying the directory structure, always update thie structure section in [shared-frontend.mdc](.cursor/rules/shared-frontend.mdc) file!!
 
 2. Mark plan as completed in @ui-plan.md file
+
+3. Make sure application builds, tests are green and application runs

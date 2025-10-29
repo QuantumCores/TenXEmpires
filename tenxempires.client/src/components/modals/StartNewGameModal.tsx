@@ -2,6 +2,8 @@ import { useState, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createGame, deleteGame } from '../../api/games'
 import type { ApiErrorDto } from '../../types/errors'
+import { useModalParam } from '../../router/query'
+import { useUiStore } from '../ui/uiStore'
 
 export interface StartNewGameModalProps {
   onRequestClose: () => void
@@ -23,6 +25,8 @@ export function StartNewGameModal({
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDeleteFlow, setShowDeleteFlow] = useState(false)
+  const { openModal } = useModalParam()
+  const setSchemaError = useUiStore((s) => s.setSchemaError)
 
   const handleStartNewGame = async () => {
     if (!isAcknowledged) return
@@ -44,8 +48,21 @@ export function StartNewGameModal({
         }
         
         if (result.status === 422) {
-          // MAP_SCHEMA_MISMATCH
-          setError('Map schema mismatch. Unable to create game at this time.')
+          // MAP_SCHEMA_MISMATCH -> open blocking schema modal
+          const dataAny = result.data as any
+          const code = dataAny?.code as string | undefined
+          if (code === 'MAP_SCHEMA_MISMATCH' || code === 'SCHEMA_MISMATCH') {
+            setSchemaError({
+              code: code!,
+              message: (dataAny?.message as string) || 'Schema mismatch.',
+              details: dataAny?.details,
+            })
+            openModal('error-schema', undefined, 'replace')
+            setIsCreating(false)
+            return
+          }
+          // Fallback inline
+          setError('Unable to create game due to validation error.')
           setIsCreating(false)
           return
         }

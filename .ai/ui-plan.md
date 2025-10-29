@@ -49,7 +49,8 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   Session management: Session expired modal, re-auth prompt, keepalive integration (`?modal=session-expired`)
   
 - **[14 - error-schema-modal-view-implementation-plan.md](.ai/ui/14%20-%20error-schema-modal-view-implementation-plan.md)**  
-  Schema errors: Blocking dialog for MAP_SCHEMA_MISMATCH (`?modal=error-schema`)
+  ✅ COMPLETED  
+  Schema errors: Blocking dialog for MAP_SCHEMA_MISMATCH / SCHEMA_MISMATCH (`?modal=error-schema`)
   
 - **[15 - error-ai-timeout-modal-view-implementation-plan.md](.ai/ui/15%20-%20error-ai-timeout-modal-view-implementation-plan.md)**  
   AI errors: Blocking dialog for AI_TIMEOUT with retry/report options (`?modal=error-ai`)
