@@ -35,13 +35,13 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
 - **[09 - saves-modal-view-implementation-plan.md](.ai/ui/09%20-%20saves-modal-view-implementation-plan.md)**  ✅ COMPLETED 
   Save management: Manual saves (slots 1-3), autosaves list, load/delete, expiresAt display
   
-- **[10 - help-modal-view-implementation-plan.md](.ai/ui/10%20-%20help-modal-view-implementation-plan.md)**  
+- **[10 - help-modal-view-implementation-plan.md](.ai/ui/10%20-%20help-modal-view-implementation-plan.md)**  ✅ COMPLETED  
   Help system: Hotkeys cheatsheet, color legend, controls guide (`?modal=help`)
   
-- **[11 - settings-modal-view-implementation-plan.md](.ai/ui/11%20-%20settings-modal-view-implementation-plan.md)**  
+- **[11 - settings-modal-view-implementation-plan.md](.ai/ui/11%20-%20settings-modal-view-implementation-plan.md)**  ✅ COMPLETED  
   Preferences: Grid toggle, invert zoom, debug flags (`?modal=settings`)
   
-- **[12 - victory-defeat-overlay-view-implementation-plan.md](.ai/ui/12%20-%20victory-defeat-overlay-view-implementation-plan.md)**  
+- **[12 - victory-defeat-overlay-view-implementation-plan.md](.ai/ui/12%20-%20victory-defeat-overlay-view-implementation-plan.md)**  ✅ COMPLETED  
   Game end: Victory/defeat full-screen overlay, stats, next steps
 
 ### System Modals (Error & Session Handling)

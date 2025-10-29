@@ -11,6 +11,7 @@ import { TurnLogPanel } from '../../components/game/TurnLogPanel'
 import { ToastsCenter } from '../../components/game/ToastsCenter'
 import { Banners } from '../../components/ui/Banners'
 import { ModalManager } from '../../components/modals/ModalManager'
+import { ResultOverlay } from '../../components/game/ResultOverlay'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 import { useGameHotkeys } from '../../features/game/useGameHotkeys'
 import { useEndTurn } from '../../features/game/useGameQueries'
@@ -150,6 +151,16 @@ export function GameMapPage() {
   })
 
   const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
+  const isGameFinished = gameState.game.status === 'finished'
+  
+  // Determine result status - if player is eliminated, it's defeat; otherwise victory
+  const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
+  const resultStatus = playerParticipant?.isEliminated ? 'defeat' : 'victory'
+  
+  // Count cities captured by player
+  const citiesCaptured = playerParticipant 
+    ? gameState.cities.filter((c) => c.participantId === playerParticipant.id).length
+    : 0
 
   return (
     <div className="game-map-page relative flex min-h-dvh flex-col">
@@ -192,6 +203,16 @@ export function GameMapPage() {
       <Banners />
 
       <ModalManager gameId={gameId!} status={status} />
+
+      {/* Result Overlay - shown when game is finished */}
+      {isGameFinished && (
+        <ResultOverlay
+          status={resultStatus}
+          turns={gameState.game.turnNo}
+          citiesCaptured={citiesCaptured}
+          gameId={gameId!}
+        />
+      )}
     </div>
   )
 }

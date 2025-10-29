@@ -21,6 +21,7 @@ Fullscreen overlay shown when a game ends (victory/defeat). Presents summary and
 - Validation: N/A.
 - Types: `GameState` (for status and summary), optional local `ResultSummaryModel`.
 - Props: `{ status: 'victory'|'defeat'; turns: number; citiesCaptured?: number }`.
+- Backgorund images in `tenxempires.client\public\images\game\modals`
 
 ## 5. Types
 - `ResultSummaryModel` `{ status: 'victory'|'defeat'; turns: number; citiesCaptured?: number }`.
