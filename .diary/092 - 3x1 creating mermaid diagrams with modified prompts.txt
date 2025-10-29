@@ -1,0 +1,125 @@
+# Mermaid Diagram – Auth Architecture
+
+You are a **security specialist** tasked with creating a **Mermaid diagram** to visualize the **authentication flow** for the **login and registration module**. The diagram should be created in the following file: **DESTINATION**
+
+<destination>  
+.ai/diagrams/auth.md  
+</destination>
+
+Your task is to analyze the login and registration implemented code in client (tenxempires.client) and server (tenxempires.server) and create a **comprehensive Mermaid diagram** that clearly depicts the **authentication sequence**. The diagram should be written **in English**.
+
+---
+
+### <authentication_analysis>
+
+Before creating the diagram, analyze the requirements and plan your approach. Place your analysis inside the `<authentication_analysis>` tags. In this analysis:
+
+1. List all authentication flows.
+2. Identify the main actors and their interactions.
+3. Define the processes of token verification and refreshing.
+4. Provide a brief description of each authentication step.
+
+---
+
+### When you're ready to create the diagram, follow these guidelines:
+
+#### 1. Start the diagram with the following syntax:
+
+```mermaid
+sequenceDiagram
+```
+
+---
+
+#### 2. Include the following elements in your diagram:
+
+* The **full lifecycle** of the authentication process in application
+* Communication between the following actors:
+
+  1. **Browser**
+  2. **Client**
+  3. **Server**
+  4. **Postgres**
+* Clear points of **user redirection** or **token verification**
+* The **data flow** after implementing new authentication requirements
+* How **user sessions** work after logging in and how the system reacts to **token expiration**
+* The **token refresh process** and **protection against unauthorized access**
+
+---
+
+### 3. Follow these Mermaid syntax rules:
+
+* Use the `autonumber` attribute for clear step sequencing
+
+* Maintain consistent spacing between elements for readability
+
+* Always use `participant` to declare actors before the sequence begins
+
+* Use the correct order in sequences (sender, arrow, receiver)
+
+* Use the correct activation/deactivation cycle:
+
+  ```mermaid
+  activate Browser
+  Browser->>API: Request data
+  deactivate Browser
+  ```
+
+* Use the appropriate arrow types:
+
+  * `->` for solid arrows (e.g., `Browser->API`)
+  * `-->` for dashed arrows (e.g., `API-->Browser: Token expired`)
+  * `->>` for open arrowheads (e.g., `Browser->>Auth: Login request`)
+  * `-->>` for dashed open arrowheads
+
+* For conditional flows, use `alt` / `else` / `end`:
+
+  ```mermaid
+  alt Authentication successful
+    Browser->>Dashboard: Redirect to dashboard
+  else Authentication failed
+    Browser->>LoginPage: Show error message
+  end
+  ```
+
+* For parallel actions, use `par` / `and` / `end`:
+
+  ```mermaid
+  par Send confirmation email
+    API->>EmailService: Send verification
+  and Update user status
+    API->>Database: Update status
+  end
+  ```
+
+* For multi-line notes, use the correct syntax:
+
+  ```mermaid
+  Note over Browser,API: This text will appear
+  in a note spanning both participants
+  ```
+
+* **DO NOT** exceed 80 characters per line
+
+* **DO NOT** include URLs, endpoint addresses, parentheses, long function names, or complex expressions in diagram labels
+  ❌ WRONG: `[Home Page<br/>(Rule Wizard)]`
+  ✅ RIGHT: `[Rule Wizard]`
+
+* Use **consistent naming** throughout the document
+
+---
+
+### 4. Avoid these common mistakes:
+
+* Missing Mermaid declaration and diagram type at the top
+* Incorrect arrow syntax (e.g., `->` instead of `->>`)
+* Using invalid characters in identifiers without quoting
+* Unbalanced code blocks (missing `end` for opened blocks)
+* Exceeding the character limit per line
+* Incorrectly nested conditional blocks
+
+---
+
+After creating the diagram, **review it carefully** to ensure there are no syntax errors or rendering issues. Make any necessary corrections to improve clarity and accuracy.
+
+When you're ready to present the final diagram, enclose it within `<mermaid_diagram>` tags.

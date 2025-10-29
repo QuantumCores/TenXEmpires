@@ -1,0 +1,124 @@
+# Mermaid Diagram – UI Components
+
+You are an experienced software architect tasked with creating a **Mermaid diagram** to visualize the architecture of tenxempire.client pages, React components for the login and registration module as well as tenxEmpires.server controllers. The diagram should be created in the following file: **DESTINATION**
+
+<destination>  
+.ai/diagrams/ui.md  
+</destination>
+
+Your task is to analyze implemented code in client (tenxempires.client) and server (tenxempires.server) for the login and registration module and create a comprehensive **Mermaid diagram** that accurately reflects the system architecture. The diagram should be in **English**.
+
+Before creating the diagram, analyze the code and plan your approach. Place your analysis inside the `<architecture_analysis>` tags. In this analysis:
+
+1. List all components.
+2. Identify the main pages and their corresponding components.
+3. Determine the data flow between components.
+4. Provide a brief description of each component’s functionality.
+
+When you are ready to create the diagram, follow these guidelines:
+
+---
+
+### 1. Start the diagram with the following syntax:
+
+```mermaid
+flowchart TD
+```
+
+---
+
+### 2. Include the following elements in your diagram:
+
+* UI structure
+* Layouts, server pages, components and controllers
+* Grouping of elements by functionality
+* Direction of data flow between components ans controllers
+* Modules responsible for application state
+* Separation of shared components and page-specific components
+* Dependencies between authentication-related components, controllers and the rest of the app
+
+---
+
+### 3. Mermaid Syntax Rules:
+
+* Use consistent **node ID formatting**:
+
+  ```
+  A[Main Panel] --> B[Login Form]
+  B --> C[Data Validation]
+  ```
+
+* Node IDs are **case-sensitive** and must be **unique**
+
+* Use appropriate **node shapes**:
+
+  * `[Text]` for rectangles
+  * `(Text)` for rounded rectangles
+  * `((Text))` for circles
+  * `{Text}` for diamonds
+  * `>Text]` for flags
+  * `[[Text]]` for subroutines
+
+* Group related elements using **subgraphs**:
+
+  ```
+  subgraph "Authentication Module"
+    A[Login Form]
+    B[Data Validation]
+    C[Session Management]
+  end
+  ```
+
+* Use **intermediate nodes** for complex relationships instead of overly tangled connections
+
+* Prefer **vertical layout** for hierarchy and **horizontal layout** for process flows
+
+* Use correct **connection types**:
+
+  * `-->` for standard arrows
+  * `---` for lines without arrows
+  * `-.->` for dotted arrows
+  * `==>` for thick arrows
+  * `--Text-->` for arrows with labels
+
+* Avoid using URLs, endpoint addresses, brackets, long function names, or complex expressions in node names
+
+* Maintain **consistent naming** throughout the document
+
+* Avoid long labels that might cause rendering issues
+
+* Use **quotation marks** for text containing spaces:
+
+  ```
+  A["Authentication Component"] --> B["State Management"]
+  ```
+
+* For styling nodes, use the following syntax:
+
+  ```
+  A:::styleClass --> B
+  ```
+
+  with the class definition:
+
+  ```
+  classDef styleClass fill:#f96,stroke:#333,stroke-width:2px;
+  ```
+
+---
+
+### 4. Avoid these common mistakes:
+
+* Missing Mermaid section and diagram type declaration at the top
+* Invalid node IDs (with disallowed characters)
+* Unclosed subgraphs (missing `end` for a `subgraph`)
+* Unclosed square brackets in node descriptions
+* Inconsistent flow directions (mixing TD and LR without justification)
+* Diagrams that are too complex without proper grouping
+* Overlapping labels and connections
+
+---
+
+After creating the diagram, **review it carefully** to ensure there are no syntax errors or rendering issues. Make any necessary adjustments to improve clarity and accuracy.
+
+When you're ready to present the final diagram, enclose it within `<mermaid_diagram>` tags.
