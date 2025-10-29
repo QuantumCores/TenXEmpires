@@ -1,0 +1,10 @@
+https://gitingest.com/QuantumCores/TenXEmpires/
+
+excludes:
+*.md, *.txt, *.png, TenXEmpires.Server/Examples/, TenXEmpires.Server/Infrastructure/, TenXEmpires.Server.Tests/, .cursor/, .github/, .dockerignore, .editorconfig, db/, tools/
+
+
+Had some problems generating test plan
+1. Gpt 5 mini - simple plan, missing a lot, had errors
+2. Gemini 2 Pro - ok plan but missing some details liek RLS editorconfig
+3. Sonet 4.5 - big very detald plan, extremaly good but a bit bloated. Either way I'll use that one
