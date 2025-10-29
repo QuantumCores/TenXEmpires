@@ -14,6 +14,7 @@ import type {
 } from '../../types/game'
 import { useRef } from 'react'
 import { withCsrfRetry } from '../../api/csrf'
+import { useModalParam } from '../../router/query'
 import { useGameErrorHandler } from './errorHandling'
 
 // ============================================================================
@@ -38,6 +39,7 @@ interface UseGameStateOptions {
 
 export function useGameState(gameId: number | undefined, options: UseGameStateOptions = {}) {
   const etagRef = useRef<string | undefined>(undefined)
+  const { state, openModal } = useModalParam()
 
   return useQuery({
     queryKey: gameId ? gameKeys.state(gameId) : ['game', 'none'],
@@ -51,6 +53,14 @@ export function useGameState(gameId: number | undefined, options: UseGameStateOp
         return null // Query will keep previous data
       }
       
+      // Unauthorized: open session expired modal
+      if (!result.ok && (result.status === 401 || result.status === 403)) {
+        if (state.modal !== 'session-expired') {
+          openModal('session-expired', undefined, 'replace')
+        }
+        throw new Error(`Unauthorized: ${result.status}`)
+      }
+
       // Store ETag for next request
       // Note: In a real implementation, you'd extract this from response headers
       // For now, we'll skip ETag caching on the client side

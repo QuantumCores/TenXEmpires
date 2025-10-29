@@ -27,6 +27,7 @@ export function useModalParam() {
   const [sp] = useSearchParams()
   const navigate = useNavigate()
   const setUiModal = useUiStore((s) => s.setModalState)
+  const setSessionLocked = useUiStore((s) => s.setSessionLocked)
 
   const state = useMemo<ModalRouteState>(() => {
     return {
@@ -47,7 +48,9 @@ export function useModalParam() {
       navigate(url.pathname + (url.search ? `?${url.searchParams.toString()}` : ''), { replace: true })
     }
     setUiModal(state.modal)
-  }, [sp, state.modal, navigate, setUiModal])
+    // Update session lock globally based on session-expired modal visibility
+    setSessionLocked(state.modal === 'session-expired')
+  }, [sp, state.modal, navigate, setUiModal, setSessionLocked])
 
   const openModal = (key: ModalKey, opts?: { tab?: string }, action: 'push' | 'replace' = 'push') => {
     const url = new URL(window.location.href)
@@ -74,4 +77,3 @@ export function useModalParam() {
 
   return { state, openModal, closeModal, openConfirm }
 }
-

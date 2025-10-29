@@ -1,4 +1,5 @@
 import { useNotifications } from '../../components/ui/notifications'
+import { useModalParam } from '../../router/query'
 import type { HttpResult } from '../../api/http'
 
 // Error codes from the backend
@@ -217,6 +218,7 @@ export function getErrorNotification(error: GameError): {
  */
 export function useGameErrorHandler() {
   const notifications = useNotifications()
+  const { state, openModal } = useModalParam()
 
   return {
     handleError: (result: HttpResult<unknown>) => {
@@ -231,11 +233,9 @@ export function useGameErrorHandler() {
         ttlMs: notification.ttlMs,
       })
 
-      // Handle redirects
-      if (error.shouldRedirect) {
-        setTimeout(() => {
-          window.location.href = error.shouldRedirect!
-        }, 1000)
+      // Open session-expired modal on unauthorized
+      if ((error.status === 401 || error.status === 403) && state.modal !== 'session-expired') {
+        openModal('session-expired', undefined, 'replace')
       }
 
       return error

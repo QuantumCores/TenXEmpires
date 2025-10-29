@@ -10,14 +10,13 @@ export interface ResultOverlayProps {
   status: 'victory' | 'defeat'
   turns: number
   citiesCaptured?: number
-  gameId: number
 }
 
 // ============================================================================
 // ResultOverlay Component
 // ============================================================================
 
-export function ResultOverlay({ status, turns, citiesCaptured, gameId }: ResultOverlayProps) {
+export function ResultOverlay({ status, turns, citiesCaptured }: ResultOverlayProps) {
   const titleId = useId()
   const overlayRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()

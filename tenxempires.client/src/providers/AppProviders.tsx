@@ -18,8 +18,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <CsrfProvider>{children}</CsrfProvider>
+      <CsrfProvider>
+        {children}
+      </CsrfProvider>
     </QueryClientProvider>
   )
 }
-

@@ -75,4 +75,7 @@ Throughout the implementation process, strictly adhere to the provided implement
 
 Ensure that your implementation accurately reflects the provided implementation plan and adheres to all specified rules. Pay special attention to component structure, API integration, and handling of user interactions.
 
-!! When modifying the directory structure, always update thie structure section in [shared-frontend.mdc](.cursor/rules/shared-frontend.mdc) file!!
+!! IMPORTANT !!
+1. When modifying the directory structure, always update thie structure section in [shared-frontend.mdc](.cursor/rules/shared-frontend.mdc) file!!
+
+2. Mark plan as completed in @ui-plan.md file

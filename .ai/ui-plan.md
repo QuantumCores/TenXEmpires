@@ -45,7 +45,7 @@ The following implementation plans in `.ai/ui/` break down the UI into manageabl
   Game end: Victory/defeat full-screen overlay, stats, next steps
 
 ### System Modals (Error & Session Handling)
-- **[13 - session-expired-modal-view-implementation-plan.md](.ai/ui/13%20-%20session-expired-modal-view-implementation-plan.md)**  
+- **[13 - session-expired-modal-view-implementation-plan.md](.ai/ui/13%20-%20session-expired-modal-view-implementation-plan.md)**  ✅COMPLETED 
   Session management: Session expired modal, re-auth prompt, keepalive integration (`?modal=session-expired`)
   
 - **[14 - error-schema-modal-view-implementation-plan.md](.ai/ui/14%20-%20error-schema-modal-view-implementation-plan.md)**  

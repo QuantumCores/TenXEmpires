@@ -23,17 +23,17 @@ When introducing changes to the project, always follow the directory structure b
 - `./tenxempires.client/src/pages/api` - API endpoints
 - `./tenxempires.client/src/components` - client-side components
 - `./tenxempires.client/src/components/auth` - authentication-related components (forms, modals)
-- `./tenxempires.client/src/components/modals` - modal containers and managers (ModalContainer.tsx, ModalManager.tsx, StartNewGameModal.tsx, SavesModal.tsx)
+- `./tenxempires.client/src/components/modals` - modal containers and managers (ModalContainer.tsx, ModalManager.tsx, StartNewGameModal.tsx, SavesModal.tsx, SettingsModal.tsx, SessionExpiredModal.tsx)
 - `./tenxempires.client/src/components/landing` - landing page components
 - `./tenxempires.client/src/components/layouts` - layout components
 - `./tenxempires.client/src/components/ui` - shared UI components
 - `./tenxempires.client/src/components/game` - game-specific components (map, units, cities, AIOverlay.tsx, ActionRail.tsx, BottomPanel.tsx, EndTurnButton.tsx, MapCanvasStack.tsx, ResultOverlay.tsx, ToastsCenter.tsx, TopBar.tsx, TurnLogPanel.tsx)
 - `./tenxempires.client/src/types` - TypeScript type definitions (game.ts, auth.ts, api.ts, view.ts, errors.ts, games.ts, saves.ts)
-- `./tenxempires.client/src/api` - API client utilities (games.ts, saves.ts, csrf.ts, http.ts)
+- `./tenxempires.client/src/api` - API client utilities (games.ts, saves.ts, auth.ts, csrf.ts, http.ts)
 - `./tenxempires.client/src/features` - feature-specific code (auth, analytics, game, etc.)
 - `./tenxempires.client/src/features/game` - game-specific hooks and state management (useGameQueries.ts, useSavesQueries.ts, useGameMapStore.ts, useGameHotkeys.ts, errorHandling.ts, pathfinding.ts, spriteCache.ts, etc.)
 - `./tenxempires.client/src/router` - routing configuration
-- `./tenxempires.client/src/providers` - React context providers
+- `./tenxempires.client/src/providers` - React context providers (AppProviders.tsx, CsrfProvider.tsx, IdleSessionProvider.tsx)
 - `./tenxempires.client/src/assets` - static internal assets
 - `./tenxempires.client/public` - public assets
 

@@ -15,7 +15,9 @@ import { ResultOverlay } from '../../components/game/ResultOverlay'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 import { useGameHotkeys } from '../../features/game/useGameHotkeys'
 import { useEndTurn } from '../../features/game/useGameQueries'
+import { useUiStore } from '../../components/ui/uiStore'
 import './GameMapPage.css'
+import { IdleSessionProvider } from '../../providers/IdleSessionProvider'
 
 export function GameMapPage() {
   const { id } = useParams<{ id: string }>()
@@ -72,13 +74,15 @@ export function GameMapPage() {
   if (isNewGameContext) {
     const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
     return (
-      <div className="game-map-page relative flex min-h-dvh flex-col">
-        <Banners />
-        <div className="flex flex-1 items-center justify-center">
-          <div className="text-slate-600">Starting new game...</div>
+      <IdleSessionProvider>
+        <div className="game-map-page relative flex min-h-dvh flex-col">
+          <Banners />
+          <div className="flex flex-1 items-center justify-center">
+            <div className="text-slate-600">Starting new game...</div>
+          </div>
+          <ModalManager gameId={id || 'new'} status={status} />
         </div>
-        <ModalManager gameId={id || 'new'} status={status} />
-      </div>
+      </IdleSessionProvider>
     )
   }
 
@@ -101,7 +105,8 @@ export function GameMapPage() {
   }
 
   const turnInProgress = gameState.game.turnInProgress
-  const isActionsDisabled = !isOnline || turnInProgress
+  const sessionLocked = useUiStore((s) => s.sessionLocked)
+  const isActionsDisabled = !isOnline || turnInProgress || sessionLocked
 
   // Find next unit that hasn't acted
   const findNextUnit = useCallback(() => {
@@ -163,6 +168,7 @@ export function GameMapPage() {
     : 0
 
   return (
+    <IdleSessionProvider>
     <div className="game-map-page relative flex min-h-dvh flex-col">
       <TopBar
         turnNo={gameState.game.turnNo}
@@ -210,10 +216,10 @@ export function GameMapPage() {
           status={resultStatus}
           turns={gameState.game.turnNo}
           citiesCaptured={citiesCaptured}
-          gameId={gameId!}
         />
       )}
     </div>
+    </IdleSessionProvider>
   )
 }
 
