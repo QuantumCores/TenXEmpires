@@ -2,7 +2,7 @@ import './App.css'
 import { AppRouter } from './router/AppRouter'
 import { AppProviders } from './providers/AppProviders'
 
-function App() {
+function App(): React.JSX.Element {
   return (
     <AppProviders>
       <AppRouter />

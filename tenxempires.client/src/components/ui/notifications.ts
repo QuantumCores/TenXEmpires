@@ -16,7 +16,7 @@ interface NotificationsState {
 
 export const useNotifications = create<NotificationsState>((set, get) => ({
   banners: [],
-  add: ({ id, kind, message, ttlMs }) => {
+  add: ({ id, kind, message, ttlMs }): string => {
     const newId = id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
     const exists = get().banners.some((b) => b.id === newId)
     const next = exists
@@ -24,14 +24,12 @@ export const useNotifications = create<NotificationsState>((set, get) => ({
       : [...get().banners, { id: newId, kind, message }]
     set({ banners: next })
     if (ttlMs && ttlMs > 0) {
-      const timeout = window.setTimeout(() => {
+      window.setTimeout(() => {
         get().remove(newId)
       }, ttlMs)
-      // Fire-and-forget; timers are not tracked to keep store simple
-      void timeout
     }
     return newId
   },
-  remove: (id: string) => set({ banners: get().banners.filter((b) => b.id !== id) }),
+  remove: (id: string): void => set({ banners: get().banners.filter((b) => b.id !== id) }),
 }))
 

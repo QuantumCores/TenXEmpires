@@ -11,7 +11,10 @@ import type {
   MoveUnitCommand,
   AttackUnitCommand,
   GameStateDto,
+  ActionStateResponse,
+  EndTurnResponse,
 } from '../../types/game'
+import type { ApiErrorDto } from '../../types/errors'
 import { useRef } from 'react'
 import { withCsrfRetry } from '../../api/csrf'
 import { useModalParam } from '../../router/query'
@@ -133,12 +136,16 @@ interface MutationContext {
   previousState?: GameStateDto
 }
 
+function isCsrfError(data: unknown): data is ApiErrorDto {
+  return typeof data === 'object' && data !== null && 'code' in data && (data as ApiErrorDto).code === 'CSRF_INVALID'
+}
+
 export function useMoveUnit(gameId: number) {
   const queryClient = useQueryClient()
   const { handleError } = useGameErrorHandler()
 
   return useMutation<
-    unknown,
+    ActionStateResponse,
     Error,
     MoveUnitCommand,
     MutationContext
@@ -149,7 +156,7 @@ export function useMoveUnit(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => moveUnit(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
       if (!result.ok || !result.data) {
@@ -157,7 +164,7 @@ export function useMoveUnit(gameId: number) {
         throw new Error(`Move failed: ${result.status}`)
       }
       
-      return result.data
+      return result.data as ActionStateResponse
     },
     onMutate: async () => {
       // Cancel outgoing refetches
@@ -168,7 +175,7 @@ export function useMoveUnit(gameId: number) {
       
       return { previousState }
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: ActionStateResponse) => {
       // Write-through: update cache with new state
       if (data?.state) {
         queryClient.setQueryData(gameKeys.state(gameId), data.state)
@@ -188,7 +195,7 @@ export function useAttackUnit(gameId: number) {
   const { handleError } = useGameErrorHandler()
 
   return useMutation<
-    unknown,
+    ActionStateResponse,
     Error,
     AttackUnitCommand,
     MutationContext
@@ -199,7 +206,7 @@ export function useAttackUnit(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => attackUnit(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
       if (!result.ok || !result.data) {
@@ -207,14 +214,14 @@ export function useAttackUnit(gameId: number) {
         throw new Error(`Attack failed: ${result.status}`)
       }
       
-      return result.data
+      return result.data as ActionStateResponse
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: gameKeys.state(gameId) })
       const previousState = queryClient.getQueryData<GameStateDto>(gameKeys.state(gameId))
       return { previousState }
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: ActionStateResponse) => {
       if (data?.state) {
         queryClient.setQueryData(gameKeys.state(gameId), data.state)
       }
@@ -232,7 +239,7 @@ export function useEndTurn(gameId: number) {
   const { handleError } = useGameErrorHandler()
 
   return useMutation<
-    unknown,
+    EndTurnResponse,
     Error,
     void,
     MutationContext
@@ -243,7 +250,7 @@ export function useEndTurn(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => endTurn(gameId, idempotencyKey),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
       if (!result.ok || !result.data) {
@@ -251,14 +258,14 @@ export function useEndTurn(gameId: number) {
         throw new Error(`End turn failed: ${result.status}`)
       }
       
-      return result.data
+      return result.data as EndTurnResponse
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: gameKeys.state(gameId) })
       const previousState = queryClient.getQueryData<GameStateDto>(gameKeys.state(gameId))
       return { previousState }
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: EndTurnResponse) => {
       if (data?.state) {
         queryClient.setQueryData(gameKeys.state(gameId), data.state)
       }

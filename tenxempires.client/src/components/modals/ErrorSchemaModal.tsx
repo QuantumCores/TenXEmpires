@@ -25,18 +25,20 @@ export function ErrorSchemaModal({ onRequestClose }: ErrorSchemaModalProps) {
     const payload = schemaError ?? { code: 'SCHEMA_MISMATCH', message: description }
     try {
       return JSON.stringify(payload, null, 2)
-    } catch {
+    } catch (err: unknown) {
+      console.error('[ErrorSchemaModal] Failed to stringify error:', err)
       return JSON.stringify({ message: description })
     }
   }, [schemaError, description])
 
-  const onCopy = async () => {
+  const onCopy = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(jsonDetails)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // ignore clipboard errors
+    } catch (err: unknown) {
+      // Ignore clipboard errors (browser may block clipboard access)
+      console.warn('[ErrorSchemaModal] Clipboard write failed:', err)
     }
   }
 

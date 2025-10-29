@@ -55,7 +55,7 @@ export function GameMapPage() {
 
   // Detect rate limiting from query errors
   useEffect(() => {
-    if (error && (error as any).status === 429) {
+    if (error && 'status' in error && (error as { status: number }).status === 429) {
       setIsRateLimited(true)
       const timer = setTimeout(() => setIsRateLimited(false), 10000)
       return () => clearTimeout(timer)

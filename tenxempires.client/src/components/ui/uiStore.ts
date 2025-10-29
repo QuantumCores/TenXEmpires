@@ -1,14 +1,20 @@
 import { create } from 'zustand'
 import type { ModalKey } from '../modals/ModalManager'
 
+interface SchemaError {
+  code: string
+  message: string
+  details?: unknown
+}
+
 interface UiState {
   isModalOpen: boolean
   modalKey?: ModalKey
   setModalState: (key?: ModalKey) => void
   sessionLocked: boolean
   setSessionLocked: (locked: boolean) => void
-  schemaError?: { code: string; message: string; details?: unknown }
-  setSchemaError: (err?: { code: string; message: string; details?: unknown }) => void
+  schemaError?: SchemaError
+  setSchemaError: (err?: SchemaError) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({

@@ -49,13 +49,13 @@ export function StartNewGameModal({
         
         if (result.status === 422) {
           // MAP_SCHEMA_MISMATCH -> open blocking schema modal
-          const dataAny = result.data as any
-          const code = dataAny?.code as string | undefined
+          const errorData = result.data as ApiErrorDto | undefined
+          const code = errorData?.code
           if (code === 'MAP_SCHEMA_MISMATCH' || code === 'SCHEMA_MISMATCH') {
             setSchemaError({
-              code: code!,
-              message: (dataAny?.message as string) || 'Schema mismatch.',
-              details: dataAny?.details,
+              code,
+              message: errorData?.message || 'Schema mismatch.',
+              details: undefined,
             })
             openModal('error-schema', undefined, 'replace')
             setIsCreating(false)

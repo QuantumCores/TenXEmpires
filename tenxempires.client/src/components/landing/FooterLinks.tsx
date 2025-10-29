@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 
-export function FooterLinks() {
+export function FooterLinks(): React.JSX.Element {
   return (
-    <footer className="mx-auto mt-16 max-w-6xl border-t border-slate-700/60 px-4 py-6 text-sm text-slate-400">
+    <footer className="mt-16 border-t border-slate-700/60 py-6 text-sm text-slate-400">
       <div className="flex items-center justify-between">
         <div>© {new Date().getFullYear()} TenX Empires</div>
         <div className="flex items-center gap-4">

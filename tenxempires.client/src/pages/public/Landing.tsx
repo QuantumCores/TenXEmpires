@@ -6,7 +6,7 @@ import { LandingHighlights } from '../../components/landing/LandingHighlights'
 import { ConsentBanner } from '../../components/landing/ConsentBanner'
 import { Banners } from '../../components/ui/Banners'
 
-export default function Landing() {
+export default function Landing(): React.JSX.Element {
   const { data: auth } = useAuthStatusQuery()
 
   return (

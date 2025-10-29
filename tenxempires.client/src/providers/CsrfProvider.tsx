@@ -18,7 +18,8 @@ async function requestCsrf(): Promise<{ ok: boolean; status: number }> {
       headers: { 'Accept': 'application/json' },
     })
     return { ok: res.ok, status: res.status }
-  } catch {
+  } catch (err: unknown) {
+    console.error('[CSRF] Request failed:', err)
     return { ok: false, status: 0 }
   }
 }

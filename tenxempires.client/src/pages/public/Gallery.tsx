@@ -1,8 +1,8 @@
 import { PublicLayout } from '../../components/layouts/PublicLayout'
 
-export default function Gallery() {
+export default function Gallery(): React.JSX.Element {
   return (
-    <PublicLayout maxWidth="medium">
+    <PublicLayout maxWidth="full">
       <section className="py-12">
         <div className="rounded-3xl border border-slate-700/60 bg-slate-900/70 px-8 py-12 backdrop-blur supports-[backdrop-filter]:bg-slate-900/50">
           <h1 className="text-4xl font-bold text-white">Gallery</h1>

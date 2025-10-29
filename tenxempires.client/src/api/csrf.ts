@@ -20,7 +20,8 @@ export async function refreshCsrfToken(): Promise<boolean> {
         headers: { 'Accept': 'application/json' },
       })
       return response.ok
-    } catch {
+    } catch (err: unknown) {
+      console.error('[CSRF] Token refresh failed:', err)
       return false
     } finally {
       // Clear the promise after completion

@@ -186,14 +186,14 @@ export function getErrorNotification(error: GameError): {
   }
 
   // Action errors - warning (user mistake)
-  const actionErrors = [
+  const actionErrors: readonly string[] = [
     ErrorCodes.ILLEGAL_MOVE,
     ErrorCodes.ONE_UNIT_PER_TILE,
     ErrorCodes.NO_ACTIONS_LEFT,
     ErrorCodes.OUT_OF_RANGE,
     ErrorCodes.INVALID_TARGET,
   ]
-  if (actionErrors.includes(error.code as any)) {
+  if (actionErrors.includes(error.code)) {
     return {
       kind: 'warning',
       message: error.message,
@@ -218,16 +218,21 @@ export function getErrorNotification(error: GameError): {
   }
 }
 
+interface GameErrorHandler {
+  handleError: (result: HttpResult<unknown>) => GameError
+  handleRateLimit: () => void
+}
+
 /**
  * Hook to handle game errors with notifications and routing
  */
-export function useGameErrorHandler() {
+export function useGameErrorHandler(): GameErrorHandler {
   const notifications = useNotifications()
   const { state, openModal } = useModalParam()
   const setSchemaError = useUiStore((s) => s.setSchemaError)
 
   return {
-    handleError: (result: HttpResult<unknown>) => {
+    handleError: (result: HttpResult<unknown>): GameError => {
       const error = parseGameError(result)
       const notification = getErrorNotification(error)
 
@@ -246,14 +251,14 @@ export function useGameErrorHandler() {
 
       // Schema mismatch handling -> open blocking error-schema modal
       if (result.status === 422) {
-        const dataAny = result.data as any
-        const code = dataAny?.code as string | undefined
+        const errorResponse = result.data as ErrorResponse | undefined
+        const code = errorResponse?.code
         if (code === ErrorCodes.SCHEMA_MISMATCH || code === ErrorCodes.MAP_SCHEMA_MISMATCH) {
           // Persist last schema error for the modal
           setSchemaError({
-            code: code!,
-            message: (dataAny?.message as string) || error.message,
-            details: dataAny?.details,
+            code,
+            message: errorResponse?.message || error.message,
+            details: errorResponse?.details,
           })
           if (state.modal !== 'error-schema') {
             openModal('error-schema', undefined, 'replace')
@@ -264,7 +269,7 @@ export function useGameErrorHandler() {
       return error
     },
 
-    handleRateLimit: () => {
+    handleRateLimit: (): void => {
       notifications.add({
         id: 'rate-limit-global',
         kind: 'warning',

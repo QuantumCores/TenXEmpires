@@ -14,7 +14,8 @@ vi.mock('../../router/query', () => ({
 
 vi.mock('../../components/ui/uiStore', () => ({
   // Simulate zustand selector usage
-  useUiStore: (selector: any) => selector({ setSchemaError }),
+  useUiStore: <T,>(selector: (state: { setSchemaError: typeof setSchemaError }) => T) => 
+    selector({ setSchemaError }),
 }))
 
 import { useGameErrorHandler } from './errorHandling'

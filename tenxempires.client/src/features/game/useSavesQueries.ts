@@ -11,9 +11,14 @@ import type {
   LoadSaveResponse,
 } from '../../types/saves'
 import type { GameStateDto } from '../../types/game'
+import type { ApiErrorDto } from '../../types/errors'
 import { withCsrfRetry } from '../../api/csrf'
 import { useGameErrorHandler } from './errorHandling'
 import { gameKeys } from './useGameQueries'
+
+function isCsrfError(data: unknown): data is ApiErrorDto {
+  return typeof data === 'object' && data !== null && 'code' in data && (data as ApiErrorDto).code === 'CSRF_INVALID'
+}
 
 // ============================================================================
 // Query Keys
@@ -67,7 +72,7 @@ export function useSaveManualMutation(gameId: number) {
   const { handleError } = useGameErrorHandler()
 
   return useMutation<
-    unknown,
+    void,
     Error,
     CreateManualSaveCommand,
     MutationContext
@@ -78,15 +83,15 @@ export function useSaveManualMutation(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => createManualSave(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
-      if (!result.ok || !result.data) {
+      if (!result.ok) {
         handleError(result)
         throw new Error(`Save failed: ${result.status}`)
       }
       
-      return result.data
+      return undefined
     },
     onMutate: async () => {
       // Cancel outgoing refetches
@@ -119,7 +124,7 @@ export function useDeleteManualMutation(gameId: number) {
   const { handleError } = useGameErrorHandler()
 
   return useMutation<
-    unknown,
+    void,
     Error,
     number, // slot number
     MutationContext
@@ -128,7 +133,7 @@ export function useDeleteManualMutation(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => deleteManualSave(gameId, slot),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
       if (!result.ok) {
@@ -136,7 +141,7 @@ export function useDeleteManualMutation(gameId: number) {
         throw new Error(`Delete failed: ${result.status}`)
       }
       
-      return result.data
+      return undefined
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: savesKeys.list(gameId) })
@@ -175,7 +180,7 @@ export function useLoadSaveMutation(gameId: number) {
       // Wrap with CSRF retry logic
       const result = await withCsrfRetry(
         () => loadSave(saveId, idempotencyKey),
-        (res) => res.status === 403 && (res.data as any)?.code === 'CSRF_INVALID'
+        (res) => res.status === 403 && isCsrfError(res.data)
       )
       
       if (!result.ok || !result.data) {
@@ -183,7 +188,7 @@ export function useLoadSaveMutation(gameId: number) {
         throw new Error(`Load save failed: ${result.status}`)
       }
       
-      return result.data
+      return result.data as LoadSaveResponse
     },
     onMutate: async () => {
       // Cancel outgoing refetches

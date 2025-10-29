@@ -49,7 +49,12 @@ export function ModalContainer({ titleId, onRequestClose, initialFocusRef, close
       document.body.style.overflow = prevOverflow
       if (root) root.removeAttribute('aria-hidden')
       // Restore focus
-      try { prevActiveEl.current?.focus({ preventScroll: true }) } catch {}
+      try { 
+        prevActiveEl.current?.focus({ preventScroll: true }) 
+      } catch (err: unknown) {
+        // Element may no longer be in DOM or focusable
+        console.debug('[ModalContainer] Failed to restore focus:', err)
+      }
     }
   }, [])
 

@@ -32,16 +32,23 @@ function readCookie(name: string): string | undefined {
 
 async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE', body?: TReq, init?: RequestInit): Promise<HttpResult<TRes>> {
   try {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
+    }
+
+    // Merge any headers from init
+    if (init?.headers) {
+      const initHeaders = new Headers(init.headers)
+      initHeaders.forEach((value, key) => {
+        headers[key] = value
+      })
     }
 
     const token = readCookie('XSRF-TOKEN')
     if (token) {
       // Server expects this header name per SecurityConstants.XsrfHeader
-      ;(headers as any)['X-XSRF-TOKEN'] = token
+      headers['X-XSRF-TOKEN'] = token
     }
 
     const res = await fetch(path, {
@@ -58,19 +65,21 @@ async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE',
     }
     const data = (await res.json()) as TRes
     return { ok: res.ok, status, data }
-  } catch {
+  } catch (err: unknown) {
+    // Network error or JSON parse error
+    console.error('[HTTP] Request failed:', err)
     return { ok: false, status: 0 }
   }
 }
 
-export function postJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit) {
+export function postJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit): Promise<HttpResult<TRes>> {
   return sendJson<TReq, TRes>(path, 'POST', body, init)
 }
 
-export function putJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit) {
+export function putJson<TReq, TRes>(path: string, body: TReq, init?: RequestInit): Promise<HttpResult<TRes>> {
   return sendJson<TReq, TRes>(path, 'PUT', body, init)
 }
 
-export function deleteJson<TRes>(path: string, init?: RequestInit) {
+export function deleteJson<TRes>(path: string, init?: RequestInit): Promise<HttpResult<TRes>> {
   return sendJson<undefined, TRes>(path, 'DELETE', undefined, init)
 }
