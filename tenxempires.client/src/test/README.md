@@ -4,13 +4,37 @@ This directory contains unit and component tests using Vitest and React Testing 
 
 ## Structure
 
+Tests are organized in a centralized `test/` directory that mirrors the source code structure:
+
 ```
 src/
 ├── test/
+│   ├── api/
+│   │   └── http.test.ts
+│   ├── components/
+│   │   └── ui/
+│   │       └── Button.test.tsx
+│   ├── features/
+│   │   └── game/
+│   │       ├── errorHandling.test.ts
+│   │       ├── hexGeometry.test.ts
+│   │       ├── pathfinding.test.ts
+│   │       └── zoom.test.ts
 │   ├── setup.ts          # Global test setup
 │   └── README.md         # This file
-└── **/*.test.{ts,tsx}    # Test files colocated with source
+├── api/
+│   └── http.ts           # ← Tested by test/api/http.test.ts
+├── components/
+│   └── ui/               # ← Tested by test/components/ui/Button.test.tsx
+├── features/
+│   └── game/             # ← Tested by test/features/game/*.test.ts
+│       ├── errorHandling.ts
+│       ├── hexGeometry.ts
+│       ├── pathfinding.ts
+│       └── zoom.ts
 ```
+
+**Note:** Tests in `test/` follow the same directory structure as `src/`, making it easy to find the corresponding source file.
 
 ## Running Tests
 

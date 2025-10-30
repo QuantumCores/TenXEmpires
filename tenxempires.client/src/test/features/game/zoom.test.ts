@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { CameraState } from '../../types/game'
-import { computeZoomUpdate } from './zoom'
+import type { CameraState } from '../../../types/game'
+import { computeZoomUpdate } from '../../../features/game/zoom'
 
 const baseCamera: CameraState = { scale: 1, offsetX: 0, offsetY: 0 }
 const viewport = { width: 1000, height: 800 }
@@ -49,3 +49,4 @@ describe('computeZoomUpdate', () => {
     expect(computeZoomUpdate(camMin, pointer, viewport, false, 100)).toBeUndefined()
   })
 })
+

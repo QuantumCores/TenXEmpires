@@ -1,0 +1,258 @@
+I'll help you identify which elements of the tenXEmpires.client project are worth testing with unit tests. Let me first examine the current testing documentation and explore the project structure.
+
+[2 tools called]
+
+Let me explore some key areas of the codebase to provide a comprehensive analysis:
+
+[12 tools called]
+
+Based on my analysis of the tenXEmpires.client codebase, here's a comprehensive breakdown of what elements are worth testing with unit tests and why:
+
+## 🎯 **High Priority: Pure Business Logic & Algorithms**
+
+### 1. **Hexagonal Geometry (`features/game/hexGeometry.ts`)** ✅ **CRITICAL**
+
+**Why test:**
+- Complex mathematical calculations for coordinate conversions
+- Core game mechanic that other systems depend on
+- Easy to test (pure functions, deterministic)
+- Bugs here break the entire game
+- Matches backend implementation - contract must be maintained
+
+**Key functions to test:**
+- `oddrToCube()` / `cubeToOddr()` - coordinate conversions
+- `pixelToOddr()` / `oddrToPixel()` - screen-to-world mapping
+- `hexDistance()` - distance calculations
+- `getNeighbors()` - adjacency logic
+- `isInRange()` - range checking
+- `isPointInHex()` - hit detection
+
+### 2. **Pathfinding (`features/game/pathfinding.ts`)** ✅ **CRITICAL**
+
+**Why test:**
+- A* algorithm implementation with complex edge cases
+- Performance-critical (affects game responsiveness)
+- Many branches: blocked tiles, range limits, bounds checking
+- Hard to debug visually when broken
+
+**Key functions to test:**
+```typescript
+- findPath() - various scenarios: direct path, obstacles, no path, out of range
+- getReachableTiles() - movement range calculation
+- getAttackableTiles() - attack range with min/max distances
+```
+
+**Test scenarios:**
+- Straight line path
+- Path around obstacles
+- No path available (blocked)
+- Path at maximum movement range
+- Out-of-bounds handling
+- Same start/end position
+
+### 3. **Zoom Logic (`features/game/zoom.ts`)** ✅ **Already tested!**
+
+Great start! This is a good example of pure logic worth testing.
+
+---
+
+## 🔥 **High Priority: State Management & Business Rules**
+
+### 4. **Error Handling (`features/game/errorHandling.ts`)** ⚠️ **Partially tested**
+
+**Why test:**
+- Complex branching logic for different HTTP status codes
+- User experience depends on correct error classification
+- Easy to miss edge cases (should retry vs shouldn't)
+
+**Extend tests to cover:**
+```typescript
+- parseGameError() for all status codes (401, 403, 409, 422, 429, 500+)
+- getErrorNotification() for different error types
+- Network errors (status 0)
+- CSRF token handling
+- Rate limiting logic
+```
+
+### 5. **Cookie/Consent Management (`features/consent/useConsent.ts`)** ✅ **IMPORTANT**
+
+**Why test:**
+- Privacy compliance is legally critical
+- Cookie parsing can fail with malformed data
+- State persistence logic needs verification
+
+**Test scenarios:**
+```typescript
+- readConsentCookie() with various cookie formats
+- writeConsentCookie() creates correct cookie string
+- accept() / decline() updates state correctly
+- hydrateFromCookie() initializes state properly
+```
+
+### 6. **Notifications Store (`components/ui/notifications.ts`)** ✅ **IMPORTANT**
+
+**Why test:**
+- Manages global UI state
+- TTL logic with setTimeout (timing-sensitive)
+- Duplicate ID handling
+- State update immutability
+
+**Test scenarios:**
+```typescript
+- add() creates unique IDs when not provided
+- add() with existing ID updates banner
+- remove() filters correctly
+- TTL expiration (use vi.useFakeTimers())
+```
+
+### 7. **UI Store (`components/ui/uiStore.ts`)** ✅ **MEDIUM**
+
+**Why test:**
+- Modal state coordination
+- Session lock logic
+- Schema error state persistence
+
+**Test:**
+```typescript
+- setModalState() updates both isModalOpen and modalKey
+- setModalState('session-expired') sets sessionLocked=true
+- setSchemaError() stores error details
+```
+
+---
+
+## 🔧 **Medium Priority: Utility Functions & Helpers**
+
+### 8. **HTTP Client (`api/http.ts`)** ✅ **IMPORTANT**
+
+**Why test:**
+- CSRF token reading from cookies is complex regex
+- Error handling for network failures
+- Content-type checking logic
+- Request header merging
+
+**Test scenarios:**
+```typescript
+- readCookie() with various cookie strings
+- CSRF token injection in POST/PUT/DELETE
+- JSON content-type handling
+- Network error response (status 0)
+- Non-JSON responses
+```
+
+**Mock `fetch` using:**
+```typescript
+import { vi } from 'vitest'
+global.fetch = vi.fn()
+```
+
+### 9. **Backstack Logic (`router/backstack.ts`)** ✅ **MEDIUM**
+
+**Why test:**
+- Complex state machine (modal → confirm → close)
+- Browser history manipulation
+- Event listener management
+
+**Challenges:**
+- Uses React hooks (need `renderHook` from Testing Library)
+- Manipulates `window.location` and `popstate` events
+- May be better suited for integration tests
+
+---
+
+## 📦 **Lower Priority (but still valuable)**
+
+### 10. **API Layer Functions** (`api/games.ts`, `api/saves.ts`, `api/auth.ts`)
+
+**Why test (if they contain logic):**
+- Request formatting
+- Response transformation
+- Error mapping
+
+**Skip if they're simple wrappers:**
+If these are just thin wrappers around `http.ts` functions, skip them and rely on integration/E2E tests.
+
+### 11. **Custom Hooks** (various `use*.ts` files)
+
+**Test if they contain business logic:**
+- `useGameHotkeys.ts` - keyboard event handling
+- `useAuthStatusQuery.ts` - auth state logic
+- `useSavesQueries.ts` - query transformation
+
+**Test using:**
+```typescript
+import { renderHook } from '@testing-library/react'
+```
+
+**Skip if they're thin React Query wrappers** - those are better tested in integration.
+
+---
+
+## 🚫 **What NOT to Unit Test**
+
+### 1. **React Components** (mostly)
+- **Why skip:** Unit tests for React components are often brittle
+- **Better approach:** Integration tests or E2E tests with Playwright
+- **Exception:** Components with complex logic separate from rendering
+
+### 2. **Simple Pass-through Functions**
+- API wrappers that just call `http.ts`
+- Simple getter/setter hooks
+
+### 3. **Type Definitions** (`types/*.ts`)
+- TypeScript handles this at compile time
+
+### 4. **Styles** (`*.css` files)
+- Visual testing is better suited for this
+
+---
+
+## 📊 **Recommended Testing Priority Order**
+
+```
+Priority 1 (Do First):
+✅ hexGeometry.ts - Core game logic
+✅ pathfinding.ts - Complex algorithm
+✅ errorHandling.ts - Expand existing tests
+✅ http.ts - Cookie/CSRF handling
+
+Priority 2:
+✅ useConsent.ts - Legal compliance
+✅ notifications.ts - Global state
+✅ zoom.ts - Already done! ✓
+
+Priority 3:
+✅ uiStore.ts - Modal coordination
+⚠️ Any custom hooks with business logic
+⚠️ API transformation functions (if they exist)
+```
+
+---
+
+## 🎓 **Testing Principles for This Project**
+
+Based on the codebase structure:
+
+1. **Test Pure Functions First** - Highest ROI, easiest to test
+2. **Test State Logic** - Zustand stores are predictable to test
+3. **Test Algorithms** - Pathfinding, geometry, calculations
+4. **Test Error Paths** - Security, auth, error handling
+5. **Skip Thin Wrappers** - If it just calls another function, skip it
+
+---
+
+## 💡 **Quick Wins**
+
+Files you can fully test **today** with high value:
+
+```typescript
+// 1. hexGeometry.test.ts (~150 lines, 3-4 hours)
+// 2. pathfinding.test.ts (~200 lines, 4-6 hours)  
+// 3. http.test.ts (~100 lines, 2-3 hours)
+// 4. useConsent.test.ts (~80 lines, 1-2 hours)
+// 5. notifications.test.ts (~80 lines, 1-2 hours)
+```
+
+**Total:** ~10-15 hours for solid coverage of critical business logic
+
+Would you like me to start implementing any of these test files?
