@@ -27,6 +27,7 @@ Scope Summary
 - AI: Deterministic priority list; completes turn < 500 ms.
 - Saves: 3 manual slots + 5 autosaves (ring buffer on end-turn); retention 3 months.
 - Analytics: Minimal event set with per-turn batching.
+- Testing: Vitest/RTL (frontend), xUnit/Testcontainers (backend), Playwright (E2E), k6 (performance).
 - Deployment: Github actions, Dockerized, CI/CD to DigitalOcean (sizing and ingress TBD).
 
 Constraints and Non-functional Targets
@@ -158,6 +159,17 @@ Pain Points Addressed
 - map.json includes schemaVersion; server validates against allowed versions.
 - Unit tests verify schema compatibility and gating behavior.
 - On mismatch, loads are rejected with clear UI messaging.
+
+3.14 Testing Strategy and Tools
+
+- **Frontend Unit/Component Tests:** Vitest with React Testing Library for component behavior and utility function testing.
+- **Backend Unit/Integration Tests:** xUnit with FluentAssertions for services and controllers; Testcontainers for PostgreSQL integration tests; Respawn for database cleanup; Bogus for test data generation.
+- **End-to-End Tests:** Playwright for critical user flows and visual regression testing of canvas rendering.
+- **Performance Tests:** k6 for load testing API endpoints; target AI turn ≤ 500 ms and game actions < 500 ms (P95).
+- **Security Tests:** OWASP ZAP for vulnerability scanning; npm audit and dotnet package vulnerability checks in CI/CD.
+- **CI/CD Integration:** GitHub Actions runs unit tests on every PR; integration and E2E tests on merge to main; nightly full regression suite.
+- **Code Coverage Targets:** ≥75% backend services (GameService, TurnService, ActionService); ≥70% critical frontend components.
+
 ## 4. Product Boundaries
 
 In Scope
