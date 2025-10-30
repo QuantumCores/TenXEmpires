@@ -503,3 +503,10 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Testing
+test-results/
+playwright-report/
+playwright/.cache/
+.playwright/
+screenshots/
