@@ -145,14 +145,12 @@ export function getGlobalImageLoader(): ImageLoader {
  */
 export const DEFAULT_MANIFEST: ImageManifest = {
   terrain: [
-    'grassland',
-    'plains',
     'desert',
-    'tundra',
+    'grassland',
     'ocean',
-    'coast',
-    'mountain',
-    'hill',
+    'tropical',
+    'tundra',
+    'water',
   ],
   feature: [
     'forest',
