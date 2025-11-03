@@ -20,7 +20,7 @@ export function VerifyEmailModal({ email, onRequestClose }: VerifyEmailModalProp
     setIsResending(true)
 
     const { ok, status, data } = await postJson<ResendVerificationRequest, ApiError>(
-      '/v1/auth/resend-verification',
+      '/api/auth/resend-verification',
       { email },
     )
 

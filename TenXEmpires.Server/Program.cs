@@ -68,7 +68,9 @@ namespace TenXEmpires.Server
             {
                 o.HeaderName = TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader;
                 o.Cookie.SameSite = SameSiteMode.Lax;
-                o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+                    ? CookieSecurePolicy.None 
+                    : CookieSecurePolicy.Always;
                 o.Cookie.Path = "/";
                 o.SuppressXFrameOptionsHeader = false;
             });
@@ -217,7 +219,9 @@ namespace TenXEmpires.Server
                 {
                     options.Cookie.Name = "tenx.auth";
                     options.Cookie.SameSite = SameSiteMode.Lax;
-                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+                        ? CookieSecurePolicy.None 
+                        : CookieSecurePolicy.Always;
                     options.Cookie.HttpOnly = true;
                     options.SlidingExpiration = true;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
@@ -249,11 +253,15 @@ namespace TenXEmpires.Server
                     options.Password.RequireUppercase = true;
                     options.Password.RequireLowercase = true;
                     options.User.RequireUniqueEmail = true;
+                    
+                    // Disable email confirmation requirement in development
+                    options.SignIn.RequireConfirmedEmail = !builder.Environment.IsDevelopment();
                 })
                 .AddRoles<IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<AppIdentityDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
+
             builder.Services.AddControllers();
 
             // Configure API versioning

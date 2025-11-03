@@ -12,7 +12,7 @@ const CsrfContext = createContext<CsrfContextValue | undefined>(undefined)
 
 async function requestCsrf(): Promise<{ ok: boolean; status: number }> {
   try {
-    const res = await fetch('/v1/auth/csrf', {
+    const res = await fetch('/api/auth/csrf', {
       method: 'GET',
       credentials: 'include',
       headers: { 'Accept': 'application/json' },

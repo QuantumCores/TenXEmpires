@@ -11,7 +11,7 @@ export function GameAuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const url = new URL('/v1/games', window.location.origin)
+      const url = new URL('/api/games', window.location.origin)
       url.searchParams.set('status', 'active')
       url.searchParams.set('sort', 'lastTurnAt')
       url.searchParams.set('order', 'desc')

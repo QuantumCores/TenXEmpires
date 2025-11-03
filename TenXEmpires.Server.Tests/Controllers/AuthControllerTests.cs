@@ -1,15 +1,17 @@
+using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Controllers;
 using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.DataContracts;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using System.Security.Claims;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
@@ -19,12 +21,17 @@ public class AuthControllerTests
     private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly Mock<SignInManager<IdentityUser<Guid>>> _signInManagerMock;
     private readonly Mock<UserManager<IdentityUser<Guid>>> _userManagerMock;
+    private readonly Mock<IWebHostEnvironment> _environmentMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
     {
         _antiforgeryMock = new Mock<IAntiforgery>();
         _loggerMock = new Mock<ILogger<AuthController>>();
+        _environmentMock = new Mock<IWebHostEnvironment>();
+        
+        // Setup environment as Development for tests
+        _environmentMock.Setup(e => e.EnvironmentName).Returns(Environments.Development);
         
         // Mock UserManager dependencies
         var userStoreMock = new Mock<IUserStore<IdentityUser<Guid>>>();
@@ -44,7 +51,8 @@ public class AuthControllerTests
             _antiforgeryMock.Object, 
             _loggerMock.Object, 
             _signInManagerMock.Object, 
-            _userManagerMock.Object)
+            _userManagerMock.Object,
+            _environmentMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -74,9 +82,10 @@ public class AuthControllerTests
 
         var setCookie = _controller.Response.Headers["Set-Cookie"].ToString();
         setCookie.Should().Contain($"{SecurityConstants.XsrfCookie}=test-token");
-        setCookie.Should().ContainEquivalentOf("Secure");
         setCookie.Should().ContainEquivalentOf("Path=/");
         setCookie.Should().ContainEquivalentOf("SameSite=Lax");
+        // In development, cookie should not be marked as Secure
+        setCookie.Should().NotContainEquivalentOf("Secure");
 
         _controller.Response.Headers["Cache-Control"].ToString()
             .Should().Contain("no-store");
@@ -338,7 +347,7 @@ public class AuthControllerTests
     public async Task Register_ShouldReturn400_WhenEmailIsNull()
     {
         // Arrange
-        var request = new RegisterRequestDto(Email: null!, Password: "Password123!");
+        var request = new RegisterRequestDto { Email = null!, Password = "Password123!", Confirm = "Password123!" };
 
         // Act
         var result = await _controller.Register(request);
@@ -353,7 +362,7 @@ public class AuthControllerTests
     public async Task Register_ShouldReturn400_WhenPasswordIsEmpty()
     {
         // Arrange
-        var request = new RegisterRequestDto(Email: "test@example.com", Password: string.Empty);
+        var request = new RegisterRequestDto { Email = "test@example.com", Password = string.Empty, Confirm = string.Empty };
 
         // Act
         var result = await _controller.Register(request);
@@ -368,7 +377,7 @@ public class AuthControllerTests
     public async Task Register_ShouldReturn400_WhenUserAlreadyExists()
     {
         // Arrange
-        var request = new RegisterRequestDto(Email: "existing@example.com", Password: "Password123!");
+        var request = new RegisterRequestDto { Email = "existing@example.com", Password = "Password123!", Confirm = "Password123!" };
         var existingUser = new IdentityUser<Guid> { Email = "existing@example.com" };
 
         _userManagerMock.Setup(um => um.FindByEmailAsync(request.Email))
@@ -387,7 +396,7 @@ public class AuthControllerTests
     public async Task Register_ShouldReturn400_WhenUserCreationFails()
     {
         // Arrange
-        var request = new RegisterRequestDto(Email: "test@example.com", Password: "weak");
+        var request = new RegisterRequestDto { Email = "test@example.com", Password = "weak", Confirm = "weak" };
 
         _userManagerMock.Setup(um => um.FindByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((IdentityUser<Guid>?)null);
@@ -408,7 +417,7 @@ public class AuthControllerTests
     public async Task Register_ShouldReturn204_WhenRegistrationSucceeds()
     {
         // Arrange
-        var request = new RegisterRequestDto(Email: "newuser@example.com", Password: "Password123!");
+        var request = new RegisterRequestDto { Email = "newuser@example.com", Password = "Password123!", Confirm = "Password123!" };
 
         _userManagerMock.Setup(um => um.FindByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((IdentityUser<Guid>?)null);

@@ -12,6 +12,6 @@ export async function sendAnalyticsBatch(events: AnalyticsEvent[]) {
   const { decided, accepted } = useConsent.getState()
   if (!decided || !accepted) return { skipped: true }
   const body = { events }
-  const res = await postJson<typeof body, { ok?: boolean; message?: string }>('/v1/analytics/batch', body)
+  const res = await postJson<typeof body, { ok?: boolean; message?: string }>('/api/analytics/batch', body)
   return res
 }

@@ -47,7 +47,7 @@ export function ForgotPasswordModal({ onRequestClose }: ForgotPasswordModalProps
     setIsSubmitting(true)
 
     const { ok, status, data } = await postJson<ForgotPasswordFormModel, ApiError>(
-      '/v1/auth/forgot-password',
+      '/api/auth/forgot-password',
       { email },
     )
 

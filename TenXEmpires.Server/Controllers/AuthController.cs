@@ -2,12 +2,14 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Constants;
+using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -27,18 +29,21 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
     private readonly SignInManager<IdentityUser<Guid>> _signInManager;
     private readonly UserManager<IdentityUser<Guid>> _userManager;
+    private readonly IWebHostEnvironment _environment;
 
     [ActivatorUtilitiesConstructor]
     public AuthController(
         IAntiforgery antiforgery,
         ILogger<AuthController> logger,
         SignInManager<IdentityUser<Guid>> signInManager,
-        UserManager<IdentityUser<Guid>> userManager)
+        UserManager<IdentityUser<Guid>> userManager,
+        IWebHostEnvironment environment)
     {
         _antiforgery = antiforgery;
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
+        _environment = environment;
     }
 
     
@@ -78,7 +83,7 @@ public class AuthController : ControllerBase
                 new CookieOptions
                 {
                     HttpOnly = false,
-                    Secure = true,
+                    Secure = !_environment.IsDevelopment(),
                     SameSite = SameSiteMode.Lax,
                     Path = "/"
                 });
@@ -186,7 +191,7 @@ public class AuthController : ControllerBase
     /// <response code="400">Invalid input or user already exists.</response>
     [HttpPost("register")]
     [AllowAnonymous]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -229,7 +234,7 @@ public class AuthController : ControllerBase
     /// <response code="400">Invalid credentials.</response>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -264,7 +269,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Unauthorized.</response>
     [HttpPost("logout")]
     [Authorize]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
     [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(TenXEmpires.Server.Examples.ApiErrorUnauthorizedExample))]
@@ -290,7 +295,7 @@ public class AuthController : ControllerBase
     /// <response code="429">Too many requests (rate limited).</response>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -345,7 +350,7 @@ public class AuthController : ControllerBase
     /// <response code="429">Too many requests (rate limited).</response>
     [HttpPost("resend-verification")]
     [AllowAnonymous]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]

@@ -5,6 +5,6 @@ import { getJson } from './http'
  * Returns 204 when successful. 401 when unauthenticated.
  */
 export async function keepAlive() {
-  return getJson<void>('/v1/auth/keepalive')
+  return getJson<void>('/api/auth/keepalive')
 }
 

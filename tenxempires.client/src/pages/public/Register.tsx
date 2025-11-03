@@ -61,7 +61,7 @@ export default function Register() {
     setError(undefined)
     
     const { ok, status, data } = await postJson<RegisterFormModel, ApiError>(
-      '/v1/auth/register',
+      '/api/auth/register',
       model,
     )
     

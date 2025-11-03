@@ -28,7 +28,7 @@ export default function Login() {
     setError(undefined)
     
     const { ok, status, data } = await postJson<LoginFormModel, ApiError>(
-      '/v1/auth/login',
+      '/api/auth/login',
       model,
     )
     

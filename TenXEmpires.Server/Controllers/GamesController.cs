@@ -8,6 +8,7 @@ using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Examples;
 using TenXEmpires.Server.Extensions;
+using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -192,7 +193,7 @@ public class GamesController : ControllerBase
     /// <response code="422">Unprocessable Entity - map schema mismatch or map not found.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost(Name = "CreateGame")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(typeof(GameCreatedResponse), StatusCodes.Status201Created)]
     [SwaggerResponseExample(StatusCodes.Status201Created, typeof(GameCreatedResponseExample))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -492,7 +493,7 @@ public class GamesController : ControllerBase
     /// <response code="404">Not Found - game does not exist or user doesn't have access.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpDelete("{id:long}", Name = "DeleteGame")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status404NotFound)]
@@ -719,7 +720,7 @@ public class GamesController : ControllerBase
     /// <response code="422">Unprocessable Entity - ILLEGAL_MOVE (path blocked or out of range).</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost("{id:long}/actions/move", Name = "MoveUnit")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
     [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ActionStateResponseExample))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -863,7 +864,7 @@ public class GamesController : ControllerBase
     /// <response code="422">Unprocessable Entity - OUT_OF_RANGE or INVALID_TARGET.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost("{id:long}/actions/attack", Name = "AttackUnit")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [SwaggerRequestExample(typeof(AttackUnitCommand), typeof(AttackUnitCommandExample))]
     [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
     [SwaggerResponseExample(StatusCodes.Status200OK, typeof(ActionStateResponseExample))]
@@ -963,7 +964,7 @@ public class GamesController : ControllerBase
     /// <response code="409">Conflict - NOT_PLAYER_TURN or TURN_IN_PROGRESS.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost("{id:long}/end-turn", Name = "EndTurn")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(typeof(EndTurnResponse), StatusCodes.Status200OK)]
     [SwaggerResponseExample(StatusCodes.Status200OK, typeof(EndTurnResponseExample))]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

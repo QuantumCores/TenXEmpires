@@ -4,16 +4,24 @@ using System.ComponentModel.DataAnnotations;
 namespace TenXEmpires.Server.Domain.DataContracts;
 
 public sealed record LoginRequestDto(
-    [property: Required, EmailAddress] string Email,
-    [property: Required, MinLength(8)] string Password,
+    [Required, EmailAddress] string Email,
+    [Required, MinLength(8)] string Password,
     bool RememberMe = false);
 
-public sealed record RegisterRequestDto(
-    [property: Required, EmailAddress] string Email,
-    [property: Required, MinLength(8)] string Password);
+public sealed record RegisterRequestDto
+{
+    [Required, EmailAddress]
+    public string Email { get; init; } = string.Empty;
+
+    [Required, MinLength(8)]
+    public string Password { get; init; } = string.Empty;
+
+    [Required, MinLength(8), Compare(nameof(Password))]
+    public string Confirm { get; init; } = string.Empty;
+}
 
 public sealed record ForgotPasswordRequestDto(
-    [property: Required, EmailAddress] string Email);
+    [Required, EmailAddress] string Email);
 
 public sealed record ResendVerificationRequestDto(
-    [property: EmailAddress] string? Email);
+    [EmailAddress] string? Email);

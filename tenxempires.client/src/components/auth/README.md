@@ -64,7 +64,7 @@ export default function Login() {
   
   async function handleSubmit(model: LoginFormModel) {
     setIsSubmitting(true)
-    const { ok } = await postJson('/v1/auth/login', model)
+    const { ok } = await postJson('/api/auth/login', model)
     setIsSubmitting(false)
     // Handle response...
   }

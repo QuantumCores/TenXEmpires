@@ -14,7 +14,7 @@ export async function refreshCsrfToken(): Promise<boolean> {
     try {
       // Call server endpoint that sets new CSRF cookie
       // Uses the same endpoint as CsrfProvider for consistency
-      const response = await fetch('/v1/auth/csrf', {
+      const response = await fetch('/api/auth/csrf', {
         method: 'GET',
         credentials: 'include',
         headers: { 'Accept': 'application/json' },

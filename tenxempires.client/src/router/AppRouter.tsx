@@ -1,4 +1,3 @@
-import { lazy, Suspense } from 'react'
 import {
   createBrowserRouter,
   RouterProvider,
@@ -8,29 +7,67 @@ import { GameCurrentGuardRoute } from '../pages/game/GameCurrentGuardRoute'
 import { GameMapPage } from '../pages/game/GameMapPage'
 import { GameAuthGuard } from '../pages/game/GameAuthGuard'
 
-// Public pages (lightweight stubs for now)
-const Landing = lazy(() => import('../pages/public/Landing'))
-const About = lazy(() => import('../pages/public/About'))
-const Gallery = lazy(() => import('../pages/public/Gallery'))
-const Privacy = lazy(() => import('../pages/public/Privacy'))
-const Cookies = lazy(() => import('../pages/public/Cookies'))
-const Login = lazy(() => import('../pages/public/Login'))
-const Register = lazy(() => import('../pages/public/Register'))
-const Unsupported = lazy(() => import('../pages/public/Unsupported'))
-
 const router = createBrowserRouter([
   // Legacy redirect
   { path: '/hub', element: <Navigate to="/game/current" replace /> },
 
-  // Public routes
-  { path: '/', element: <Suspense fallback={null}><Landing /></Suspense> },
-  { path: '/about', element: <Suspense fallback={null}><About /></Suspense> },
-  { path: '/gallery', element: <Suspense fallback={null}><Gallery /></Suspense> },
-  { path: '/privacy', element: <Suspense fallback={null}><Privacy /></Suspense> },
-  { path: '/cookies', element: <Suspense fallback={null}><Cookies /></Suspense> },
-  { path: '/login', element: <Suspense fallback={null}><Login /></Suspense> },
-  { path: '/register', element: <Suspense fallback={null}><Register /></Suspense> },
-  { path: '/unsupported', element: <Suspense fallback={null}><Unsupported /></Suspense> },
+  // Public routes with lazy loading
+  { 
+    path: '/', 
+    lazy: async () => {
+      const { default: Landing } = await import('../pages/public/Landing')
+      return { Component: Landing }
+    }
+  },
+  { 
+    path: '/about', 
+    lazy: async () => {
+      const { default: About } = await import('../pages/public/About')
+      return { Component: About }
+    }
+  },
+  { 
+    path: '/gallery', 
+    lazy: async () => {
+      const { default: Gallery } = await import('../pages/public/Gallery')
+      return { Component: Gallery }
+    }
+  },
+  { 
+    path: '/privacy', 
+    lazy: async () => {
+      const { default: Privacy } = await import('../pages/public/Privacy')
+      return { Component: Privacy }
+    }
+  },
+  { 
+    path: '/cookies', 
+    lazy: async () => {
+      const { default: Cookies } = await import('../pages/public/Cookies')
+      return { Component: Cookies }
+    }
+  },
+  { 
+    path: '/login', 
+    lazy: async () => {
+      const { default: Login } = await import('../pages/public/Login')
+      return { Component: Login }
+    }
+  },
+  { 
+    path: '/register', 
+    lazy: async () => {
+      const { default: Register } = await import('../pages/public/Register')
+      return { Component: Register }
+    }
+  },
+  { 
+    path: '/unsupported', 
+    lazy: async () => {
+      const { default: Unsupported } = await import('../pages/public/Unsupported')
+      return { Component: Unsupported }
+    }
+  },
 
   // Guarded route for current game
   { path: '/game/current', element: <GameCurrentGuardRoute /> },

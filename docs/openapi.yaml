@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8669397+00:00
-                clientRequestId: 80b2cdc9-2fe8-463d-805a-6a095ae67d28
+                occurredAt: 2025-11-03T21:08:41.1531101+00:00
+                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8679009+00:00
-                clientRequestId: 6087f8ca-e8ba-478b-8482-a89af9b0a4e9
+                occurredAt: 2025-11-03T21:08:41.1532024+00:00
+                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8669397+00:00
-                clientRequestId: 80b2cdc9-2fe8-463d-805a-6a095ae67d28
+                occurredAt: 2025-11-03T21:08:41.1531101+00:00
+                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8679009+00:00
-                clientRequestId: 6087f8ca-e8ba-478b-8482-a89af9b0a4e9
+                occurredAt: 2025-11-03T21:08:41.1532024+00:00
+                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8669397+00:00
-                clientRequestId: 80b2cdc9-2fe8-463d-805a-6a095ae67d28
+                occurredAt: 2025-11-03T21:08:41.1531101+00:00
+                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-10-30T20:00:36.8679009+00:00
-                clientRequestId: 6087f8ca-e8ba-478b-8482-a89af9b0a4e9
+                occurredAt: 2025-11-03T21:08:41.1532024+00:00
+                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
                 payload: 
       responses:
         202:
@@ -2286,14 +2286,11 @@ components:
           format: int64
       additionalProperties: false
     ForgotPasswordRequestDto:
-      required:
-      - email
       type: object
       properties:
         email:
-          minLength: 1
           type: string
-          format: email
+          nullable: true
       additionalProperties: false
     GameCreatedResponse:
       type: object
@@ -2511,18 +2508,14 @@ components:
           $ref: '#/components/schemas/GameStateDto'
       additionalProperties: false
     LoginRequestDto:
-      required:
-      - email
-      - password
       type: object
       properties:
         email:
-          minLength: 1
           type: string
-          format: email
+          nullable: true
         password:
-          minLength: 8
           type: string
+          nullable: true
         rememberMe:
           type: boolean
       additionalProperties: false
@@ -2641,6 +2634,7 @@ components:
       additionalProperties: {}
     RegisterRequestDto:
       required:
+      - confirm
       - email
       - password
       type: object
@@ -2652,13 +2646,15 @@ components:
         password:
           minLength: 8
           type: string
+        confirm:
+          minLength: 8
+          type: string
       additionalProperties: false
     ResendVerificationRequestDto:
       type: object
       properties:
         email:
           type: string
-          format: email
           nullable: true
       additionalProperties: false
     SaveAutosaveDto:

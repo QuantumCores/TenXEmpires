@@ -36,9 +36,10 @@ public class RlsContextMiddleware
                     await using var transaction = await dbContext.Database.BeginTransactionAsync();
                     
                     // Set the session variable for RLS
+                    // Note: Direct string interpolation is safe here because userId is validated as a GUID
+                    // PostgreSQL doesn't support parameters in SET LOCAL commands
                     await dbContext.Database.ExecuteSqlRawAsync(
-                        "SET LOCAL app.user_id = {0}", 
-                        userId.ToString());
+                        $"SET LOCAL app.user_id = '{userId}'");
                     
                     _logger.LogDebug("Set RLS context for user {UserId}", userId);
                     

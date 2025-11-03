@@ -8,6 +8,7 @@ using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Examples;
 using TenXEmpires.Server.Extensions;
+using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -159,7 +160,7 @@ public class SavesController : ControllerBase
     /// <response code="409">Conflict - SAVE_CONFLICT on upsert failure.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost("{id:long}/saves/manual", Name = "CreateManualSave")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [SwaggerRequestExample(typeof(CreateManualSaveCommand), typeof(CreateManualSaveCommandExample))]
     [ProducesResponseType(typeof(SaveCreatedDto), StatusCodes.Status201Created)]
     [SwaggerResponseExample(StatusCodes.Status201Created, typeof(SaveCreatedDtoExample))]
@@ -261,7 +262,7 @@ public class SavesController : ControllerBase
     /// <response code="404">Not Found - game or manual save does not exist or user doesn't have access.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpDelete("{id:long}/saves/manual/{slot:int}", Name = "DeleteManualSave")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
@@ -353,7 +354,7 @@ public class SavesController : ControllerBase
     /// <response code="422">Unprocessable Entity - schema version mismatch.</response>
     /// <response code="500">Internal server error occurred.</response>
     [HttpPost("/v{version:apiVersion}/saves/{saveId:long}/load", Name = "LoadSave")]
-    [ValidateAntiForgeryToken]
+    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(typeof(LoadSaveResponse), StatusCodes.Status200OK)]
     [SwaggerResponseExample(StatusCodes.Status200OK, typeof(LoadSaveResponseExample))]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]

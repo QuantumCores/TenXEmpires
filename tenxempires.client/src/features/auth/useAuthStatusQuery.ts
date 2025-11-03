@@ -10,7 +10,7 @@ function nowIsoSeconds(): string {
 }
 
 async function rawFetchAuthStatus(): Promise<{ status: number; auth: AuthStatus }> {
-  const url = new URL('/v1/auth/me', window.location.origin)
+  const url = new URL('/api/auth/me', window.location.origin)
   const { ok, status } = await getJson<CurrentUser>(url.toString())
 
   // Default unauthenticated state
