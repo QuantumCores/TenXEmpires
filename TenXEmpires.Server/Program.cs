@@ -65,6 +65,9 @@ namespace TenXEmpires.Server
             // Add memory cache for caching lookup data
             builder.Services.AddMemoryCache();
 
+            // Add response caching for HTTP caching support
+            builder.Services.AddResponseCaching();
+
             // Configure Antiforgery for SPA CSRF protection
             builder.Services.AddAntiforgery(o =>
             {
@@ -340,6 +343,9 @@ namespace TenXEmpires.Server
             }
 
             app.UseHttpsRedirection();
+
+            // Enable response caching (must be before CORS and auth)
+            app.UseResponseCaching();
 
             // Enable CORS
             app.UseCors("DefaultCorsPolicy");
