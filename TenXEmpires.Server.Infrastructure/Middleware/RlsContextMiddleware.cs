@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -33,24 +32,42 @@ public class RlsContextMiddleware
             {
                 try
                 {
-                    // Begin a transaction to ensure SET LOCAL is scoped to this request
-                    await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-                    // Set the session variable for RLS
+                    // Open the connection explicitly to ensure it stays open for the entire request
+                    // This prevents connection pooling from giving us different connections
+                    var connection = dbContext.Database.GetDbConnection();
+                    var wasOpen = connection.State == System.Data.ConnectionState.Open;
+                    
+                    if (!wasOpen)
+                    {
+                        await connection.OpenAsync();
+                    }
+                    
+                    // Set the session variable for RLS on this specific connection
                     // Note: Direct string interpolation is safe here because userId is validated as a GUID
-                    // PostgreSQL doesn't support parameters in SET LOCAL commands
-
-                    var query = FormattableStringFactory.Create("SET LOCAL app.user_id = '{0}'", userId.ToString());
-                    _logger.LogInformation("Running RLS query: {0}", query.ToString());
-                    await dbContext.Database.ExecuteSqlAsync(query);
+                    // PostgreSQL doesn't support parameters in SET commands - must use literal value
+                    var userIdString = userId.ToString();
+                    var sql = $"SET app.user_id = '{userIdString}'";
+                    
+                    _logger.LogDebug("Setting RLS context: {Sql}", sql);
+                    await dbContext.Database.ExecuteSqlRawAsync(sql);
                     
                     _logger.LogDebug("Set RLS context for user {UserId}", userId);
                     
-                    // Execute the rest of the pipeline
-                    await _next(context);
-                    
-                    // Commit the transaction
-                    await transaction.CommitAsync();
+                    try
+                    {
+                        // Execute the rest of the pipeline with connection kept open
+                        await _next(context);
+                    }
+                    finally
+                    {
+                        // Reset and close connection
+                        if (!wasOpen)
+                        {
+                            await dbContext.Database.ExecuteSqlRawAsync("RESET app.user_id");
+                            _logger.LogDebug("Reset RLS context for user {UserId}", userId);
+                            connection.Close();
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
