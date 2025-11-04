@@ -12,6 +12,8 @@ import {
   pixelToOddr,
   drawHexPath,
   HEX_SIZE,
+  HEX_WIDTH,
+  HEX_HEIGHT,
 } from '../../features/game/hexGeometry'
 import { findPath, getReachableTiles, getAttackableTiles } from '../../features/game/pathfinding'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
@@ -138,6 +140,22 @@ export function MapCanvasStack({
       }
     })
   }, [dimensions, spriteCache])
+
+  // Center camera on map when first loaded
+  useEffect(() => {
+    // Calculate map center in world coordinates
+    const mapCenterRow = gameState.map.height / 2
+    const mapCenterCol = gameState.map.width / 2
+    const mapCenter = oddrToPixel(mapCenterCol, mapCenterRow)
+    
+    // Set camera to center the map
+    // Negative offset moves the world in that direction, centering it
+    setCamera({
+      offsetX: -mapCenter.x,
+      offsetY: -mapCenter.y,
+      scale: 1,
+    })
+  }, [gameState.map.width, gameState.map.height, setCamera])
 
   // Update preview when selection changes
   useEffect(() => {
@@ -460,10 +478,31 @@ function renderTiles(
     const terrainImage = imageLoader.getImage('terrain', tile.terrain.toLowerCase())
     
     if (terrainImage) {
-      // Draw PNG image
-      // Assuming PNG is sized to fit hex (adjust offsets as needed based on your image dimensions)
-      const imageSize = HEX_SIZE * 2
-      ctx.drawImage(terrainImage, -imageSize, -imageSize, imageSize * 2, imageSize * 2)
+      // Draw PNG image, cropping transparent padding
+      // Image: 274x274 with transparent padding (52px horizontal, 39px vertical on each side)
+      // Actual hex content: 170x196 (after removing padding)
+      // For pointy-top hexes: width (flat-to-flat) = sqrt(3) * HEX_SIZE ≈ 55.4
+      const IMG_WIDTH = 274
+      const IMG_HEIGHT = 274
+      const IMG_PADDING_H = 52
+      const IMG_PADDING_V = 39
+      
+      // Source rectangle (crop to hex content only, no padding)
+      const srcX = IMG_PADDING_H
+      const srcY = IMG_PADDING_V
+      const srcWidth = IMG_WIDTH - (IMG_PADDING_H * 2)   // 170
+      const srcHeight = IMG_HEIGHT - (IMG_PADDING_V * 2) // 196
+      
+      // Destination dimensions (scale hex content to fit HEX_WIDTH and HEX_HEIGHT)
+      const destWidth = HEX_WIDTH   // ~55.4
+      const destHeight = HEX_HEIGHT // 64
+      
+      // Draw only the hex content, centered
+      ctx.drawImage(
+        terrainImage,
+        srcX, srcY, srcWidth, srcHeight,  // source rectangle (crop padding)
+        -destWidth / 2, -destHeight / 2, destWidth, destHeight  // destination
+      )
     } else {
       // Fallback to drawn sprite
       const spriteKey = generateTileSprite(tile.terrain, !!tile.resourceType)

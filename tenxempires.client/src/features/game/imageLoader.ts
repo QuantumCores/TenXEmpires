@@ -153,20 +153,13 @@ export const DEFAULT_MANIFEST: ImageManifest = {
     'water',
   ],
   feature: [
-    'forest',
-    'jungle',
-    'marsh',
-    'oasis',
-    'ice',
+    // Features will use fallback sprites for now
   ],
   unit: [
-    // Unit sprites can be added here if needed
+    // Unit sprites will use fallback
   ],
   city: [
-    'city',
-    'city-ancient',
-    'city-medieval',
-    'city-modern',
+    // City sprites will use fallback
   ],
 }
 

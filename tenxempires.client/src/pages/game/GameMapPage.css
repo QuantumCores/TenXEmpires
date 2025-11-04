@@ -5,7 +5,7 @@
 
 /* Ensure full viewport usage */
 .game-map-page {
-  min-height: 100dvh;
+  height: 100dvh; /* Explicit height needed for flex children */
   display: flex;
   flex-direction: column;
   overflow: hidden;

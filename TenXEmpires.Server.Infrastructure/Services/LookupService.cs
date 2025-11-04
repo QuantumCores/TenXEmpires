@@ -25,8 +25,8 @@ public class LookupService : ILookupService
     private const string MapTilesETagCacheKeyPrefix = "Lookup.MapTiles.ETag.";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
     
-    private const int DefaultPageSize = 20;
-    private const int MaxPageSize = 100;
+    private const int DefaultPageSize = 500;
+    private const int MaxPageSize = 500;
 
     public LookupService(
         TenXDbContext context,

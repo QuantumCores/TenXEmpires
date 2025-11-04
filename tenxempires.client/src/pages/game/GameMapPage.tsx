@@ -66,9 +66,59 @@ export function GameMapPage() {
 
   // UI state
   const { camera, selection, gridOn, setCamera, setSelection } = useGameMapStore()
+  const sessionLocked = useUiStore((s) => s.sessionLocked)
 
   // Mutations
   const endTurnMutation = useEndTurn(gameId || 0)
+
+  // Camera controls - defined before early returns to satisfy Rules of Hooks
+  const handleZoomIn = useCallback(() => {
+    setCamera({ scale: Math.min(camera.scale * 1.2, 3) })
+  }, [camera.scale, setCamera])
+
+  const handleZoomOut = useCallback(() => {
+    setCamera({ scale: Math.max(camera.scale / 1.2, 0.5) })
+  }, [camera.scale, setCamera])
+
+  const handlePan = useCallback(
+    (dx: number, dy: number) => {
+      setCamera({
+        offsetX: camera.offsetX + dx,
+        offsetY: camera.offsetY + dy,
+      })
+    },
+    [camera, setCamera]
+  )
+
+  // Find next unit - defined before early returns to satisfy Rules of Hooks
+  const findNextUnit = useCallback(() => {
+    if (!gameState) return
+    const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
+    if (!playerParticipant) return
+
+    const unactedUnits = gameState.units.filter(
+      (u) => u.participantId === playerParticipant.id && !u.hasActed
+    )
+
+    if (unactedUnits.length > 0) {
+      setSelection({ kind: 'unit', id: unactedUnits[0].id })
+    }
+  }, [gameState, setSelection])
+
+  // Hotkeys - must be called unconditionally
+  const isActionsDisabled = !isOnline || gameState?.game.turnInProgress || sessionLocked
+  useGameHotkeys({
+    onEndTurn: () => {
+      if (!isActionsDisabled && !endTurnMutation.isPending) {
+        endTurnMutation.mutate()
+      }
+    },
+    onNextUnit: findNextUnit,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+    onPan: handlePan,
+    isEndTurnDisabled: isActionsDisabled || endTurnMutation.isPending,
+  })
 
   // If we're in the new game context, show minimal shell for modal
   if (isNewGameContext) {
@@ -105,56 +155,6 @@ export function GameMapPage() {
   }
 
   const turnInProgress = gameState.game.turnInProgress
-  const sessionLocked = useUiStore((s) => s.sessionLocked)
-  const isActionsDisabled = !isOnline || turnInProgress || sessionLocked
-
-  // Find next unit that hasn't acted
-  const findNextUnit = useCallback(() => {
-    const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
-    if (!playerParticipant) return
-
-    const unactedUnits = gameState.units.filter(
-      (u) => u.participantId === playerParticipant.id && !u.hasActed
-    )
-
-    if (unactedUnits.length > 0) {
-      setSelection({ kind: 'unit', id: unactedUnits[0].id })
-    }
-  }, [gameState, setSelection])
-
-  // Camera controls
-  const handleZoomIn = useCallback(() => {
-    setCamera({ scale: Math.min(camera.scale * 1.2, 3) })
-  }, [camera.scale, setCamera])
-
-  const handleZoomOut = useCallback(() => {
-    setCamera({ scale: Math.max(camera.scale / 1.2, 0.5) })
-  }, [camera.scale, setCamera])
-
-  const handlePan = useCallback(
-    (dx: number, dy: number) => {
-      setCamera({
-        offsetX: camera.offsetX + dx,
-        offsetY: camera.offsetY + dy,
-      })
-    },
-    [camera, setCamera]
-  )
-
-  // Hotkeys
-  useGameHotkeys({
-    onEndTurn: () => {
-      if (!isActionsDisabled && !endTurnMutation.isPending) {
-        endTurnMutation.mutate()
-      }
-    },
-    onNextUnit: findNextUnit,
-    onZoomIn: handleZoomIn,
-    onZoomOut: handleZoomOut,
-    onPan: handlePan,
-    isEndTurnDisabled: isActionsDisabled || endTurnMutation.isPending,
-  })
-
   const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
   const isGameFinished = gameState.game.status === 'finished'
   

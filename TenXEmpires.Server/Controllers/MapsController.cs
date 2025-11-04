@@ -126,7 +126,7 @@ public class MapsController : ControllerBase
     /// </summary>
     /// <param name="code">The unique map code.</param>
     /// <param name="page">Optional 1-based page number (default: 1).</param>
-    /// <param name="pageSize">Optional page size (default: 20, max: 100).</param>
+    /// <param name="pageSize">Optional page size (default: 20, max: 500).</param>
     /// <remarks>
     /// Returns tiles for rendering terrain and resources. Supports pagination for large maps.
     /// Results are ordered by row, then column for stable pagination.
@@ -166,7 +166,8 @@ public class MapsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    [ResponseCache(Duration = 600, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "page", "pageSize" })]
+    // Temporarily disabled caching during development
+    // [ResponseCache(Duration = 10, Location = ResponseCacheLocation.Any, VaryByQueryKeys = new[] { "page", "pageSize" })]
     public async Task<ActionResult<PagedResult<MapTileDto>>> GetMapTiles(
         string code,
         [FromQuery] int? page = null,
@@ -187,7 +188,7 @@ public class MapsController : ControllerBase
 
             // Validate pagination parameters
             var effectivePage = page ?? 1;
-            var effectivePageSize = pageSize ?? 20;
+            var effectivePageSize = pageSize ?? 500; // Default to 500 to get full map in one request
 
             if (effectivePage < 1)
             {
@@ -199,13 +200,13 @@ public class MapsController : ControllerBase
                 });
             }
 
-            if (effectivePageSize < 1 || effectivePageSize > 100)
+            if (effectivePageSize < 1 || effectivePageSize > 1000)
             {
                 _logger.LogWarning("Invalid page size: {PageSize}", pageSize);
                 return BadRequest(new
                 {
                     code = "INVALID_PAGE_SIZE",
-                    message = "The 'pageSize' parameter must be between 1 and 100."
+                    message = "The 'pageSize' parameter must be between 1 and 1000."
                 });
             }
 

@@ -39,6 +39,7 @@ export async function fetchMapTiles(mapCode: string, etag?: string) {
   if (etag) {
     headers['If-None-Match'] = etag
   }
+  // Backend defaults to pageSize=500, which is enough for standard maps (20x15 = 300 tiles)
   return getJson<MapTilesResponse>(`${API_BASE}/maps/${mapCode}/tiles`, { headers })
 }
 

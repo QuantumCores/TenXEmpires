@@ -2,7 +2,7 @@
 -- Migration: 20251031000000_seed_initial_map.sql
 -- Purpose : Seed initial map (20x15 hexagonal, odd-r) with terrain distribution
 -- Notes   :
---   - Map code: 'initial', schema_version: 1
+--   - Map code: 'standard_15x20', schema_version: 1
 --   - Ocean tiles distributed in outer 3 layers with probability:
 --     * Layer 0 (outermost): 90% ocean
 --     * Layer 1 (second):    50% ocean
@@ -31,18 +31,18 @@ BEGIN
     
     -- Insert map entry
     INSERT INTO app.maps (code, schema_version, width, height)
-    VALUES ('initial', 1, v_width, v_height)
+    VALUES ('standard_15x20', 1, v_width, v_height)
     ON CONFLICT (code) DO NOTHING
     RETURNING id INTO v_map_id;
     
     -- If map already exists, retrieve its id
     IF v_map_id IS NULL THEN
-        SELECT id INTO v_map_id FROM app.maps WHERE code = 'initial';
-        RAISE NOTICE 'Map "initial" already exists with id %', v_map_id;
+        SELECT id INTO v_map_id FROM app.maps WHERE code = 'standard_15x20';
+        RAISE NOTICE 'Map "standard_15x20" already exists with id %', v_map_id;
         RETURN;
     END IF;
     
-    RAISE NOTICE 'Creating map tiles for map id %', v_map_id;
+    RAISE NOTICE 'Creating map tiles for map id % (standard_15x20)', v_map_id;
     
     -- Generate tiles for 20x15 map (columns 0-19, rows 0-14)
     FOR v_row IN 0..(v_height - 1) LOOP
@@ -91,7 +91,7 @@ BEGIN
         END LOOP;
     END LOOP;
     
-    RAISE NOTICE 'Successfully created % tiles for map "initial"', v_width * v_height;
+    RAISE NOTICE 'Successfully created % tiles for map "standard_15x20"', v_width * v_height;
 END $$;
 
 -- ============================================================================
