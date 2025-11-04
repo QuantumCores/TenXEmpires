@@ -536,7 +536,7 @@ public class GamesControllerTests
 
         var map = new GameStateMapDto(
             Id: 1,
-            Code: "standard_6x8",
+            Code: "standard_15x20",
             SchemaVersion: 1,
             Width: 8,
             Height: 6);

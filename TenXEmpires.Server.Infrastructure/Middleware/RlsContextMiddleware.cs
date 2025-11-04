@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -34,12 +35,14 @@ public class RlsContextMiddleware
                 {
                     // Begin a transaction to ensure SET LOCAL is scoped to this request
                     await using var transaction = await dbContext.Database.BeginTransactionAsync();
-                    
+
                     // Set the session variable for RLS
                     // Note: Direct string interpolation is safe here because userId is validated as a GUID
                     // PostgreSQL doesn't support parameters in SET LOCAL commands
-                    await dbContext.Database.ExecuteSqlRawAsync(
-                        $"SET LOCAL app.user_id = '{userId}'");
+
+                    var query = FormattableStringFactory.Create("SET LOCAL app.user_id = '{0}'", userId.ToString());
+                    _logger.LogInformation("Running RLS query: {0}", query.ToString());
+                    await dbContext.Database.ExecuteSqlAsync(query);
                     
                     _logger.LogDebug("Set RLS context for user {UserId}", userId);
                     

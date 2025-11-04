@@ -14,7 +14,7 @@ public class GameDetailDtoExample : IExamplesProvider<GameDetailDto>
         var settingsJson = System.Text.Json.JsonDocument.Parse("""
         {
           "difficulty": "normal",
-          "map": { "code": "standard_6x8", "schemaVersion": 1 }
+          "map": { "code": "standard_15x20", "schemaVersion": 1 }
         }
         """);
 

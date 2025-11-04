@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1531101+00:00
-                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
+                occurredAt: 2025-11-04T20:33:41.1655398+00:00
+                clientRequestId: 2eb72b81-fcfb-4f0e-a8b1-a97d0a638eef
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1532024+00:00
-                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
+                occurredAt: 2025-11-04T20:33:41.1657032+00:00
+                clientRequestId: f85ed29c-7e39-46e4-9f34-f6b8e4c51299
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1531101+00:00
-                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
+                occurredAt: 2025-11-04T20:33:41.1655398+00:00
+                clientRequestId: 2eb72b81-fcfb-4f0e-a8b1-a97d0a638eef
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1532024+00:00
-                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
+                occurredAt: 2025-11-04T20:33:41.1657032+00:00
+                clientRequestId: f85ed29c-7e39-46e4-9f34-f6b8e4c51299
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1531101+00:00
-                clientRequestId: b120ddd8-1a02-48f4-8fa0-8902161973cc
+                occurredAt: 2025-11-04T20:33:41.1655398+00:00
+                clientRequestId: 2eb72b81-fcfb-4f0e-a8b1-a97d0a638eef
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-03T21:08:41.1532024+00:00
-                clientRequestId: a2cee007-b5ce-47bb-ad7c-5ef02f080154
+                occurredAt: 2025-11-04T20:33:41.1657032+00:00
+                clientRequestId: f85ed29c-7e39-46e4-9f34-f6b8e4c51299
                 payload: 
       responses:
         202:
@@ -426,7 +426,7 @@ paths:
       tags:
       - v1
       summary: Creates a new game for the authenticated user.
-      description: "Creates a new game instance on a fixed map, initializes participants (human + AI),\r\nseeds starting cities/units, and returns the initial game state.\r\n\r\nThe endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to prevent duplicate game creation.\r\n\r\nRequest Body:\r\n- mapCode (optional): The map code to use (defaults to \"standard_6x8\" if not provided)\r\n- settings (optional): JSON object with game settings\r\n- displayName (optional): Your display name in the game (defaults to \"Player\" if not provided)\r\n\r\nExample request:\r\n            \r\n    POST /v1/games\r\n    X-Tenx-Idempotency-Key: unique-request-id-123\r\n    \r\n    {\r\n      \"mapCode\": \"standard_6x8\",\r\n      \"settings\": { \"difficulty\": \"normal\" },\r\n      \"displayName\": \"Commander Alex\"\r\n    }\r\n            \r\nThe response includes the full initial game state with all entities (participants, cities, units).\r\nYour AI opponent will be assigned a random historical or fantasy leader name (e.g., \"Charlemagne\", \"Cyrus the Great\")."
+      description: "Creates a new game instance on a fixed map, initializes participants (human + AI),\r\nseeds starting cities/units, and returns the initial game state.\r\n\r\nThe endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to prevent duplicate game creation.\r\n\r\nRequest Body:\r\n- mapCode (optional): The map code to use (defaults to \"standard_15x20\" if not provided)\r\n- settings (optional): JSON object with game settings\r\n- displayName (optional): Your display name in the game (defaults to \"Player\" if not provided)\r\n\r\nExample request:\r\n            \r\n    POST /v1/games\r\n    X-Tenx-Idempotency-Key: unique-request-id-123\r\n    \r\n    {\r\n      \"mapCode\": \"standard_15x20\",\r\n      \"settings\": { \"difficulty\": \"normal\" },\r\n      \"displayName\": \"Commander Alex\"\r\n    }\r\n            \r\nThe response includes the full initial game state with all entities (participants, cities, units).\r\nYour AI opponent will be assigned a random historical or fantasy leader name (e.g., \"Charlemagne\", \"Cyrus the Great\")."
       operationId: CreateGame
       requestBody:
         description: The command to create a new game with optional map code, settings, and display name.
@@ -458,7 +458,7 @@ paths:
                     status: active
                   map:
                     id: 1
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
                     width: 8
                     height: 6
@@ -576,7 +576,7 @@ paths:
       tags:
       - v1
       summary: Gets the current state of a specific game.
-      description: "Returns the complete game state including all participants, cities, units, resources, and unit definitions.\r\nThis is the authoritative game state used by clients to render the game.\r\n\r\nThe response includes:\r\n- Game metadata (turn number, active player, status)\r\n- Map information\r\n- All participants and their states\r\n- All units with positions and stats\r\n- All cities with positions and resources\r\n- Unit definitions (for client reference)\r\n\r\nExample response structure:\r\n            \r\n    {\r\n      \"game\": { \"id\": 1, \"turnNo\": 1, \"activeParticipantId\": 1, \"status\": \"active\" },\r\n      \"map\": { \"id\": 1, \"code\": \"standard_6x8\", \"width\": 8, \"height\": 6 },\r\n      \"participants\": [...],\r\n      \"units\": [...],\r\n      \"cities\": [...],\r\n      \"cityTiles\": [...],\r\n      \"cityResources\": [...],\r\n      \"unitDefinitions\": [...]\r\n    }"
+      description: "Returns the complete game state including all participants, cities, units, resources, and unit definitions.\r\nThis is the authoritative game state used by clients to render the game.\r\n\r\nThe response includes:\r\n- Game metadata (turn number, active player, status)\r\n- Map information\r\n- All participants and their states\r\n- All units with positions and stats\r\n- All cities with positions and resources\r\n- Unit definitions (for client reference)\r\n\r\nExample response structure:\r\n            \r\n    {\r\n      \"game\": { \"id\": 1, \"turnNo\": 1, \"activeParticipantId\": 1, \"status\": \"active\" },\r\n      \"map\": { \"id\": 1, \"code\": \"standard_15x20\", \"width\": 8, \"height\": 6 },\r\n      \"participants\": [...],\r\n      \"units\": [...],\r\n      \"cities\": [...],\r\n      \"cityTiles\": [...],\r\n      \"cityResources\": [...],\r\n      \"unitDefinitions\": [...]\r\n    }"
       operationId: GetGameState
       parameters:
       - name: id
@@ -602,7 +602,7 @@ paths:
                   status: active
                 map:
                   id: 1
-                  code: standard_6x8
+                  code: standard_15x20
                   schemaVersion: 1
                   width: 8
                   height: 6
@@ -774,7 +774,7 @@ paths:
                 settings:
                   difficulty: normal
                   map:
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
         304:
           description: Not Modified
@@ -994,7 +994,7 @@ paths:
                     status: active
                   map:
                     id: 1
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
                     width: 8
                     height: 6
@@ -1192,7 +1192,7 @@ paths:
                     status: active
                   map:
                     id: 1
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
                     width: 8
                     height: 6
@@ -1375,7 +1375,7 @@ paths:
                     status: active
                   map:
                     id: 1
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
                     width: 8
                     height: 6
@@ -1892,7 +1892,7 @@ paths:
                     status: active
                   map:
                     id: 1
-                    code: standard_6x8
+                    code: standard_15x20
                     schemaVersion: 1
                     width: 8
                     height: 6

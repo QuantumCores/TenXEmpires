@@ -120,6 +120,8 @@ public class GamesController : ControllerBase
             // Get user ID from authenticated user
             var userId = User.GetUserId();
 
+            _logger.LogInformation("ARD: query {0}", System.Text.Json.JsonSerializer.Serialize(query));
+
             // Call service to list games
             var result = await _gameService.ListGamesAsync(userId, query, cancellationToken);
 
@@ -168,7 +170,7 @@ public class GamesController : ControllerBase
     /// The endpoint supports idempotency via the `X-Tenx-Idempotency-Key` header to prevent duplicate game creation.
     /// 
     /// Request Body:
-    /// - mapCode (optional): The map code to use (defaults to "standard_6x8" if not provided)
+    /// - mapCode (optional): The map code to use (defaults to "standard_15x20" if not provided)
     /// - settings (optional): JSON object with game settings
     /// - displayName (optional): Your display name in the game (defaults to "Player" if not provided)
     /// 
@@ -178,7 +180,7 @@ public class GamesController : ControllerBase
     ///     X-Tenx-Idempotency-Key: unique-request-id-123
     ///     
     ///     {
-    ///       "mapCode": "standard_6x8",
+    ///       "mapCode": "standard_15x20",
     ///       "settings": { "difficulty": "normal" },
     ///       "displayName": "Commander Alex"
     ///     }
@@ -307,7 +309,7 @@ public class GamesController : ControllerBase
     ///
     ///     {
     ///       "game": { "id": 1, "turnNo": 1, "activeParticipantId": 1, "status": "active" },
-    ///       "map": { "id": 1, "code": "standard_6x8", "width": 8, "height": 6 },
+    ///       "map": { "id": 1, "code": "standard_15x20", "width": 8, "height": 6 },
     ///       "participants": [...],
     ///       "units": [...],
     ///       "cities": [...],

@@ -44,7 +44,7 @@ public class GameServiceTests : IDisposable
         {
             MaxActiveGamesPerUser = 10,
             AcceptedMapSchemaVersion = 1,
-            DefaultMapCode = "standard_6x8"
+            DefaultMapCode = "standard_15x20"
         });
 
         _service = new GameService(
@@ -395,13 +395,13 @@ public class GameServiceTests : IDisposable
     {
         // Arrange
         var newUserId = Guid.NewGuid();
-        var command = new CreateGameCommand("standard_6x8", null, "TestPlayer");
+        var command = new CreateGameCommand("standard_15x20", null, "TestPlayer");
         
         // Setup test map
         var testMap = new Map
         {
             Id = 100,
-            Code = "standard_6x8",
+            Code = "standard_15x20",
             SchemaVersion = 1,
             Width = 8,
             Height = 6
@@ -415,7 +415,7 @@ public class GameServiceTests : IDisposable
 
         var expectedGameState = new GameStateDto(
             new GameStateGameDto(1, 1, 1, false, "active"),
-            new GameStateMapDto(100, "standard_6x8", 1, 8, 6),
+            new GameStateMapDto(100, "standard_15x20", 1, 8, 6),
             new List<ParticipantDto>(),
             new List<UnitInStateDto>(),
             new List<CityInStateDto>(),
@@ -466,12 +466,12 @@ public class GameServiceTests : IDisposable
     {
         // Arrange
         var newUserId = Guid.NewGuid();
-        var command = new CreateGameCommand("standard_6x8", null, null);
+        var command = new CreateGameCommand("standard_15x20", null, null);
         
         var testMap = new Map
         {
             Id = 101,
-            Code = "standard_6x8",
+            Code = "standard_15x20",
             SchemaVersion = 1,
             Width = 8,
             Height = 6
@@ -483,7 +483,7 @@ public class GameServiceTests : IDisposable
         _gameStateServiceMock.Setup(x => x.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameStateDto(
                 new GameStateGameDto(1, 1, 1, false, "active"),
-                new GameStateMapDto(101, "standard_6x8", 1, 8, 6),
+                new GameStateMapDto(101, "standard_15x20", 1, 8, 6),
                 Array.Empty<ParticipantDto>(),
                 Array.Empty<UnitInStateDto>(),
                 Array.Empty<CityInStateDto>(),
@@ -507,14 +507,14 @@ public class GameServiceTests : IDisposable
     {
         // Arrange
         var newUserId = Guid.NewGuid();
-        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var command = new CreateGameCommand("standard_15x20", null, "Player");
         var idempotencyKey = "test-key-123";
         
         var cachedResponse = new GameCreatedResponse(
             999,
             new GameStateDto(
                 new GameStateGameDto(999, 1, 1, false, "active"),
-                new GameStateMapDto(1, "standard_6x8", 1, 8, 6),
+                new GameStateMapDto(1, "standard_15x20", 1, 8, 6),
                 Array.Empty<ParticipantDto>(),
                 Array.Empty<UnitInStateDto>(),
                 Array.Empty<CityInStateDto>(),
@@ -562,7 +562,7 @@ public class GameServiceTests : IDisposable
         }
         await _context.SaveChangesAsync();
 
-        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var command = new CreateGameCommand("standard_15x20", null, "Player");
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -618,13 +618,13 @@ public class GameServiceTests : IDisposable
     {
         // Arrange
         var newUserId = Guid.NewGuid();
-        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var command = new CreateGameCommand("standard_15x20", null, "Player");
         var idempotencyKey = "test-key-456";
         
         var testMap = new Map
         {
             Id = 103,
-            Code = "standard_6x8",
+            Code = "standard_15x20",
             SchemaVersion = 1,
             Width = 8,
             Height = 6
@@ -636,7 +636,7 @@ public class GameServiceTests : IDisposable
         _gameStateServiceMock.Setup(x => x.BuildGameStateAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameStateDto(
                 new GameStateGameDto(1, 1, 1, false, "active"),
-                new GameStateMapDto(103, "standard_6x8", 1, 8, 6),
+                new GameStateMapDto(103, "standard_15x20", 1, 8, 6),
                 Array.Empty<ParticipantDto>(),
                 Array.Empty<UnitInStateDto>(),
                 Array.Empty<CityInStateDto>(),
@@ -663,12 +663,12 @@ public class GameServiceTests : IDisposable
     {
         // Arrange
         var newUserId = Guid.NewGuid();
-        var command = new CreateGameCommand("standard_6x8", null, "Player");
+        var command = new CreateGameCommand("standard_15x20", null, "Player");
         
         var testMap = new Map
         {
             Id = 104,
-            Code = "standard_6x8",
+            Code = "standard_15x20",
             SchemaVersion = 1,
             Width = 8,
             Height = 6

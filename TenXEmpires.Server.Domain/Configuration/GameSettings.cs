@@ -18,7 +18,7 @@ public class GameSettings
     /// <summary>
     /// The default map code to use when none is specified.
     /// </summary>
-    public string DefaultMapCode { get; set; } = "standard_6x8";
+    public string DefaultMapCode { get; set; } = "standard_15x20";
 
     /// <summary>
     /// City healing per turn when not under siege.

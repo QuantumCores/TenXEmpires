@@ -1,14 +1,13 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
-using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Constants;
+using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;

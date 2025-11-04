@@ -40,7 +40,9 @@ namespace TenXEmpires.Server
             // Register DbContext
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
             builder.Services.AddDbContext<TenXDbContext>(options =>
-                options.UseNpgsql(connectionString));
+                options.UseNpgsql(connectionString)
+                       .EnableSensitiveDataLogging()
+                       .EnableDetailedErrors());
             builder.Services.AddDbContext<AppIdentityDbContext>(options =>
                 options.UseNpgsql(connectionString));
 

@@ -105,6 +105,8 @@ public class GameService : IGameService
                 nameof(query.Sort))
         };
 
+        _logger.LogInformation("ARD: baseQuery {0}", baseQuery.ToQueryString());
+
         // Get total count (optional for performance - could be deferred)
         var total = await baseQuery.CountAsync(cancellationToken);
 
