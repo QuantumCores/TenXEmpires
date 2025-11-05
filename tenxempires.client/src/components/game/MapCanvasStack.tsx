@@ -623,7 +623,7 @@ function renderFeatures(
       // Fallback to drawn sprite
       const spriteSize = hexMetrics.hexSize * 1.25
       const citySprite = spriteCache.get(generateCitySprite(), spriteSize, spriteSize, (spriteCtx) => drawCitySprite(spriteCtx))
-      ctx.drawImage(citySprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
+      ctx.drawImage(citySprite, -spriteSize / 2, -spriteSize / 2)
     }
 
     // HP bar (always drawn on top)
@@ -665,7 +665,7 @@ function renderUnits(
     ctx.scale(camera.scale, camera.scale)
 
     // Draw unit sprite
-    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
+    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2)
 
     // Draw unit type (scaled font)
     ctx.fillStyle = '#ffffff'

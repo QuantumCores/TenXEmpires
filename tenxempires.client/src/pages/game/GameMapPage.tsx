@@ -182,6 +182,7 @@ export function GameMapPage() {
       </main>
 
       {/* UI overlays positioned absolutely */}
+
       <BottomPanel
         gameState={gameState}
         selection={selection}
