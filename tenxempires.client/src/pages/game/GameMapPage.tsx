@@ -2,7 +2,6 @@ import { useParams } from 'react-router-dom'
 import { useCallback, useState, useEffect } from 'react'
 import { useGameState, useUnitDefinitions, useMapTiles } from '../../features/game/useGameQueries'
 import { MapCanvasStack } from '../../components/game/MapCanvasStack'
-import { TopBar } from '../../components/game/TopBar'
 import { BottomPanel } from '../../components/game/BottomPanel'
 import { ActionRail } from '../../components/game/ActionRail'
 import { EndTurnButton } from '../../components/game/EndTurnButton'
@@ -169,14 +168,9 @@ export function GameMapPage() {
 
   return (
     <IdleSessionProvider>
-    <div className="game-map-page relative flex min-h-dvh flex-col">
-      <TopBar
-        turnNo={gameState.game.turnNo}
-        status={gameState.game.status}
-        turnInProgress={turnInProgress}
-      />
-
-      <main className="game-map-main relative flex-1 overflow-hidden">
+    <div className="game-map-page relative">
+      {/* Map fills entire viewport */}
+      <main className="game-map-main">
         <MapCanvasStack
           gameState={gameState}
           unitDefs={unitDefs}
@@ -187,6 +181,7 @@ export function GameMapPage() {
         />
       </main>
 
+      {/* UI overlays positioned absolutely */}
       <BottomPanel
         gameState={gameState}
         selection={selection}
@@ -198,6 +193,8 @@ export function GameMapPage() {
         gameId={gameId!}
         gameState={gameState}
         disabled={isActionsDisabled}
+        turnNo={gameState.game.turnNo}
+        status={gameState.game.status}
       />
 
       <AIOverlay isVisible={turnInProgress} />

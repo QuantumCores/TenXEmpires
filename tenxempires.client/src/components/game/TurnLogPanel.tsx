@@ -9,7 +9,7 @@ export function TurnLogPanel({ gameId }: TurnLogPanelProps) {
   const entries = logs[gameId] || []
 
   return (
-    <div className="absolute left-4 top-20 z-30">
+    <div className="absolute left-4 top-4 z-30">
       <button
         type="button"
         className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"

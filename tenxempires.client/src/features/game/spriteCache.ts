@@ -14,7 +14,7 @@ export class SpriteCache {
   /**
    * Gets or creates a cached sprite canvas
    */
-  get(key: string, width: number, height: number, draw: (ctx: CanvasRenderingContext2D) => void): HTMLCanvasElement {
+  get(key: string, width: number, height: number, draw: (ctx: CanvasRenderingContext2D, logicalWidth: number, logicalHeight: number) => void): HTMLCanvasElement {
     const cacheKey = `${key}-${this.dpr}`
 
     if (this.cache.has(cacheKey)) {
@@ -29,8 +29,8 @@ export class SpriteCache {
     const ctx = canvas.getContext('2d')!
     ctx.scale(this.dpr, this.dpr)
     
-    // Draw sprite
-    draw(ctx)
+    // Draw sprite with logical dimensions
+    draw(ctx, width, height)
     
     this.cache.set(cacheKey, canvas)
     return canvas
@@ -82,7 +82,9 @@ export function drawTileSprite(
   ctx: CanvasRenderingContext2D,
   _terrain: string,
   hasResource: boolean,
-  color: string
+  color: string,
+  _logicalWidth?: number,
+  _logicalHeight?: number
 ): void {
   const centerX = HEX_SIZE * 2
   const centerY = HEX_SIZE * 2
@@ -105,7 +107,7 @@ export function drawTileSprite(
  * Generates a unit sprite key
  */
 export function generateUnitSprite(isPlayerUnit: boolean, hasActed: boolean): string {
-  return `unit-${isPlayerUnit ? 'player' : 'ai'}-${hasActed ? 'acted' : 'ready'}`
+  return `unit-v4-${isPlayerUnit ? 'player' : 'ai'}-${hasActed ? 'acted' : 'ready'}`
 }
 
 /**
@@ -114,19 +116,28 @@ export function generateUnitSprite(isPlayerUnit: boolean, hasActed: boolean): st
 export function drawUnitSprite(
   ctx: CanvasRenderingContext2D,
   isPlayerUnit: boolean,
-  hasActed: boolean
+  hasActed: boolean,
+  logicalWidth?: number,
+  logicalHeight?: number
 ): void {
-  const centerX = 20
-  const centerY = 20
-  const radius = 16
+  // Get dimensions - use passed logical dimensions
+  const width = logicalWidth || 40
+  const height = logicalHeight || 40
+  
+  // Center coordinates
+  const centerX = width / 2
+  const centerY = height / 2
+  
+  // Calculate radius - 80% of available space to ensure full visibility
+  const radius = (Math.min(centerX, centerY) * 0.8)
 
-  // Draw unit circle
+  // Draw unit circle (full circle, smaller than city square)
   ctx.fillStyle = hasActed ? '#64748b' : isPlayerUnit ? '#3b82f6' : '#ef4444'
   ctx.beginPath()
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
   ctx.fill()
 
-  // Draw border
+  // Draw border (thinner, inside the circle)
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 2
   ctx.stroke()
@@ -136,46 +147,62 @@ export function drawUnitSprite(
  * Generates a city sprite key
  */
 export function generateCitySprite(): string {
-  return 'city-base'
+  return 'city-v4-base'
 }
 
 /**
  * Draws a city sprite
  */
-export function drawCitySprite(ctx: CanvasRenderingContext2D): void {
-  const centerX = 20
-  const centerY = 20
-  const radius = 14
+export function drawCitySprite(
+  ctx: CanvasRenderingContext2D,
+  logicalWidth?: number,
+  logicalHeight?: number
+): void {
+  // Get dimensions - use passed logical dimensions
+  const width = logicalWidth || 40
+  const height = logicalHeight || 40
+  
+  // Center coordinates
+  const centerX = width / 2
+  const centerY = height / 2
+  
+  // Calculate size - 80% of available space to ensure full visibility
+  const size = Math.min(width, height) * 0.8
 
-  // Draw city
+  // Draw city as a square
   ctx.fillStyle = '#fbbf24'
-  ctx.beginPath()
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-  ctx.fill()
+  ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size)
 
-  // Draw border
+  // Draw border (thinner, inside the square)
   ctx.strokeStyle = '#ffffff'
   ctx.lineWidth = 2
-  ctx.stroke()
+  ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size)
 }
 
 /**
  * Generates a hex grid sprite key
  */
 export function generateGridSprite(): string {
-  return 'grid-hex'
+  return 'grid-v2-hex'
 }
 
 /**
  * Draws a hex grid sprite
  */
-export function drawGridSprite(ctx: CanvasRenderingContext2D): void {
-  const centerX = HEX_SIZE * 2
-  const centerY = HEX_SIZE * 2
+export function drawGridSprite(
+  ctx: CanvasRenderingContext2D,
+  logicalWidth?: number,
+  logicalHeight?: number
+): void {
+  // Use passed dimensions or fall back to defaults
+  // The canvas is created as hexSize * 4, so center is at half that
+  const centerX = (logicalWidth ?? HEX_SIZE * 4) / 2
+  const centerY = (logicalHeight ?? HEX_SIZE * 4) / 2
+  const hexSize = centerX / 2
 
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
   ctx.lineWidth = 1
-  drawHexPath(ctx, centerX, centerY)
+  drawHexPath(ctx, centerX, centerY, hexSize)
   ctx.stroke()
 }
 
