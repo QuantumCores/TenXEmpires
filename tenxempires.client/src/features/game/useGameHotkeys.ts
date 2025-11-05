@@ -33,6 +33,10 @@ export function useGameHotkeys({
       const rawKey = e.key
       const key = rawKey.toLowerCase()
 
+      // Ignore if typing in an input/textarea (highest priority check)
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
       // Help toggle (H or ?), allowed even when help modal is open
       if (key === 'h' || rawKey === '?') {
         e.preventDefault()
@@ -57,10 +61,6 @@ export function useGameHotkeys({
 
       // Suspend other hotkeys when any non-help modal is open
       if (isModalOpen) return
-
-      // Ignore if typing in an input/textarea
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
 
       // key already computed above
 

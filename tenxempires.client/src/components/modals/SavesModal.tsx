@@ -343,7 +343,19 @@ function SaveSlotCard({
   onLoad, 
   onDelete 
 }: SaveSlotCardProps) {
-  const [name, setName] = useState(save?.name || `Save ${slot}`)
+  // Generate default name with timestamp format: YYYY-MM-DD HH:MM:SS
+  const generateDefaultName = () => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    return `save_${slot}_${year}${month}${day}_${hours}${minutes}${seconds}`
+  }
+
+  const [name, setName] = useState(save?.name || generateDefaultName())
   const [isEditing, setIsEditing] = useState(false)
 
   const handleSave = () => {
@@ -377,7 +389,21 @@ function SaveSlotCard({
           </div>
 
           {isEmpty ? (
-            <div className="mb-3 text-sm text-slate-400">Empty slot</div>
+            <div className="mb-3">
+              <label htmlFor={`save-name-${slot}`} className="mb-1 block text-xs text-slate-500">
+                Save name:
+              </label>
+              <input
+                id={`save-name-${slot}`}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                maxLength={40}
+                disabled={disabled}
+                placeholder="Enter save name"
+              />
+            </div>
           ) : (
             <div className="mb-3">
               {isEditing ? (
