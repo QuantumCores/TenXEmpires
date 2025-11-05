@@ -7,11 +7,56 @@
 // Constants
 // ============================================================================
 
-// Pointy-top hex dimensions
-export const HEX_SIZE = 32 // Distance from center to vertex
+// Pointy-top hex dimensions (default/fallback values)
+export const DEFAULT_HEX_SIZE = 32 // Distance from center to vertex
+export const HEX_SIZE = DEFAULT_HEX_SIZE // For backward compatibility
 export const HEX_WIDTH = HEX_SIZE * Math.sqrt(3) // ~55.4
 export const HEX_HEIGHT = HEX_SIZE * 2 // 64
 export const HEX_VERT_SPACING = HEX_SIZE * 1.5 // 48
+
+/**
+ * Calculates optimal hex size to fit the map within the given viewport.
+ * Takes into account the map dimensions and adds padding for better UX.
+ */
+export function calculateOptimalHexSize(
+  mapWidth: number,
+  mapHeight: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  paddingPercent = 0.1 // 10% padding by default
+): {
+  hexSize: number
+  hexWidth: number
+  hexHeight: number
+  hexVertSpacing: number
+} {
+  // Add padding to viewport
+  const availableWidth = viewportWidth * (1 - paddingPercent * 2)
+  const availableHeight = viewportHeight * (1 - paddingPercent * 2)
+
+  // For pointy-top hexagons in odd-r layout:
+  // Total width = mapWidth * HEX_WIDTH + 0.5 * HEX_WIDTH (for offset rows)
+  // Total height = (mapHeight - 1) * HEX_VERT_SPACING + HEX_HEIGHT
+
+  // Calculate hex size based on width constraint
+  const hexSizeFromWidth = availableWidth / (mapWidth * Math.sqrt(3) + 0.5 * Math.sqrt(3))
+  
+  // Calculate hex size based on height constraint
+  // HEX_VERT_SPACING = hexSize * 1.5
+  // HEX_HEIGHT = hexSize * 2
+  // totalHeight = (mapHeight - 1) * (hexSize * 1.5) + (hexSize * 2)
+  const hexSizeFromHeight = availableHeight / ((mapHeight - 1) * 1.5 + 2)
+
+  // Use the smaller of the two to ensure the map fits in both dimensions
+  const hexSize = Math.min(hexSizeFromWidth, hexSizeFromHeight)
+
+  return {
+    hexSize,
+    hexWidth: hexSize * Math.sqrt(3),
+    hexHeight: hexSize * 2,
+    hexVertSpacing: hexSize * 1.5,
+  }
+}
 
 // ============================================================================
 // Coordinate Types
@@ -61,9 +106,11 @@ export function cubeToOddr(cube: CubeCoord): SquareCoord {
 /**
  * Converts odd-r offset coordinates to pixel coordinates (pointy-top).
  */
-export function oddrToPixel(col: number, row: number): PixelCoord {
-  const x = HEX_WIDTH * (col + 0.5 * (row & 1))
-  const y = HEX_VERT_SPACING * row
+export function oddrToPixel(col: number, row: number, hexWidth?: number, hexVertSpacing?: number): PixelCoord {
+  const width = hexWidth ?? HEX_WIDTH
+  const spacing = hexVertSpacing ?? HEX_VERT_SPACING
+  const x = width * (col + 0.5 * (row & 1))
+  const y = spacing * row
   return { x, y }
 }
 
@@ -71,10 +118,13 @@ export function oddrToPixel(col: number, row: number): PixelCoord {
  * Converts pixel coordinates to odd-r offset coordinates (pointy-top).
  * Returns the hex that contains the given pixel point.
  */
-export function pixelToOddr(x: number, y: number): SquareCoord {
+export function pixelToOddr(x: number, y: number, hexWidth?: number, hexVertSpacing?: number): SquareCoord {
+  const width = hexWidth ?? HEX_WIDTH
+  const spacing = hexVertSpacing ?? HEX_VERT_SPACING
+  
   // Fractional odd-r coordinates
-  const row = y / HEX_VERT_SPACING
-  const col = (x - HEX_WIDTH * 0.5 * (Math.floor(row) & 1)) / HEX_WIDTH
+  const row = y / spacing
+  const col = (x - width * 0.5 * (Math.floor(row) & 1)) / width
 
   // Convert to cube for rounding
   const cubeX = col - (Math.floor(row) - (Math.floor(row) & 1)) / 2
@@ -165,14 +215,15 @@ export function isInRange(
 /**
  * Gets the six vertices of a pointy-top hexagon centered at (x, y).
  */
-export function getHexVertices(centerX: number, centerY: number): PixelCoord[] {
+export function getHexVertices(centerX: number, centerY: number, hexSize?: number): PixelCoord[] {
+  const size = hexSize ?? HEX_SIZE
   const vertices: PixelCoord[] = []
   for (let i = 0; i < 6; i++) {
     const angleDeg = 60 * i - 30 // Start at -30° for pointy-top
     const angleRad = (Math.PI / 180) * angleDeg
     vertices.push({
-      x: centerX + HEX_SIZE * Math.cos(angleRad),
-      y: centerY + HEX_SIZE * Math.sin(angleRad),
+      x: centerX + size * Math.cos(angleRad),
+      y: centerY + size * Math.sin(angleRad),
     })
   }
   return vertices
@@ -184,9 +235,10 @@ export function getHexVertices(centerX: number, centerY: number): PixelCoord[] {
 export function drawHexPath(
   ctx: CanvasRenderingContext2D,
   centerX: number,
-  centerY: number
+  centerY: number,
+  hexSize?: number
 ): void {
-  const vertices = getHexVertices(centerX, centerY)
+  const vertices = getHexVertices(centerX, centerY, hexSize)
   ctx.beginPath()
   ctx.moveTo(vertices[0].x, vertices[0].y)
   for (let i = 1; i < 6; i++) {
@@ -202,10 +254,13 @@ export function isPointInHex(
   pointX: number,
   pointY: number,
   hexCol: number,
-  hexRow: number
+  hexRow: number,
+  hexSize?: number,
+  hexWidth?: number,
+  hexVertSpacing?: number
 ): boolean {
-  const center = oddrToPixel(hexCol, hexRow)
-  const vertices = getHexVertices(center.x, center.y)
+  const center = oddrToPixel(hexCol, hexRow, hexWidth, hexVertSpacing)
+  const vertices = getHexVertices(center.x, center.y, hexSize)
 
   // Use point-in-polygon algorithm
   let inside = false

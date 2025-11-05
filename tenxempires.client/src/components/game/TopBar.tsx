@@ -6,7 +6,7 @@ interface TopBarProps {
 
 export function TopBar({ turnNo, status, turnInProgress }: TopBarProps) {
   return (
-    <header className="flex items-center justify-between border-b border-slate-300 bg-white px-4 py-2">
+    <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between border-b border-slate-300 bg-white/90 px-4 py-2 backdrop-blur-sm">
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-semibold">Turn {turnNo}</h1>
         <div className="flex items-center gap-2">

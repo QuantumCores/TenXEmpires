@@ -169,14 +169,9 @@ export function GameMapPage() {
 
   return (
     <IdleSessionProvider>
-    <div className="game-map-page relative flex min-h-dvh flex-col">
-      <TopBar
-        turnNo={gameState.game.turnNo}
-        status={gameState.game.status}
-        turnInProgress={turnInProgress}
-      />
-
-      <main className="game-map-main relative flex-1 overflow-hidden">
+    <div className="game-map-page relative">
+      {/* Map fills entire viewport */}
+      <main className="game-map-main">
         <MapCanvasStack
           gameState={gameState}
           unitDefs={unitDefs}
@@ -186,6 +181,13 @@ export function GameMapPage() {
           gridOn={gridOn}
         />
       </main>
+
+      {/* UI overlays positioned absolutely */}
+      <TopBar
+        turnNo={gameState.game.turnNo}
+        status={gameState.game.status}
+        turnInProgress={turnInProgress}
+      />
 
       <BottomPanel
         gameState={gameState}

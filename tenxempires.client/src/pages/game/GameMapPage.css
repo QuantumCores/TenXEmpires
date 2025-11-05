@@ -1,22 +1,42 @@
 /**
  * Game Map Page styles
  * Ensures proper sizing and rendering at 1080p (1920x1080) and 900p+ resolutions
+ * Makes the game map fill the entire screen like desktop strategy games
  */
 
-/* Ensure full viewport usage */
-.game-map-page {
-  height: 100dvh; /* Explicit height needed for flex children */
-  display: flex;
-  flex-direction: column;
+/* Ensure html and body support fullscreen when game is active */
+html:has(.game-map-page),
+body:has(.game-map-page) {
+  height: 100dvh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Override root container constraints for fullscreen game */
+#root:has(.game-map-page) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
   overflow: hidden;
 }
 
-/* Map container takes all available space */
-.game-map-main {
-  flex: 1;
+/* Ensure full viewport usage */
+.game-map-page {
+  height: 100dvh;
+  width: 100%;
   position: relative;
   overflow: hidden;
-  min-height: 0; /* Important for flex container to shrink */
+}
+
+/* Map container fills entire viewport */
+.game-map-main {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Canvas stack fills container */
@@ -25,6 +45,12 @@
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+/* Ensure all canvases in the map fill their container */
+.game-map-main canvas {
+  display: block;
+  object-fit: contain;
 }
 
 /* Ensure crisp rendering on high-DPI displays */

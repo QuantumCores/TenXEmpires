@@ -14,6 +14,7 @@ import {
   HEX_SIZE,
   HEX_WIDTH,
   HEX_HEIGHT,
+  calculateOptimalHexSize,
 } from '../../features/game/hexGeometry'
 import { findPath, getReachableTiles, getAttackableTiles } from '../../features/game/pathfinding'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
@@ -72,6 +73,17 @@ export function MapCanvasStack({
   const [hoverTile, setHoverTile] = useState<GridPosition | null>(null)
   const [preview, setPreview] = useState<PreviewState>({ kind: null })
 
+  // Calculate optimal hex size based on viewport and map dimensions
+  const hexMetrics = useMemo(() => {
+    return calculateOptimalHexSize(
+      gameState.map.width,
+      gameState.map.height,
+      dimensions.width,
+      dimensions.height,
+      0.05 // 5% padding
+    )
+  }, [dimensions.width, dimensions.height, gameState.map.width, gameState.map.height])
+
   const { setSelection, clearSelection, setCamera } = useGameMapStore()
   const debug = useGameMapStore((s) => s.debug)
   const invertScrollZoom = useGameMapStore((s) => s.invertZoom)
@@ -97,10 +109,18 @@ export function MapCanvasStack({
     const container = containerRef.current
     if (!container) return
 
+    // Set initial dimensions immediately
+    const rect = container.getBoundingClientRect()
+    if (rect.width > 0 && rect.height > 0) {
+      setDimensions({ width: rect.width, height: rect.height })
+    }
+
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect
-        setDimensions({ width, height })
+        if (width > 0 && height > 0) {
+          setDimensions({ width, height })
+        }
       }
     })
 
@@ -141,21 +161,21 @@ export function MapCanvasStack({
     })
   }, [dimensions, spriteCache])
 
-  // Center camera on map when first loaded
+  // Center camera on map when first loaded or when hex size changes
   useEffect(() => {
-    // Calculate map center in world coordinates
+    // Calculate map center in world coordinates using current hex metrics
     const mapCenterRow = gameState.map.height / 2
     const mapCenterCol = gameState.map.width / 2
-    const mapCenter = oddrToPixel(mapCenterCol, mapCenterRow)
+    const mapCenter = oddrToPixel(mapCenterCol, mapCenterRow, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     
-    // Set camera to center the map
+    // Set camera to center the map, shifted down by half a hex height to account for TopBar
     // Negative offset moves the world in that direction, centering it
     setCamera({
       offsetX: -mapCenter.x,
-      offsetY: -mapCenter.y,
+      offsetY: -mapCenter.y + hexMetrics.hexHeight * 0.5,
       scale: 1,
     })
-  }, [gameState.map.width, gameState.map.height, setCamera])
+  }, [gameState.map.width, gameState.map.height, setCamera, hexMetrics])
 
   // Update preview when selection changes
   useEffect(() => {
@@ -209,8 +229,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderTiles(ctx, mapTiles, camera, dimensions, spriteCache, imageLoader)
-  }, [mapTiles, camera, dimensions, spriteCache, imageLoader, imagesLoaded])
+    renderTiles(ctx, mapTiles, camera, dimensions, spriteCache, imageLoader, hexMetrics)
+  }, [mapTiles, camera, dimensions, spriteCache, imageLoader, imagesLoaded, hexMetrics])
 
   // Render grid layer
   useEffect(() => {
@@ -219,11 +239,11 @@ export function MapCanvasStack({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     if (gridOn) {
-      renderGrid(ctx, gameState.map, camera, dimensions, spriteCache)
+      renderGrid(ctx, gameState.map, camera, dimensions, spriteCache, hexMetrics)
     } else {
       ctx.clearRect(0, 0, dimensions.width, dimensions.height)
     }
-  }, [gameState.map, camera, dimensions, gridOn, spriteCache])
+  }, [gameState.map, camera, dimensions, gridOn, spriteCache, hexMetrics])
 
   // Render features layer
   useEffect(() => {
@@ -231,8 +251,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderFeatures(ctx, gameState, camera, dimensions, spriteCache, imageLoader)
-  }, [gameState, camera, dimensions, spriteCache, imageLoader, imagesLoaded])
+    renderFeatures(ctx, gameState, camera, dimensions, spriteCache, imageLoader, hexMetrics)
+  }, [gameState, camera, dimensions, spriteCache, imageLoader, imagesLoaded, hexMetrics])
 
   // Render units layer
   useEffect(() => {
@@ -240,8 +260,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderUnits(ctx, gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache)
-  }, [gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache])
+    renderUnits(ctx, gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, hexMetrics)
+  }, [gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, hexMetrics])
 
   // Render overlay layer
   useEffect(() => {
@@ -249,8 +269,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderOverlay(ctx, selection, gameState, preview, hoverTile, camera, dimensions, debug)
-  }, [selection, gameState, preview, hoverTile, camera, dimensions, debug])
+    renderOverlay(ctx, selection, gameState, preview, hoverTile, camera, dimensions, debug, hexMetrics)
+  }, [selection, gameState, preview, hoverTile, camera, dimensions, debug, hexMetrics])
 
   // Handle pointer move
   const handlePointerMove = useCallback(
@@ -261,10 +281,10 @@ export function MapCanvasStack({
       const x = (e.clientX - rect.left - dimensions.width / 2 - camera.offsetX) / camera.scale
       const y = (e.clientY - rect.top - dimensions.height / 2 - camera.offsetY) / camera.scale
 
-      const tile = pixelToOddr(x, y)
+      const tile = pixelToOddr(x, y, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       setHoverTile({ row: tile.y, col: tile.x })
     },
-    [camera, dimensions]
+    [camera, dimensions, hexMetrics]
   )
 
   // Handle click
@@ -278,7 +298,7 @@ export function MapCanvasStack({
       const x = (e.clientX - rect.left - dimensions.width / 2 - camera.offsetX) / camera.scale
       const y = (e.clientY - rect.top - dimensions.height / 2 - camera.offsetY) / camera.scale
 
-      const clickedTile = pixelToOddr(x, y)
+      const clickedTile = pixelToOddr(x, y, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const clickedPos: GridPosition = { row: clickedTile.y, col: clickedTile.x }
 
       // Picking priority: Unit > City > Tile
@@ -383,7 +403,7 @@ export function MapCanvasStack({
       // Otherwise clear selection
       clearSelection()
     },
-    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation]
+    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, hexMetrics]
   )
 
   // Handle right-click to cancel
@@ -462,12 +482,13 @@ function renderTiles(
   camera: CameraState,
   viewport: { width: number; height: number },
   spriteCache: ReturnType<typeof getGlobalSpriteCache>,
-  imageLoader: ReturnType<typeof getGlobalImageLoader>
+  imageLoader: ReturnType<typeof getGlobalImageLoader>,
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
   tiles.forEach((tile) => {
-    const pos = oddrToPixel(tile.col, tile.row)
+    const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
     ctx.save()
@@ -481,7 +502,6 @@ function renderTiles(
       // Draw PNG image, cropping transparent padding
       // Image: 274x274 with transparent padding (52px horizontal, 39px vertical on each side)
       // Actual hex content: 170x196 (after removing padding)
-      // For pointy-top hexes: width (flat-to-flat) = sqrt(3) * HEX_SIZE ≈ 55.4
       const IMG_WIDTH = 274
       const IMG_HEIGHT = 274
       const IMG_PADDING_H = 52
@@ -493,9 +513,9 @@ function renderTiles(
       const srcWidth = IMG_WIDTH - (IMG_PADDING_H * 2)   // 170
       const srcHeight = IMG_HEIGHT - (IMG_PADDING_V * 2) // 196
       
-      // Destination dimensions (scale hex content to fit HEX_WIDTH and HEX_HEIGHT)
-      const destWidth = HEX_WIDTH   // ~55.4
-      const destHeight = HEX_HEIGHT // 64
+      // Destination dimensions (scale hex content to fit current hex size)
+      const destWidth = hexMetrics.hexWidth
+      const destHeight = hexMetrics.hexHeight
       
       // Draw only the hex content, centered
       ctx.drawImage(
@@ -508,11 +528,11 @@ function renderTiles(
       const spriteKey = generateTileSprite(tile.terrain, !!tile.resourceType)
       const sprite = spriteCache.get(
         spriteKey,
-        HEX_SIZE * 4,
-        HEX_SIZE * 4,
+        hexMetrics.hexSize * 4,
+        hexMetrics.hexSize * 4,
         (spriteCtx) => drawTileSprite(spriteCtx, tile.terrain, !!tile.resourceType, getTerrainColor(tile.terrain))
       )
-      ctx.drawImage(sprite, -HEX_SIZE * 2, -HEX_SIZE * 2)
+      ctx.drawImage(sprite, -hexMetrics.hexSize * 2, -hexMetrics.hexSize * 2)
     }
 
     // Draw resource indicator if present (always drawn on top)
@@ -532,27 +552,28 @@ function renderGrid(
   map: { width: number; height: number },
   camera: CameraState,
   viewport: { width: number; height: number },
-  spriteCache: ReturnType<typeof getGlobalSpriteCache>
+  spriteCache: ReturnType<typeof getGlobalSpriteCache>,
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
   // Get cached grid sprite
   const gridSprite = spriteCache.get(
     generateGridSprite(),
-    HEX_SIZE * 4,
-    HEX_SIZE * 4,
+    hexMetrics.hexSize * 4,
+    hexMetrics.hexSize * 4,
     (spriteCtx) => drawGridSprite(spriteCtx)
   )
 
   for (let row = 0; row < map.height; row++) {
     for (let col = 0; col < map.width; col++) {
-      const pos = oddrToPixel(col, row)
+      const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
       ctx.save()
       ctx.translate(screen.x, screen.y)
       ctx.scale(camera.scale, camera.scale)
-      ctx.drawImage(gridSprite, -HEX_SIZE * 2, -HEX_SIZE * 2)
+      ctx.drawImage(gridSprite, -hexMetrics.hexSize * 2, -hexMetrics.hexSize * 2)
       ctx.restore()
     }
   }
@@ -564,12 +585,13 @@ function renderFeatures(
   camera: CameraState,
   viewport: { width: number; height: number },
   spriteCache: ReturnType<typeof getGlobalSpriteCache>,
-  imageLoader: ReturnType<typeof getGlobalImageLoader>
+  imageLoader: ReturnType<typeof getGlobalImageLoader>,
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
   gameState.cities.forEach((city) => {
-    const pos = oddrToPixel(city.col, city.row)
+    const pos = oddrToPixel(city.col, city.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
     ctx.save()
@@ -580,19 +602,21 @@ function renderFeatures(
     const cityImage = imageLoader.getImage('city', 'city')
     
     if (cityImage) {
-      // Draw PNG image
-      const size = 40
+      // Draw PNG image scaled relative to hex size
+      const size = hexMetrics.hexSize * 1.25
       ctx.drawImage(cityImage, -size / 2, -size / 2, size, size)
     } else {
       // Fallback to drawn sprite
-      const citySprite = spriteCache.get(generateCitySprite(), 40, 40, (spriteCtx) => drawCitySprite(spriteCtx))
-      ctx.drawImage(citySprite, -20, -20)
+      const spriteSize = hexMetrics.hexSize * 1.25
+      const citySprite = spriteCache.get(generateCitySprite(), spriteSize, spriteSize, (spriteCtx) => drawCitySprite(spriteCtx))
+      ctx.drawImage(citySprite, -spriteSize / 2, -spriteSize / 2)
     }
 
     // HP bar (always drawn on top)
     const hpPercent = city.hp / city.maxHp
+    const barWidth = hexMetrics.hexSize
     ctx.fillStyle = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#f59e0b' : '#ef4444'
-    ctx.fillRect(-16, -22, 32 * hpPercent, 4)
+    ctx.fillRect(-barWidth / 2, -hexMetrics.hexSize * 0.7, barWidth * hpPercent, 4)
 
     ctx.restore()
   })
@@ -605,31 +629,34 @@ function renderUnits(
   _unitDefs: UnitDefinitionDto[],
   camera: CameraState,
   viewport: { width: number; height: number },
-  spriteCache: ReturnType<typeof getGlobalSpriteCache>
+  spriteCache: ReturnType<typeof getGlobalSpriteCache>,
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
   units.forEach((unit) => {
-    const pos = oddrToPixel(unit.col, unit.row)
+    const pos = oddrToPixel(unit.col, unit.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
     const participant = participants.find((p) => p.id === unit.participantId)
     const isPlayerUnit = participant?.kind === 'human'
 
-    // Get cached unit sprite
+    // Get cached unit sprite scaled to hex size
     const spriteKey = generateUnitSprite(isPlayerUnit, unit.hasActed)
-    const sprite = spriteCache.get(spriteKey, 40, 40, (spriteCtx) => drawUnitSprite(spriteCtx, isPlayerUnit, unit.hasActed))
+    const spriteSize = hexMetrics.hexSize * 1.25
+    const sprite = spriteCache.get(spriteKey, spriteSize, spriteSize, (spriteCtx) => drawUnitSprite(spriteCtx, isPlayerUnit, unit.hasActed))
 
     ctx.save()
     ctx.translate(screen.x, screen.y)
     ctx.scale(camera.scale, camera.scale)
 
     // Draw unit sprite
-    ctx.drawImage(sprite, -20, -20)
+    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2)
 
-    // Draw unit type
+    // Draw unit type (scaled font)
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 10px sans-serif'
+    const fontSize = Math.max(8, hexMetrics.hexSize * 0.3)
+    ctx.font = `bold ${fontSize}px sans-serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(unit.typeCode.slice(0, 2).toUpperCase(), 0, 0)
@@ -646,21 +673,22 @@ function renderOverlay(
   hoverTile: GridPosition | null,
   camera: CameraState,
   viewport: { width: number; height: number },
-  debug: boolean
+  debug: boolean,
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
   // Draw reachable tiles
   if (preview.reachable) {
     preview.reachable.forEach((tile) => {
-      const pos = oddrToPixel(tile.col, tile.row)
+      const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
       ctx.save()
       ctx.translate(screen.x, screen.y)
       ctx.scale(camera.scale, camera.scale)
 
-      drawHexPath(ctx, 0, 0)
+      drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
       ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'
       ctx.fill()
 
@@ -671,14 +699,14 @@ function renderOverlay(
   // Draw attackable tiles
   if (preview.attackable) {
     preview.attackable.forEach((tile) => {
-      const pos = oddrToPixel(tile.col, tile.row)
+      const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
       ctx.save()
       ctx.translate(screen.x, screen.y)
       ctx.scale(camera.scale, camera.scale)
 
-      drawHexPath(ctx, 0, 0)
+      drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
       ctx.fillStyle = 'rgba(239, 68, 68, 0.15)'
       ctx.fill()
 
@@ -695,7 +723,7 @@ function renderOverlay(
 
     ctx.beginPath()
     preview.path.forEach((tile, i) => {
-      const pos = oddrToPixel(tile.col, tile.row)
+      const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
       if (i === 0) {
         ctx.moveTo(screen.x, screen.y)
@@ -727,14 +755,14 @@ function renderOverlay(
     }
 
     if (targetRow !== undefined && targetCol !== undefined) {
-      const pos = oddrToPixel(targetCol, targetRow)
+      const pos = oddrToPixel(targetCol, targetRow, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
       ctx.save()
       ctx.translate(screen.x, screen.y)
       ctx.scale(camera.scale, camera.scale)
 
-      drawHexPath(ctx, 0, 0)
+      drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
       ctx.strokeStyle = '#fbbf24'
       ctx.lineWidth = 3
       ctx.stroke()
@@ -745,14 +773,14 @@ function renderOverlay(
 
   // Highlight target tile
   if (preview.targetTile) {
-    const pos = oddrToPixel(preview.targetTile.col, preview.targetTile.row)
+    const pos = oddrToPixel(preview.targetTile.col, preview.targetTile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
     ctx.save()
     ctx.translate(screen.x, screen.y)
     ctx.scale(camera.scale, camera.scale)
 
-    drawHexPath(ctx, 0, 0)
+    drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
     ctx.strokeStyle = preview.kind === 'attack' ? '#ef4444' : '#22c55e'
     ctx.lineWidth = 2
     ctx.stroke()
@@ -761,7 +789,7 @@ function renderOverlay(
   }
 
   if (debug) {
-    renderDebug(ctx, gameState, hoverTile, selection, camera, viewport)
+    renderDebug(ctx, gameState, hoverTile, selection, camera, viewport, hexMetrics)
   }
 }
 
@@ -771,7 +799,8 @@ function renderDebug(
   hoverTile: GridPosition | null,
   selection: SelectionState,
   camera: CameraState,
-  viewport: { width: number; height: number }
+  viewport: { width: number; height: number },
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   // Crosshair at center of every tile (light color)
   ctx.save()
@@ -779,7 +808,7 @@ function renderDebug(
   ctx.lineWidth = 1
   for (let row = 0; row < gameState.map.height; row++) {
     for (let col = 0; col < gameState.map.width; col++) {
-      const pos = oddrToPixel(col, row)
+      const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
       const s = 4 * camera.scale
       ctx.beginPath()
@@ -794,7 +823,7 @@ function renderDebug(
 
   // Emphasize hover tile crosshair (cyan)
   if (hoverTile) {
-    const pos = oddrToPixel(hoverTile.col, hoverTile.row)
+    const pos = oddrToPixel(hoverTile.col, hoverTile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
     const s = 8 * camera.scale
     ctx.save()
@@ -821,10 +850,10 @@ function renderDebug(
       if (city) { row = city.row; col = city.col }
     }
     if (row !== undefined && col !== undefined) {
-      const pos = oddrToPixel(col, row)
+      const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
-      const hw = HEX_SIZE * 2 * camera.scale
-      const hh = HEX_SIZE * 2 * camera.scale
+      const hw = hexMetrics.hexSize * 2 * camera.scale
+      const hh = hexMetrics.hexSize * 2 * camera.scale
       ctx.save()
       ctx.strokeStyle = 'rgba(236,72,153,0.95)'
       ctx.lineWidth = Math.max(1, 1.5 * camera.scale)
