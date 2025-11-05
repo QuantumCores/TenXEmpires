@@ -604,9 +604,13 @@ function renderFeatures(
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
 
+  // Get player participant for color coding
+  const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
+
   gameState.cities.forEach((city) => {
     const pos = oddrToPixel(city.col, city.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+    const isPlayerCity = city.participantId === playerParticipant?.id
 
     ctx.save()
     ctx.translate(screen.x, screen.y)
@@ -622,8 +626,8 @@ function renderFeatures(
     } else {
       // Fallback to drawn sprite
       const spriteSize = hexMetrics.hexSize * 1.25
-      const citySprite = spriteCache.get(generateCitySprite(), spriteSize, spriteSize, (spriteCtx) => drawCitySprite(spriteCtx))
-      ctx.drawImage(citySprite, -spriteSize / 2, -spriteSize / 2)
+      const citySprite = spriteCache.get(generateCitySprite(isPlayerCity), spriteSize, spriteSize, (spriteCtx) => drawCitySprite(spriteCtx, isPlayerCity))
+      ctx.drawImage(citySprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
     }
 
     // HP bar (always drawn on top)
@@ -665,7 +669,7 @@ function renderUnits(
     ctx.scale(camera.scale, camera.scale)
 
     // Draw unit sprite
-    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2)
+    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
 
     // Draw unit type (scaled font)
     ctx.fillStyle = '#ffffff'

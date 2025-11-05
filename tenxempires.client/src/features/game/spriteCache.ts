@@ -132,7 +132,7 @@ export function drawUnitSprite(
   const radius = (Math.min(centerX, centerY) * 0.8)
 
   // Draw unit circle (full circle, smaller than city square)
-  ctx.fillStyle = hasActed ? '#64748b' : isPlayerUnit ? '#3b82f6' : '#ef4444'
+  ctx.fillStyle = hasActed ? '#64748b' : isPlayerUnit ? '#93c5fd' : '#ef4444'
   ctx.beginPath()
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
   ctx.fill()
@@ -146,8 +146,8 @@ export function drawUnitSprite(
 /**
  * Generates a city sprite key
  */
-export function generateCitySprite(): string {
-  return 'city-v4-base'
+export function generateCitySprite(isPlayerCity: boolean): string {
+  return `city-v5-${isPlayerCity ? 'player' : 'enemy'}`
 }
 
 /**
@@ -155,6 +155,7 @@ export function generateCitySprite(): string {
  */
 export function drawCitySprite(
   ctx: CanvasRenderingContext2D,
+  isPlayerCity: boolean,
   logicalWidth?: number,
   logicalHeight?: number
 ): void {
@@ -169,8 +170,8 @@ export function drawCitySprite(
   // Calculate size - 80% of available space to ensure full visibility
   const size = Math.min(width, height) * 0.8
 
-  // Draw city as a square
-  ctx.fillStyle = '#fbbf24'
+  // Draw city as a square - blue for player, red for enemy
+  ctx.fillStyle = isPlayerCity ? '#93c5fd' : '#ef4444'
   ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size)
 
   // Draw border (thinner, inside the square)

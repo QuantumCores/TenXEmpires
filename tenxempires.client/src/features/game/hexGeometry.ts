@@ -127,7 +127,7 @@ export function pixelToOddr(x: number, y: number, hexWidth?: number, hexVertSpac
   const col = (x - width * 0.5 * (Math.floor(row) & 1)) / width
 
   // Convert to fractional cube coordinates
-  const cubeX = col - (row - (rowInt & 1)) / 2
+  const cubeX = col - (row - (Math.floor(row) & 1)) / 2
   const cubeZ = row
   const cubeY = -cubeX - cubeZ
 
