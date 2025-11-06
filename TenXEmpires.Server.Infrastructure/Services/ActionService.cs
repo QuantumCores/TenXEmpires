@@ -189,10 +189,32 @@ namespace TenXEmpires.Server.Infrastructure.Services;
                     .Select(u => (u.Row, u.Col))
                     .ToHashSet();
 
+                // Load map tiles to check for water/ocean terrain
+                var mapTiles = await _context.MapTiles
+                    .AsNoTracking()
+                    .Where(t => t.MapId == game.MapId)
+                    .Select(t => new { t.Row, t.Col, t.Terrain })
+                    .ToListAsync(cancellationToken);
+
+                var waterTiles = mapTiles
+                    .Where(t => TerrainTypes.IsWater(t.Terrain))
+                    .Select(t => (t.Row, t.Col))
+                    .ToHashSet();
+
                 // Create blocking function for pathfinding
                 bool IsBlocked(GridPosition pos)
                 {
-                    return occupiedPositions.Contains((pos.Row, pos.Col));
+                    // Block if occupied by another unit
+                    if (occupiedPositions.Contains((pos.Row, pos.Col)))
+                    {
+                        return true;
+                    }
+                    // Block if tile is water or ocean
+                    if (waterTiles.Contains((pos.Row, pos.Col)))
+                    {
+                        return true;
+                    }
+                    return false;
                 }
 
                 // Calculate path using A* pathfinding

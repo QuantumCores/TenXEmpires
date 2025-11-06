@@ -198,16 +198,40 @@ export function MapCanvasStack({
       }
 
       // Calculate reachable tiles for movement
-      const reachable = getReachableTiles(
+      const allReachable = getReachableTiles(
         { row: unit.row, col: unit.col },
         unitDef.movePoints,
         gameState.map.width,
         gameState.map.height,
-        (pos) => gameState.units.some((u) => u.row === pos.row && u.col === pos.col)
+        (pos) => {
+          // Block if occupied by another unit
+          if (gameState.units.some((u) => u.row === pos.row && u.col === pos.col)) {
+            return true
+          }
+          // Block if tile is water or ocean
+          const tile = mapTiles.find((t) => t.row === pos.row && t.col === pos.col)
+          if (tile) {
+            if (tile.terrain === 'water' || tile.terrain === 'ocean') {
+              return true
+            }
+          }
+          return false
+        }
       )
+      
+      // Filter out any water/ocean tiles that might have slipped through (defensive check)
+      const reachable = allReachable.filter((pos) => {
+        const tile = mapTiles.find((t) => t.row === pos.row && t.col === pos.col)
+        if (tile && (tile.terrain === 'water' || tile.terrain === 'ocean')) {
+          return false
+        }
+        return true
+      })
 
       // Calculate attackable tiles
-      const attackable = unitDef.isRanged
+      // Melee units can attack adjacent tiles (distance 1), ranged units use their range
+      // Filter out water/ocean tiles but keep tiles with enemy units
+      const allAttackableTiles = unitDef.isRanged
         ? getAttackableTiles(
             { row: unit.row, col: unit.col },
             unitDef.rangeMin,
@@ -215,13 +239,36 @@ export function MapCanvasStack({
             gameState.map.width,
             gameState.map.height
           )
-        : []
+        : getAttackableTiles(
+            { row: unit.row, col: unit.col },
+            1,
+            1,
+            gameState.map.width,
+            gameState.map.height
+          )
+      
+      // Filter attackable tiles: exclude water/ocean, but include tiles with enemy units
+      const attackable = allAttackableTiles.filter((tile) => {
+        // Always include tiles with enemy units (even if on water - though that shouldn't happen)
+        const enemyUnit = gameState.units.find(
+          (u) => u.row === tile.row && u.col === tile.col && u.participantId !== unit.participantId
+        )
+        if (enemyUnit) return true
+        
+        // Exclude water/ocean tiles
+        const mapTile = mapTiles.find((t) => t.row === tile.row && t.col === tile.col)
+        if (mapTile && (mapTile.terrain === 'water' || mapTile.terrain === 'ocean')) {
+          return false
+        }
+        
+        return true
+      })
 
       setPreview({ kind: null, reachable, attackable })
     } else {
       setPreview({ kind: null })
     }
-  }, [selection, gameState, unitDefs])
+  }, [selection, gameState, unitDefs, mapTiles])
 
   // Render tiles layer
   useEffect(() => {
@@ -329,6 +376,31 @@ export function MapCanvasStack({
           return
         }
 
+        // If clicking on enemy unit and we have a unit selected, check if it's attackable
+        if (selection.kind === 'unit' && !isPlayerUnit && clickedUnit.participantId !== playerParticipant?.id) {
+          const selectedUnit = gameState.units.find((u) => u.id === selection.id)
+          if (selectedUnit && !selectedUnit.hasActed) {
+            const unitDef = unitDefs.find((d) => d.code === selectedUnit.typeCode)
+            if (unitDef) {
+              const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
+              if (isAttackable) {
+                // Second click: commit attack
+                if (preview.kind === 'attack' && preview.targetUnitId === clickedUnit.id) {
+                  attackUnitMutation.mutate({
+                    attackerUnitId: selectedUnit.id,
+                    targetUnitId: clickedUnit.id,
+                  })
+                  clearSelection()
+                } else {
+                  // First click: show preview
+                  setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetUnitId: clickedUnit.id })
+                }
+                return
+              }
+            }
+          }
+        }
+
         // Only allow selecting player's own units
         if (isPlayerUnit) {
           setSelection({ kind: 'unit', id: clickedUnit.id })
@@ -373,7 +445,18 @@ export function MapCanvasStack({
             unitDef.movePoints,
             gameState.map.width,
             gameState.map.height,
-            (pos) => gameState.units.some((u) => u.row === pos.row && u.col === pos.col && u.id !== selectedUnit.id)
+            (pos) => {
+              // Block if occupied by another unit
+              if (gameState.units.some((u) => u.row === pos.row && u.col === pos.col && u.id !== selectedUnit.id)) {
+                return true
+              }
+              // Block if tile is water or ocean
+              const tile = mapTiles.find((t) => t.row === pos.row && t.col === pos.col)
+              if (tile && (tile.terrain === 'water' || tile.terrain === 'ocean')) {
+                return true
+              }
+              return false
+            }
           )
 
           if (path) {
@@ -392,25 +475,23 @@ export function MapCanvasStack({
           }
         }
 
-        // Check if clicking within attack range (for ranged units)
-        if (unitDef.isRanged) {
-          const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
-          const targetUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
+        // Check if clicking within attack range (for both melee and ranged units)
+        const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
+        const targetUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
 
-          if (isAttackable && targetUnit && targetUnit.participantId !== selectedUnit.participantId) {
-            // Second click: commit attack
-            if (preview.kind === 'attack' && preview.targetUnitId === targetUnit.id) {
-              attackUnitMutation.mutate({
-                attackerUnitId: selectedUnit.id,
-                targetUnitId: targetUnit.id,
-              })
-              clearSelection()
-            } else {
-              // First click: show preview
-              setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetUnitId: targetUnit.id })
-            }
-            return
+        if (isAttackable && targetUnit && targetUnit.participantId !== selectedUnit.participantId) {
+          // Second click: commit attack
+          if (preview.kind === 'attack' && preview.targetUnitId === targetUnit.id) {
+            attackUnitMutation.mutate({
+              attackerUnitId: selectedUnit.id,
+              targetUnitId: targetUnit.id,
+            })
+            clearSelection()
+          } else {
+            // First click: show preview
+            setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetUnitId: targetUnit.id })
           }
+          return
         }
       }
 
@@ -644,7 +725,7 @@ function renderUnits(
   ctx: CanvasRenderingContext2D,
   units: GameStateDto['units'],
   participants: GameStateDto['participants'],
-  _unitDefs: UnitDefinitionDto[],
+  unitDefs: UnitDefinitionDto[],
   camera: CameraState,
   viewport: { width: number; height: number },
   spriteCache: ReturnType<typeof getGlobalSpriteCache>,
@@ -679,6 +760,15 @@ function renderUnits(
     ctx.textBaseline = 'middle'
     ctx.fillText(unit.typeCode.slice(0, 2).toUpperCase(), 0, 0)
 
+    // HP bar (always drawn on top, similar to cities)
+    const unitDef = unitDefs.find((d) => d.code === unit.typeCode)
+    if (unitDef) {
+      const hpPercent = unit.hp / unitDef.health
+      const barWidth = hexMetrics.hexSize
+      ctx.fillStyle = hpPercent > 0.5 ? '#22c55e' : hpPercent > 0.25 ? '#f59e0b' : '#ef4444'
+      ctx.fillRect(-barWidth / 2, -hexMetrics.hexSize * 0.7, barWidth * hpPercent, 4)
+    }
+
     ctx.restore()
   })
 }
@@ -707,7 +797,7 @@ function renderOverlay(
       ctx.scale(camera.scale, camera.scale)
 
       drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)'
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)'
       ctx.fill()
 
       ctx.restore()

@@ -114,9 +114,9 @@ function LegendSection() {
       </h3>
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Item
-          icon={<Rect className="bg-blue-500/20 ring-1 ring-inset ring-blue-500/40" />}
+          icon={<Rect className="bg-white/50 ring-1 ring-inset ring-white/60" />}
           label="Reachable (Move Range)"
-          desc="Blue translucent overlay on tiles you can move to."
+          desc="White translucent overlay on tiles you can move to."
         />
         <Item
           icon={<DashedLine />}

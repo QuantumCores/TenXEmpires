@@ -532,6 +532,7 @@ public class TurnService : ITurnService
                     var tile = await _context.MapTiles.FirstOrDefaultAsync(t => t.MapId == game.MapId && t.Row == sq.Y && t.Col == sq.X, cancellationToken);
                     if (tile is null) continue;
                     if (occupiedSet.Contains(tile.Id)) continue; // respect 1UPT
+                    if (TerrainTypes.IsWater(tile.Terrain)) continue; // block water and ocean tiles
 
                     var dist = HexagonalGrid.GetCubeDistance(neighborCube, cityCube);
                     if (dist < bestDist)
@@ -575,19 +576,9 @@ public class TurnService : ITurnService
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            // Commit AI turn
-            var aiDuration = (int)Math.Max(0, (DateTimeOffset.UtcNow - aiStart).TotalMilliseconds);
-            var aiSummary = System.Text.Json.JsonSerializer.Serialize(new { ai = "move", unitsMoved, attacks, cityAttacks, harvested = aiHarvested, producedUnits = producedByAi, productionDelayed });
-            var aiTurn = new Turn
-            {
-                GameId = game.Id,
-                TurnNo = game.TurnNo,
-                ParticipantId = activeParticipant.Id,
-                CommittedAt = DateTimeOffset.UtcNow,
-                DurationMs = aiDuration,
-                Summary = aiSummary
-            };
-            _context.Turns.Add(aiTurn);
+            // Note: We don't create a separate Turn record for AI turns because the database
+            // constraint ux_turns only allows one Turn per (game_id, turn_no). The human player's
+            // Turn record already includes an aiExecuted flag in its summary to indicate AI actions occurred.
 
             // Advance to next participant (could increment TurnNo on wrap)
             await AdvanceTurnAsync(game, cancellationToken);
