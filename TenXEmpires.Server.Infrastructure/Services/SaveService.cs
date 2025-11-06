@@ -491,7 +491,9 @@ public class SaveService : ISaveService
             // Update game metadata
             game.TurnNo = save.TurnNo;
             game.ActiveParticipantId = save.ActiveParticipantId;
-            game.TurnInProgress = savedState.Game.TurnInProgress;
+            // Always set turnInProgress to false when loading a save to ensure clean state
+            // (autosaves are created before ending turn, so they may have turnInProgress=true)
+            game.TurnInProgress = false;
             game.Status = savedState.Game.Status;
             game.LastTurnAt = DateTimeOffset.UtcNow;
 
@@ -548,6 +550,7 @@ public class SaveService : ISaveService
                 var newCityId = cityIdMapping[ctDto.CityId];
                 var cityTile = new CityTile
                 {
+                    GameId = gameId,
                     CityId = newCityId,
                     TileId = ctDto.TileId
                 };
