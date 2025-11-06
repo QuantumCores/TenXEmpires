@@ -24,6 +24,11 @@ public sealed record MoveUnitCommand(long UnitId, GridPosition To);
 public sealed record AttackUnitCommand(long AttackerUnitId, long TargetUnitId);
 
 /// <summary>
+/// Command to attack a <see cref="City"/> with a <see cref="Unit"/>.
+/// </summary>
+public sealed record AttackCityCommand(long AttackerUnitId, long TargetCityId);
+
+/// <summary>
 /// Command to end the active participant's turn in a <see cref="Game"/>.
 /// </summary>
 public sealed record EndTurnCommand;

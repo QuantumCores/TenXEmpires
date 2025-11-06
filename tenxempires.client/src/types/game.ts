@@ -125,6 +125,11 @@ export interface AttackUnitCommand {
   targetUnitId: number
 }
 
+export interface AttackCityCommand {
+  attackerUnitId: number
+  targetCityId: number
+}
+
 export interface EndTurnCommand {}
 
 // ============================================================================

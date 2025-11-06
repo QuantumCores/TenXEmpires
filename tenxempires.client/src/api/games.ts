@@ -5,6 +5,7 @@ import type {
   MapTilesResponse,
   MoveUnitCommand,
   AttackUnitCommand,
+  AttackCityCommand,
   EndTurnCommand,
   ActionStateResponse,
   EndTurnResponse,
@@ -58,6 +59,14 @@ export async function moveUnit(gameId: number, command: MoveUnitCommand, idempot
 export async function attackUnit(gameId: number, command: AttackUnitCommand, idempotencyKey: string) {
   return postJson<AttackUnitCommand, ActionStateResponse>(
     `${API_BASE}/games/${gameId}/actions/attack`,
+    command,
+    { headers: { 'Idempotency-Key': idempotencyKey } }
+  )
+}
+
+export async function attackCity(gameId: number, command: AttackCityCommand, idempotencyKey: string) {
+  return postJson<AttackCityCommand, ActionStateResponse>(
+    `${API_BASE}/games/${gameId}/actions/attack-city`,
     command,
     { headers: { 'Idempotency-Key': idempotencyKey } }
   )

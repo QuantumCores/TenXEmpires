@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3806971+00:00
-                clientRequestId: f61a9df4-c342-46a3-b180-11ceb1f4b518
+                occurredAt: 2025-11-06T21:39:45.490425+00:00
+                clientRequestId: 26243a25-ca2b-4508-a3cb-55579eeecc74
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3808003+00:00
-                clientRequestId: 50f61b80-012a-4747-874c-5dcbc956cd83
+                occurredAt: 2025-11-06T21:39:45.4905489+00:00
+                clientRequestId: 48834633-e421-4c99-b2cc-440d02b4bcfb
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3806971+00:00
-                clientRequestId: f61a9df4-c342-46a3-b180-11ceb1f4b518
+                occurredAt: 2025-11-06T21:39:45.490425+00:00
+                clientRequestId: 26243a25-ca2b-4508-a3cb-55579eeecc74
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3808003+00:00
-                clientRequestId: 50f61b80-012a-4747-874c-5dcbc956cd83
+                occurredAt: 2025-11-06T21:39:45.4905489+00:00
+                clientRequestId: 48834633-e421-4c99-b2cc-440d02b4bcfb
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3806971+00:00
-                clientRequestId: f61a9df4-c342-46a3-b180-11ceb1f4b518
+                occurredAt: 2025-11-06T21:39:45.490425+00:00
+                clientRequestId: 26243a25-ca2b-4508-a3cb-55579eeecc74
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-06T21:25:01.3808003+00:00
-                clientRequestId: 50f61b80-012a-4747-874c-5dcbc956cd83
+                occurredAt: 2025-11-06T21:39:45.4905489+00:00
+                clientRequestId: 48834633-e421-4c99-b2cc-440d02b4bcfb
                 payload: 
       responses:
         202:
@@ -1328,6 +1328,201 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/actions/attack-city:
+    post:
+      tags:
+      - v1
+      summary: >-
+        Executes an attack action from a unit against an enemy city using deterministic damage rules.
+
+        City does not counterattack. Returns updated game state.
+      description: >-
+        Validations:
+
+        - It must be the human player's turn
+
+        - Attacker must belong to the active participant and have not acted
+
+        - Target must be an enemy city and be in range (melee: adjacent; ranged: within [min,max])
+
+        - Cities never counterattack
+
+
+        Returns 409 for NOT_PLAYER_TURN or NO_ACTIONS_LEFT, 422 for OUT_OF_RANGE or INVALID_TARGET.
+      operationId: AttackCity
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: The attack command with attacker unit ID and target city ID.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AttackCityCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AttackCityCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/AttackCityCommand'
+      responses:
+        200:
+          description: Returns the updated game state after the attack.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStateResponse'
+              example:
+                state:
+                  game:
+                    id: 42
+                    turnNo: 3
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_15x20
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: true
+                    tileId: 13
+                    row: 2
+                    col: 3
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  - id: 203
+                    participantId: 101
+                    typeCode: settler
+                    hp: 50
+                    hasActed: false
+                    tileId: 7
+                    row: 0
+                    col: 2
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: food
+                    amount: 8
+                  - cityId: 301
+                    resourceType: production
+                    amount: 4
+                  - cityId: 302
+                    resourceType: food
+                    amount: 7
+                  - cityId: 302
+                    resourceType: production
+                    amount: 3
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  - id: 3
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 2
+                    movePoints: 2
+                    health: 80
+                  turnSummary: 
+        400:
+          description: Bad request due to invalid payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized - user is not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - unit or city does not exist or user doesn't have access.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - NOT_PLAYER_TURN or NO_ACTIONS_LEFT.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        422:
+          description: Unprocessable Entity - OUT_OF_RANGE or INVALID_TARGET.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/games/{id}/end-turn:
     post:
       tags:
@@ -2190,6 +2385,16 @@ components:
         message:
           type: string
           nullable: true
+      additionalProperties: false
+    AttackCityCommand:
+      type: object
+      properties:
+        attackerUnitId:
+          type: integer
+          format: int64
+        targetCityId:
+          type: integer
+          format: int64
       additionalProperties: false
     AttackUnitCommand:
       type: object

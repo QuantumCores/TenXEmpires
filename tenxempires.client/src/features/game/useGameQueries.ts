@@ -5,11 +5,13 @@ import {
   fetchMapTiles,
   moveUnit,
   attackUnit,
+  attackCity,
   endTurn,
 } from '../../api/games'
 import type {
   MoveUnitCommand,
   AttackUnitCommand,
+  AttackCityCommand,
   GameStateDto,
   ActionStateResponse,
   EndTurnResponse,
@@ -212,6 +214,50 @@ export function useAttackUnit(gameId: number) {
       if (!result.ok || !result.data) {
         handleError(result)
         throw new Error(`Attack failed: ${result.status}`)
+      }
+      
+      return result.data as ActionStateResponse
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: gameKeys.state(gameId) })
+      const previousState = queryClient.getQueryData<GameStateDto>(gameKeys.state(gameId))
+      return { previousState }
+    },
+    onSuccess: (data: ActionStateResponse) => {
+      if (data?.state) {
+        queryClient.setQueryData(gameKeys.state(gameId), data.state)
+      }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(gameKeys.state(gameId), context.previousState)
+      }
+    },
+  })
+}
+
+export function useAttackCity(gameId: number) {
+  const queryClient = useQueryClient()
+  const { handleError } = useGameErrorHandler()
+
+  return useMutation<
+    ActionStateResponse,
+    Error,
+    AttackCityCommand,
+    MutationContext
+  >({
+    mutationFn: async (command: AttackCityCommand) => {
+      const idempotencyKey = generateIdempotencyKey()
+      
+      // Wrap with CSRF retry logic
+      const result = await withCsrfRetry(
+        () => attackCity(gameId, command, idempotencyKey),
+        (res) => res.status === 403 && isCsrfError(res.data)
+      )
+      
+      if (!result.ok || !result.data) {
+        handleError(result)
+        throw new Error(`City attack failed: ${result.status}`)
       }
       
       return result.data as ActionStateResponse

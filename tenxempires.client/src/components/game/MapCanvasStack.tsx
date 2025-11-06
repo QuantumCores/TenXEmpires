@@ -15,11 +15,12 @@ import {
   HEX_WIDTH,
   HEX_HEIGHT,
   calculateOptimalHexSize,
+  hexDistance,
 } from '../../features/game/hexGeometry'
 import { findPath, getReachableTiles, getAttackableTiles } from '../../features/game/pathfinding'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 import { computeZoomUpdate } from '../../features/game/zoom'
-import { useMoveUnit, useAttackUnit } from '../../features/game/useGameQueries'
+import { useMoveUnit, useAttackUnit, useAttackCity } from '../../features/game/useGameQueries'
 import {
   getGlobalSpriteCache,
   generateTileSprite,
@@ -49,6 +50,7 @@ interface PreviewState {
   attackable?: GridPosition[]
   targetTile?: GridPosition
   targetUnitId?: number
+  targetCityId?: number
 }
 
 /**
@@ -89,6 +91,7 @@ export function MapCanvasStack({
   const invertScrollZoom = useGameMapStore((s) => s.invertZoom)
   const moveUnitMutation = useMoveUnit(gameState.game.id)
   const attackUnitMutation = useAttackUnit(gameState.game.id)
+  const attackCityMutation = useAttackCity(gameState.game.id)
 
   // Sprite cache for performance
   const spriteCache = useMemo(() => getGlobalSpriteCache(), [])
@@ -247,13 +250,19 @@ export function MapCanvasStack({
             gameState.map.height
           )
       
-      // Filter attackable tiles: exclude water/ocean, but include tiles with enemy units
+      // Filter attackable tiles: exclude water/ocean, but include tiles with enemy units or cities
       const attackable = allAttackableTiles.filter((tile) => {
         // Always include tiles with enemy units (even if on water - though that shouldn't happen)
         const enemyUnit = gameState.units.find(
           (u) => u.row === tile.row && u.col === tile.col && u.participantId !== unit.participantId
         )
         if (enemyUnit) return true
+        
+        // Always include tiles with enemy cities
+        const enemyCity = gameState.cities.find(
+          (c) => c.row === tile.row && c.col === tile.col && c.participantId !== unit.participantId
+        )
+        if (enemyCity) return true
         
         // Exclude water/ocean tiles
         const mapTile = mapTiles.find((t) => t.row === tile.row && t.col === tile.col)
@@ -413,6 +422,39 @@ export function MapCanvasStack({
         // Check if city belongs to player
         const isPlayerCity = clickedCity.participantId === playerParticipant?.id
         
+        // If clicking on enemy city and we have a unit selected, check if it's attackable
+        if (selection.kind === 'unit' && !isPlayerCity) {
+          const selectedUnit = gameState.units.find((u) => u.id === selection.id)
+          if (selectedUnit && !selectedUnit.hasActed) {
+            const unitDef = unitDefs.find((d) => d.code === selectedUnit.typeCode)
+            if (unitDef) {
+              // Check if this tile is in the attackable list (already filtered by range)
+              const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
+              
+              // Also check range directly as fallback (in case city tile isn't in attackable list)
+              const distance = hexDistance(selectedUnit.col, selectedUnit.row, clickedCity.col, clickedCity.row)
+              const isInRange = unitDef.isRanged
+                ? distance >= unitDef.rangeMin && distance <= unitDef.rangeMax
+                : distance === 1
+              
+              if (isAttackable || isInRange) {
+                // Second click: commit attack
+                if (preview.kind === 'attack' && preview.targetCityId === clickedCity.id) {
+                  attackCityMutation.mutate({
+                    attackerUnitId: selectedUnit.id,
+                    targetCityId: clickedCity.id,
+                  })
+                  clearSelection()
+                } else {
+                  // First click: show preview
+                  setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetCityId: clickedCity.id })
+                }
+                return
+              }
+            }
+          }
+        }
+        
         // Only allow selecting player's own cities
         if (isPlayerCity) {
           setSelection({ kind: 'city', id: clickedCity.id })
@@ -434,10 +476,69 @@ export function MapCanvasStack({
           return
         }
 
-        // Check if clicking within movement range
+        // Check for attackable targets FIRST (attacks take priority over movement)
+        const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
+        const targetUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
+        const targetCity = gameState.cities.find((c) => c.row === clickedPos.row && c.col === clickedPos.col)
+
+        // Handle unit attacks
+        if (isAttackable && targetUnit && targetUnit.participantId !== selectedUnit.participantId) {
+          // Second click: commit attack
+          if (preview.kind === 'attack' && preview.targetUnitId === targetUnit.id) {
+            attackUnitMutation.mutate({
+              attackerUnitId: selectedUnit.id,
+              targetUnitId: targetUnit.id,
+            })
+            clearSelection()
+          } else {
+            // First click: show preview
+            setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetUnitId: targetUnit.id })
+          }
+          return
+        }
+
+        // Handle city attacks
+        if (isAttackable && targetCity && targetCity.participantId !== selectedUnit.participantId) {
+          // Calculate hex distance between unit and city
+          const distance = hexDistance(selectedUnit.col, selectedUnit.row, targetCity.col, targetCity.row)
+          
+          // Check if city is in attack range
+          const isInRange = unitDef.isRanged
+            ? distance >= unitDef.rangeMin && distance <= unitDef.rangeMax
+            : distance === 1
+
+          if (isInRange) {
+            // Second click: commit attack (when API is ready)
+            if (preview.kind === 'attack' && preview.targetCityId === targetCity.id) {
+              // TODO: Implement city attack mutation when API endpoint is available
+              // attackCityMutation.mutate({
+              //   attackerUnitId: selectedUnit.id,
+              //   targetCityId: targetCity.id,
+              // })
+              // clearSelection()
+              // For now, just show preview
+              setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetCityId: targetCity.id })
+            } else {
+              // First click: show preview
+              setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetCityId: targetCity.id })
+            }
+            return
+          }
+        }
+
+        // Check if clicking within movement range (only if not attacking)
         const isReachable = preview.reachable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
 
         if (isReachable) {
+          // Don't allow movement to tiles with enemy cities (they should be attacked instead)
+          const enemyCityOnTile = gameState.cities.find(
+            (c) => c.row === clickedPos.row && c.col === clickedPos.col && c.participantId !== selectedUnit.participantId
+          )
+          if (enemyCityOnTile) {
+            // Already handled above as attack target
+            return
+          }
+
           // Calculate path
           const path = findPath(
             { row: selectedUnit.row, col: selectedUnit.col },
@@ -474,31 +575,12 @@ export function MapCanvasStack({
             return
           }
         }
-
-        // Check if clicking within attack range (for both melee and ranged units)
-        const isAttackable = preview.attackable?.some((t) => t.row === clickedPos.row && t.col === clickedPos.col)
-        const targetUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
-
-        if (isAttackable && targetUnit && targetUnit.participantId !== selectedUnit.participantId) {
-          // Second click: commit attack
-          if (preview.kind === 'attack' && preview.targetUnitId === targetUnit.id) {
-            attackUnitMutation.mutate({
-              attackerUnitId: selectedUnit.id,
-              targetUnitId: targetUnit.id,
-            })
-            clearSelection()
-          } else {
-            // First click: show preview
-            setPreview({ ...preview, kind: 'attack', targetTile: clickedPos, targetUnitId: targetUnit.id })
-          }
-          return
-        }
       }
 
       // Otherwise clear selection
       clearSelection()
     },
-    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, hexMetrics]
+    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics]
   )
 
   // Handle right-click to cancel
