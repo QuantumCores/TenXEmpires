@@ -258,6 +258,11 @@ public class TurnService : ITurnService
             await _context.SaveChangesAsync(cancellationToken);
 
             // Commit Turn row with summary (will update aiExecuted after potential AI processing)
+            // First, delete any existing Turn for this turn number (defensive check - should not exist, but handles save/load edge cases)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.turns WHERE game_id = {gameId} AND turn_no = {game.TurnNo}",
+                cancellationToken);
+
             var duration = (int)Math.Max(0, (DateTimeOffset.UtcNow - turnStart).TotalMilliseconds);
             var summaryObj = new
             {

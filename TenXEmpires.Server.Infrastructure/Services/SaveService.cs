@@ -445,48 +445,35 @@ public class SaveService : ISaveService
             }
 
             // Delete existing game state entities
-            // Note: ExecuteDelete with joins may not be supported by in-memory database, so use fallback
-            try
-            {
-                // 1. City resources
-                await _context.CityResources
-                    .Where(cr => cr.City.GameId == gameId)
-                    .ExecuteDeleteAsync(cancellationToken);
+            // Use raw SQL for reliable deletion that works with RLS
+            // Delete in order to respect FK constraints
+            
+            // 1. City resources (references cities)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $@"DELETE FROM app.city_resources 
+                   WHERE city_id IN (SELECT id FROM app.cities WHERE game_id = {gameId})",
+                cancellationToken);
 
-                // 2. City tiles
-                await _context.CityTiles
-                    .Where(ct => ct.City.GameId == gameId)
-                    .ExecuteDeleteAsync(cancellationToken);
+            // 2. City tiles (has game_id column)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.city_tiles WHERE game_id = {gameId}",
+                cancellationToken);
 
-                // 3. Cities
-                await _context.Cities
-                    .Where(c => c.GameId == gameId)
-                    .ExecuteDeleteAsync(cancellationToken);
+            // 3. Cities (references game)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.cities WHERE game_id = {gameId}",
+                cancellationToken);
 
-                // 4. Units
-                await _context.Units
-                    .Where(u => u.GameId == gameId)
-                    .ExecuteDeleteAsync(cancellationToken);
-            }
-            catch (InvalidOperationException)
-            {
-                // Fallback for databases that don't support ExecuteDelete with joins (e.g., in-memory)
-                var cityIds = await _context.Cities.Where(c => c.GameId == gameId).Select(c => c.Id).ToListAsync(cancellationToken);
-                
-                var cityResources = await _context.CityResources.Where(cr => cityIds.Contains(cr.CityId)).ToListAsync(cancellationToken);
-                _context.CityResources.RemoveRange(cityResources);
-                
-                var cityTiles = await _context.CityTiles.Where(ct => cityIds.Contains(ct.CityId)).ToListAsync(cancellationToken);
-                _context.CityTiles.RemoveRange(cityTiles);
-                
-                var cities = await _context.Cities.Where(c => c.GameId == gameId).ToListAsync(cancellationToken);
-                _context.Cities.RemoveRange(cities);
-                
-                var units = await _context.Units.Where(u => u.GameId == gameId).ToListAsync(cancellationToken);
-                _context.Units.RemoveRange(units);
-                
-                await _context.SaveChangesAsync(cancellationToken);
-            }
+            // 4. Units (references game)
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.units WHERE game_id = {gameId}",
+                cancellationToken);
+
+            // 5. Turns (delete turns at or after the restored turn number to avoid duplicate key violations)
+            // We restore to save.TurnNo, so delete turns >= save.TurnNo since we'll be recreating them
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.turns WHERE game_id = {gameId} AND turn_no >= {save.TurnNo}",
+                cancellationToken);
 
             // Update game metadata
             game.TurnNo = save.TurnNo;
