@@ -40,18 +40,21 @@ internal static class CombatHelper
 
     public static AttackOutcome ResolveAttack(Unit attacker, Unit target)
     {
-        // Compute primary damage
+        // Compute primary damage: attacker deals damage to target
+        // Parameters: attacker's attack stat, target's defense stat, attacker's HP (dealing unit), target's HP (receiving unit)
         var attackerDamage = ComputeDamage(
-            attacker.Type.Attack,
-            target.Type.Defence,
-            attacker.Hp,
-            attacker.Type.Health,
-            target.Hp,
-            target.Type.Health);
+            attacker.Type.Attack,        // Attacking unit's attack stat
+            target.Type.Defence,          // Defending unit's defense stat
+            attacker.Hp,                  // Attacking unit's current HP (for damage scaling)
+            attacker.Type.Health,         // Attacking unit's max HP
+            target.Hp,                    // Defending unit's current HP (for defense scaling)
+            target.Type.Health);          // Defending unit's max HP
 
+        // Apply damage to target
         target.Hp -= attackerDamage;
         target.UpdatedAt = DateTimeOffset.UtcNow;
 
+        // Counterattack: if target survives and both are melee, target counterattacks
         int? counterDamage = null;
         if (target.Hp > 0)
         {
@@ -59,13 +62,18 @@ internal static class CombatHelper
             var attackerReceivesCounter = !attacker.Type.IsRanged;
             if (defenderCanCounter && attackerReceivesCounter)
             {
+                // Compute counterattack damage: target (now attacker) deals damage to original attacker (now defender)
+                // Note: target.Hp is AFTER taking the initial damage, so counterattack is weaker
+                // Parameters: target's attack stat, attacker's defense stat, target's HP (dealing unit, reduced), attacker's HP (receiving unit, full)
                 counterDamage = ComputeDamage(
-                    target.Type.Attack,
-                    attacker.Type.Defence,
-                    target.Hp,
-                    target.Type.Health,
-                    attacker.Hp,
-                    attacker.Type.Health);
+                    target.Type.Attack,        // Counterattacking unit's attack stat
+                    attacker.Type.Defence,      // Original attacker's defense stat
+                    target.Hp,                  // Counterattacking unit's current HP (reduced from initial attack)
+                    target.Type.Health,         // Counterattacking unit's max HP
+                    attacker.Hp,                // Original attacker's current HP (full, before counterattack)
+                    attacker.Type.Health);      // Original attacker's max HP
+
+                // Apply counterattack damage to original attacker
                 attacker.Hp -= counterDamage.Value;
                 attacker.UpdatedAt = DateTimeOffset.UtcNow;
             }
