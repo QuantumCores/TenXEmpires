@@ -118,7 +118,7 @@ public class MapsControllerTests
     public async Task GetMapTiles_ShouldReturnBadRequest_WhenPageSizeInvalid()
     {
         var result1 = await _controller.GetMapTiles("test-map", pageSize: 0);
-        var result2 = await _controller.GetMapTiles("test-map", pageSize: 101);
+        var result2 = await _controller.GetMapTiles("test-map", pageSize: 1001);
 
         result1.Result.Should().BeOfType<BadRequestObjectResult>();
         result2.Result.Should().BeOfType<BadRequestObjectResult>();
@@ -148,13 +148,13 @@ public class MapsControllerTests
         {
             Items = tiles,
             Page = 1,
-            PageSize = 20,
+            PageSize = 500,
             Total = 3
         };
 
-        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 500))
             .ReturnsAsync(pagedResult);
-        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 500))
             .ReturnsAsync("\"test-etag\"");
 
         var result = await _controller.GetMapTiles("test-map");
@@ -163,7 +163,7 @@ public class MapsControllerTests
         var value = ok.Value.Should().BeOfType<PagedResult<MapTileDto>>().Subject;
         value.Items.Should().HaveCount(3);
         value.Page.Should().Be(1);
-        value.PageSize.Should().Be(20);
+        value.PageSize.Should().Be(500);
         value.Total.Should().Be(3);
         _controller.Response.Headers.CacheControl.ToString().Should().Contain("max-age=600");
         _controller.Response.Headers.ETag.ToString().Should().Be("\"test-etag\"");
@@ -209,13 +209,13 @@ public class MapsControllerTests
         {
             Items = tiles,
             Page = 1,
-            PageSize = 20,
+            PageSize = 500,
             Total = 1
         };
 
-        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 500))
             .ReturnsAsync(pagedResult);
-        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 500))
             .ReturnsAsync("\"matching-etag\"");
 
         _controller.Request.Headers.IfNoneMatch = new StringValues("\"matching-etag\"");
@@ -238,13 +238,13 @@ public class MapsControllerTests
         {
             Items = tiles,
             Page = 1,
-            PageSize = 20,
+            PageSize = 500,
             Total = 1
         };
 
-        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 500))
             .ReturnsAsync(pagedResult);
-        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 500))
             .ReturnsAsync("\"current-etag\"");
 
         _controller.Request.Headers.IfNoneMatch = new StringValues("\"old-etag\"");
@@ -265,13 +265,13 @@ public class MapsControllerTests
         {
             Items = tiles,
             Page = 1,
-            PageSize = 20,
+            PageSize = 500,
             Total = 1
         };
 
-        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesAsync("test-map", 1, 500))
             .ReturnsAsync(pagedResult);
-        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 20))
+        _lookupServiceMock.Setup(s => s.GetMapTilesETagAsync("test-map", 1, 500))
             .ReturnsAsync((string?)null);
 
         var result = await _controller.GetMapTiles("test-map");

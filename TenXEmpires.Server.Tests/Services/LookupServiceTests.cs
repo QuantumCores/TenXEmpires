@@ -351,7 +351,7 @@ public class LookupServiceTests
         result.Should().NotBeNull();
         result!.Items.Should().HaveCount(3);
         result.Page.Should().Be(1);
-        result.PageSize.Should().Be(20);
+        result.PageSize.Should().Be(500);
         result.Total.Should().Be(3);
     }
 
@@ -470,7 +470,7 @@ public class LookupServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.PageSize.Should().Be(20); // Default page size
+        result!.PageSize.Should().Be(500); // Default page size
         result.Page.Should().Be(1); // Default page
     }
 
@@ -496,7 +496,7 @@ public class LookupServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetMapTilesAsync("test-map", pageSize: 0));
         await Assert.ThrowsAsync<ArgumentException>(() => service.GetMapTilesAsync("test-map", pageSize: -1));
-        await Assert.ThrowsAsync<ArgumentException>(() => service.GetMapTilesAsync("test-map", pageSize: 101));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.GetMapTilesAsync("test-map", pageSize: 1001));
     }
 
     [Fact]

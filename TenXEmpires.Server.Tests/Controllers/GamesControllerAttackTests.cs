@@ -141,4 +141,106 @@ public class GamesControllerAttackTests
         var notFound = result.Result.As<NotFoundObjectResult>();
         notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
+
+    #region AttackCity Tests
+
+    [Fact]
+    public async Task AttackCity_Success_ShouldReturn200()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new AttackCityCommand(201, 501);
+        var state = new GameStateDto(
+            new GameStateGameDto(gameId, 1, 1, false, "active"),
+            new GameStateMapDto(1, "code", 1, 8, 6),
+            new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
+            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null);
+        var expected = new ActionStateResponse(state);
+
+        _actionServiceMock
+            .Setup(s => s.AttackCityAsync(_userId, gameId, command.AttackerUnitId, command.TargetCityId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expected);
+
+        // Act
+        var result = await _controller.AttackCity(gameId, command, CancellationToken.None);
+
+        // Assert
+        var ok = result.Result.As<OkObjectResult>();
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        ok.Value.Should().BeOfType<ActionStateResponse>();
+    }
+
+    [Fact]
+    public async Task AttackCity_NotPlayerTurn_ShouldReturn409()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new AttackCityCommand(201, 501);
+        _actionServiceMock
+            .Setup(s => s.AttackCityAsync(_userId, gameId, command.AttackerUnitId, command.TargetCityId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("NOT_PLAYER_TURN: It is not your turn."));
+
+        // Act
+        var result = await _controller.AttackCity(gameId, command, CancellationToken.None);
+
+        // Assert
+        var conflict = result.Result.As<ConflictObjectResult>();
+        conflict.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    [Fact]
+    public async Task AttackCity_OutOfRange_ShouldReturn422()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new AttackCityCommand(201, 501);
+        _actionServiceMock
+            .Setup(s => s.AttackCityAsync(_userId, gameId, command.AttackerUnitId, command.TargetCityId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("OUT_OF_RANGE: Melee attacks on city require adjacency."));
+
+        // Act
+        var result = await _controller.AttackCity(gameId, command, CancellationToken.None);
+
+        // Assert
+        var unproc = result.Result.As<UnprocessableEntityObjectResult>();
+        unproc.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task AttackCity_InvalidTarget_ShouldReturn422()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new AttackCityCommand(201, 501);
+        _actionServiceMock
+            .Setup(s => s.AttackCityAsync(_userId, gameId, command.AttackerUnitId, command.TargetCityId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ArgumentException("INVALID_TARGET: Target must be an enemy city."));
+
+        // Act
+        var result = await _controller.AttackCity(gameId, command, CancellationToken.None);
+
+        // Assert
+        var unproc = result.Result.As<UnprocessableEntityObjectResult>();
+        unproc.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+    }
+
+    [Fact]
+    public async Task AttackCity_CityNotFound_ShouldReturn404()
+    {
+        // Arrange
+        var gameId = 42L;
+        var command = new AttackCityCommand(201, 999);
+        _actionServiceMock
+            .Setup(s => s.AttackCityAsync(_userId, gameId, command.AttackerUnitId, command.TargetCityId, It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("CITY_NOT_FOUND: City not found."));
+
+        // Act
+        var result = await _controller.AttackCity(gameId, command, CancellationToken.None);
+
+        // Assert
+        var notFound = result.Result.As<NotFoundObjectResult>();
+        notFound.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    #endregion
 }
