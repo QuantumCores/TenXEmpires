@@ -30,6 +30,7 @@ export function AuthAwareCTA({ auth }: Props) {
       </Link>
       <Link
         to={`/register?returnUrl=${returnUrl}`}
+        data-testid="register-button"
         className="inline-flex items-center justify-center rounded-md border border-slate-600 bg-slate-800 px-6 py-3 text-base font-semibold text-slate-100 shadow-lg hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
         Register

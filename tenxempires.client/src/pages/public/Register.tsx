@@ -152,7 +152,7 @@ export default function Register() {
 
   return (
     <>
-      <main className="mx-auto max-w-md p-6">
+      <main data-testid="register-page" className="mx-auto max-w-md p-6">
         <h1 id="register-heading" className="text-2xl font-semibold">Create account</h1>
         <p className="mt-2 text-slate-600">Sign up to start playing TenX Empires.</p>
         

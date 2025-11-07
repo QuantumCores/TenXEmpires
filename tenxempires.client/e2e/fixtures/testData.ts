@@ -15,6 +15,27 @@ export const testUsers = {
   },
 }
 
+export const registrationTestData = {
+  valid: {
+    email: `test_${Date.now()}@example.com`,
+    password: 'TestPassword123!',
+    confirmPassword: 'TestPassword123!',
+  },
+  invalid: {
+    emailTooShort: 'test@',
+    emailInvalid: 'test@test', // Passes browser validation but fails Zod's stricter validation
+    passwordTooShort: 'Short1!',
+    passwordNoDigit: 'NoDigitPass!',
+    passwordNoUppercase: 'nouppercase123!',
+    passwordNoLowercase: 'NOLOWERCASE123!',
+    passwordNoSymbol: 'NoSymbol123',
+    passwordsMismatch: {
+      password: 'TestPassword123!',
+      confirmPassword: 'DifferentPassword123!',
+    },
+  },
+}
+
 export const testGameData = {
   newGame: {
     name: 'Test Empire',

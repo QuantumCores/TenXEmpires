@@ -108,7 +108,7 @@ export function RegisterForm({ onSubmit, isSubmitting = false, error, retryAfter
   const hasErrors = Object.keys(validationErrors).length > 0 || error
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4" aria-labelledby="register-heading">
+    <form data-testid="register-form" onSubmit={handleSubmit} className="mt-6 space-y-4" aria-labelledby="register-heading">
       {/* Error summary for screen readers */}
       {hasErrors && (
         <div 
@@ -135,6 +135,7 @@ export function RegisterForm({ onSubmit, isSubmitting = false, error, retryAfter
           required
           autoComplete="email"
           autoFocus
+          data-testid="register-email-input"
           aria-invalid={!!validationErrors.email}
           aria-describedby={validationErrors.email ? 'email-error' : undefined}
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-50"
@@ -159,6 +160,7 @@ export function RegisterForm({ onSubmit, isSubmitting = false, error, retryAfter
           type="password"
           required
           autoComplete="new-password"
+          data-testid="register-password-input"
           aria-invalid={!!validationErrors.password}
           aria-describedby={showPasswordRules ? 'password-rules' : validationErrors.password ? 'password-error' : undefined}
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-50"
@@ -234,6 +236,7 @@ export function RegisterForm({ onSubmit, isSubmitting = false, error, retryAfter
           type="password"
           required
           autoComplete="new-password"
+          data-testid="register-confirm-password-input"
           aria-invalid={!!validationErrors.confirm}
           aria-describedby={validationErrors.confirm ? 'confirm-error' : undefined}
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-50"
@@ -256,6 +259,7 @@ export function RegisterForm({ onSubmit, isSubmitting = false, error, retryAfter
 
       <button
         type="submit"
+        data-testid="create-account-button"
         disabled={isDisabled || !allRulesMet}
         className="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >

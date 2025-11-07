@@ -70,3 +70,21 @@ return (
   </header>
 ```
 Later we will create POM classes
+
+How to run tests
+
+Option 1: Run from tenxempires.client/ directory (recommended)
+```
+cd tenxempires.clientnpx playwright test registration
+```
+
+Or use the npm script:
+```
+cd tenxempires.clientnpm run test:e2e -- registration
+```
+
+Option 2: Run from root with config path
+If you want to run from the project root, specify the config file:
+``
+npx playwright test --config=tenxempires.client/playwright.config.ts registration
+```
