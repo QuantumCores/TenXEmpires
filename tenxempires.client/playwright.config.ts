@@ -1,18 +1,23 @@
 import { defineConfig, devices } from '@playwright/test'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
  */
 // import dotenv from 'dotenv';
-// import path from 'path';
 // dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// Get the directory where this config file is located
+// This ensures relative paths work correctly regardless of where the command is run from
+const configDir = path.dirname(fileURLToPath(import.meta.url))
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: path.join(configDir, 'e2e'),
   
   /* Run tests in files in parallel */
   fullyParallel: true,
@@ -56,11 +61,34 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer: 
+    // If API_BASE_URL is set and not localhost, only start frontend
+    process.env.API_BASE_URL && !process.env.API_BASE_URL.includes('localhost')
+      ? {
+          command: 'npm run dev',
+          url: 'http://localhost:5173',
+          reuseExistingServer: !process.env.CI,
+          timeout: 120 * 1000,
+        }
+      : // Start both frontend and backend servers separately for tests
+        // This is more reliable than relying on SPA proxy in test environment
+        [
+          // Frontend dev server
+          {
+            command: 'npm run dev',
+            url: 'http://localhost:5173',
+            reuseExistingServer: !process.env.CI,
+            timeout: 120 * 1000,
+            cwd: configDir,
+          },
+          // Backend API server
+          {
+            command: 'dotnet run --project ../TenXEmpires.Server/TenXEmpires.Server.csproj',
+            url: 'http://localhost:5019/swagger',
+            reuseExistingServer: !process.env.CI,
+            timeout: 180 * 1000,
+            cwd: configDir,
+          },
+        ],
 })
 

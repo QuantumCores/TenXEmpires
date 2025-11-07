@@ -6,7 +6,12 @@
   "directories": {
     "doc": "docs"
   },
-  "scripts": {},
+  "scripts": {
+    "test:e2e": "cd tenxempires.client && npm run test:e2e",
+    "test:e2e:headed": "cd tenxempires.client && npm run test:e2e:headed",
+    "test:e2e:ui": "cd tenxempires.client && npm run test:e2e:ui",
+    "test:e2e:debug": "cd tenxempires.client && npm run test:e2e:debug"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/QuantumCores/TenXEmpires.git"

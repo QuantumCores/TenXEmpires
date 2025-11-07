@@ -106,20 +106,24 @@ export class RegisterPage extends BasePage {
       const emailError = this.page.locator('#email-error')
       const passwordError = this.page.locator('#password-error')
       const confirmError = this.page.locator('#confirm-error')
+      // Also check for server error messages (general error div)
+      const serverError = this.page.locator('[role="alert"].rounded-md.border-rose-300')
       
       // Wait for any visible error to appear
       await Promise.race([
         emailError.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {}),
         passwordError.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {}),
         confirmError.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {}),
+        serverError.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {}),
       ])
       
       // Check if any are visible
       const hasEmailError = await emailError.isVisible().catch(() => false)
       const hasPasswordError = await passwordError.isVisible().catch(() => false)
       const hasConfirmError = await confirmError.isVisible().catch(() => false)
+      const hasServerError = await serverError.isVisible().catch(() => false)
       
-      return hasEmailError || hasPasswordError || hasConfirmError
+      return hasEmailError || hasPasswordError || hasConfirmError || hasServerError
     } catch {
       // Fallback: check for any visible alert elements (excluding sr-only)
       const visibleErrors = this.page.locator('[role="alert"]:not(.sr-only)')
@@ -139,6 +143,8 @@ export class RegisterPage extends BasePage {
     const emailError = this.page.locator('#email-error')
     const passwordError = this.page.locator('#password-error')
     const confirmError = this.page.locator('#confirm-error')
+    // Also check for server error messages (general error div)
+    const serverError = this.page.locator('[role="alert"].rounded-md.border-rose-300')
     
     // Wait a bit for errors to appear
     await this.page.waitForTimeout(100)
@@ -156,6 +162,12 @@ export class RegisterPage extends BasePage {
     
     if (await confirmError.isVisible().catch(() => false)) {
       const text = await confirmError.textContent()
+      if (text) errors.push(text.trim())
+    }
+    
+    // Check for server error (duplicate email, etc.)
+    if (await serverError.isVisible().catch(() => false)) {
+      const text = await serverError.textContent()
       if (text) errors.push(text.trim())
     }
     

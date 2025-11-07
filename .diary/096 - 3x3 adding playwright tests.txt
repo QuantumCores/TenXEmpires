@@ -80,11 +80,13 @@ cd tenxempires.clientnpx playwright test registration
 
 Or use the npm script:
 ```
-cd tenxempires.clientnpm run test:e2e -- registration
+cd tenxempires.client npm run test:e2e -- registration
 ```
 
 Option 2: Run from root with config path
-If you want to run from the project root, specify the config file:
-``
+# From project root
 npx playwright test --config=tenxempires.client/playwright.config.ts registration
-```
+
+# From tenxempires.client directory  
+cd tenxempires.client
+npm run test:e2e -- registration
