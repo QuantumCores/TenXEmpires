@@ -1,0 +1,72 @@
+Please draw an ASCII compnent tree starting at @LandingHighlights.tsx 
+
+AppRouter
+└── Landing (page)
+    └── PublicLayout
+        ├── LandingNavbar
+        │   ├── Link (react-router-dom)
+        │   └── NavLink (react-router-dom) × 4
+        │       └── [About, Gallery, Privacy, Cookies]
+        │
+        ├── [children]
+        │   ├── LandingIntro
+        │   │   └── AuthAwareCTA (prop)
+        │   │       └── Link (react-router-dom) × 1-2
+        │   │           └── [Play | Login + Register]
+        │   │
+        │   ├── LandingHighlights ⭐ (starting point)
+        │   │   └── <section>
+        │   │       └── <ul>
+        │   │           ├── <li> (highlight 1)
+        │   │           │   ├── <div> (icon + title)
+        │   │           │   │   ├── <span> (⏱️ icon)
+        │   │           │   │   └── <h3> (Fast, compact turns)
+        │   │           │   └── <p> (description)
+        │   │           │
+        │   │           ├── <li> (highlight 2)
+        │   │           │   ├── <div> (icon + title)
+        │   │           │   │   ├── <span> (♟️ icon)
+        │   │           │   │   └── <h3> (Deterministic AI)
+        │   │           │   └── <p> (description)
+        │   │           │
+        │   │           └── <li> (highlight 3)
+        │   │               ├── <div> (icon + title)
+        │   │               │   ├── <span> (💾 icon)
+        │   │               │   └── <h3> (Saves built‑in)
+        │   │               └── <p> (description)
+        │   │
+        │   ├── ConsentBanner
+        │   └── Banners
+        │
+        └── FooterLinks
+            └── Link (react-router-dom) × 2
+                └── [Privacy, Cookies]
+
+Hooks & Data:
+└── useAuthStatusQuery (used by Landing)
+    └── auth data → passed to AuthAwareCTA
+	
+	
+PROMPT
+
+Now I want us to prepare for the following playwright e2e test. 
+
+1. User opens landing page
+2. User clicks the register button 
+3. On the registration page user provides email, password, confirms passwords
+4. User clicks Create Account
+
+Go through key components related to this scenario and add `data-testid` attributes with values representing given action and/or component. Selectors should be added inside the component not outside e.g. 
+```
+<!-- WRONG-->
+<!-- Layout.tsx -->
+<Topbar client:load data-testid="topbar" /> 
+
+<!-- GOOD-->
+<!-- Topbar.tsx -->
+return (
+  <header data-testid="topbar">
+   ...
+  </header>
+```
+Later we will create POM classes

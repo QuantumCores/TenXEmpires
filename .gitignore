@@ -510,3 +510,9 @@ playwright-report/
 playwright/.cache/
 .playwright/
 screenshots/
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
