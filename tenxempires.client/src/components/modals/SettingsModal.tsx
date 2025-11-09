@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { useId } from 'react'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 

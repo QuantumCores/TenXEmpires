@@ -3,7 +3,8 @@ import { renderHook } from '@testing-library/react'
 
 // Mock dependencies
 const mockNavigate = vi.fn()
-const mockModalState = { modal: undefined, confirm: undefined, tab: undefined }
+import type { ModalRouteState } from '../../router/query'
+const mockModalState: ModalRouteState = { modal: undefined, confirm: undefined, tab: undefined }
 
 vi.mock('react-router-dom', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,7 +72,8 @@ describe('useBackstackCloseBehavior', () => {
 
   afterEach(() => {
     // Restore original location
-    window.location = originalLocation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window as any).location = originalLocation
     vi.restoreAllMocks()
     popstateHandlers = []
   })

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import React, { ReactNode } from 'react'
+import React, { type ReactNode } from 'react'
 import { useAttackUnit, useAttackCity } from '../../../features/game/useGameQueries'
 import type { AttackUnitCommand, AttackCityCommand, ActionStateResponse, GameStateDto } from '../../../types/game'
 

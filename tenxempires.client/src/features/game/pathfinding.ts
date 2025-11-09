@@ -70,7 +70,7 @@ export function findPath(
 
     // Check if we've reached the destination
     if (cubeEquals(current.position, endCube)) {
-      return reconstructPath(cameFrom, current.position, startCube)
+      return reconstructPath(cameFrom, current.position)
     }
 
     closedSet.add(currentKey)
