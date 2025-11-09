@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4252261+00:00
-                clientRequestId: f5e08d37-1d88-4b01-a444-8d6d232e1727
+                occurredAt: 2025-11-09T22:17:03.7480157+00:00
+                clientRequestId: 28cada95-2db5-4f98-9c35-4385bb5f9a35
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4253407+00:00
-                clientRequestId: ca65bace-c4ff-40d9-a80b-9945ddc7b99e
+                occurredAt: 2025-11-09T22:17:03.7489294+00:00
+                clientRequestId: e1a1136a-7bad-4156-9efb-abf9ac7093fa
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4252261+00:00
-                clientRequestId: f5e08d37-1d88-4b01-a444-8d6d232e1727
+                occurredAt: 2025-11-09T22:17:03.7480157+00:00
+                clientRequestId: 28cada95-2db5-4f98-9c35-4385bb5f9a35
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4253407+00:00
-                clientRequestId: ca65bace-c4ff-40d9-a80b-9945ddc7b99e
+                occurredAt: 2025-11-09T22:17:03.7489294+00:00
+                clientRequestId: e1a1136a-7bad-4156-9efb-abf9ac7093fa
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4252261+00:00
-                clientRequestId: f5e08d37-1d88-4b01-a444-8d6d232e1727
+                occurredAt: 2025-11-09T22:17:03.7480157+00:00
+                clientRequestId: 28cada95-2db5-4f98-9c35-4385bb5f9a35
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-07T19:59:41.4253407+00:00
-                clientRequestId: ca65bace-c4ff-40d9-a80b-9945ddc7b99e
+                occurredAt: 2025-11-09T22:17:03.7489294+00:00
+                clientRequestId: e1a1136a-7bad-4156-9efb-abf9ac7093fa
                 payload: 
       responses:
         202:
@@ -1695,6 +1695,18 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /api/Health:
+    get:
+      tags:
+      - v1
+      parameters:
+      - name: X-Api-Version
+        in: header
+        schema:
+          type: string
+      responses:
+        200:
+          description: OK
   /v1/maps/{code}:
     get:
       tags:

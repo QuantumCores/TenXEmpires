@@ -322,9 +322,17 @@ services:
 
 ## Phase 2: GitHub Actions workflows
 
-### 2.1 PR pipeline (build and test)
+**Workflow Strategy:** We use a two-workflow approach for optimal CI/CD:
+- **PR Workflow**: Fast feedback with unit tests, linting, and builds (~2-5 minutes)
+- **Main Workflow**: Full validation including E2E tests when code is merged (~5-10 minutes)
+
+This approach saves CI minutes, reduces flakiness noise on PRs, and ensures thorough validation before deployment.
+
+### 2.1 PR pipeline (fast feedback - unit tests only)
 
 **File:** `.github/workflows/pr.yml`
+
+**Purpose:** Fast feedback on PRs with unit tests, linting, and builds. E2E tests run only on main branch to save CI time and reduce flakiness.
 
 ```yaml
 name: PR Build and Test
@@ -381,7 +389,72 @@ jobs:
       - name: Build
         working-directory: tenxempires.client
         run: npm run build
+```
 
+### 2.2 Main branch pipeline (full validation with E2E)
+
+**File:** `.github/workflows/main.yml`
+
+**Purpose:** Full validation including E2E tests when code is merged to main. Ensures nothing broken gets deployed.
+
+```yaml
+name: Main Branch Validation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # Run all PR checks first
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore TenXEmpires.Server/TenXEmpires.Server.csproj
+      
+      - name: Build
+        run: dotnet build TenXEmpires.Server/TenXEmpires.Server.csproj --configuration Release --no-restore
+      
+      - name: Run unit tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tenxempires.client/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: tenxempires.client
+        run: npm ci
+      
+      - name: Lint
+        working-directory: tenxempires.client
+        run: npm run lint
+      
+      - name: Run unit tests
+        working-directory: tenxempires.client
+        run: npm test
+      
+      - name: Build
+        working-directory: tenxempires.client
+        run: npm run build
+
+  # E2E tests only on main branch
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
@@ -439,7 +512,7 @@ jobs:
         run: docker-compose -f docker-compose.e2e.yml down -v
 ```
 
-### 2.2 Deploy database pipeline
+### 2.3 Deploy database pipeline
 
 **File:** `.github/workflows/deploy-database.yml`
 
@@ -473,7 +546,7 @@ jobs:
           # This workflow is mainly for tracking/audit purposes
 ```
 
-### 2.3 Deploy backend pipeline
+### 2.4 Deploy backend pipeline
 
 **File:** `.github/workflows/deploy-backend.yml`
 
@@ -575,7 +648,7 @@ jobs:
           # App Platform will pull the latest image from registry
 ```
 
-### 2.4 Deploy frontend pipeline
+### 2.5 Deploy frontend pipeline
 
 **File:** `.github/workflows/deploy-frontend.yml`
 
@@ -652,7 +725,7 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 ```
 
-### 2.5 Deploy full stack pipeline
+### 2.6 Deploy full stack pipeline
 
 **File:** `.github/workflows/deploy-fullstack.yml`
 
@@ -855,10 +928,21 @@ docker-compose -f docker-compose.e2e.yml down -v
    - Backend builds
    - Frontend builds
    - Unit tests pass
-   - E2E tests run with Docker Compose
+   - Linting passes
+   - No E2E tests run (fast feedback)
    - No errors in workflow
 
-### 5.3 Test deployment pipelines
+### 5.3 Test main branch pipeline
+
+1. Merge a test PR to main (or push directly to main)
+2. Verify:
+   - All PR checks run (backend build, frontend build, unit tests)
+   - E2E tests run with Docker Compose
+   - E2E tests pass
+   - Playwright report is uploaded
+   - No errors in workflow
+
+### 5.4 Test deployment pipelines
 
 1. Test backend deployment:
    - Run `deploy-backend.yml` manually
@@ -881,7 +965,7 @@ docker-compose -f docker-compose.e2e.yml down -v
    - Run `deploy-fullstack.yml`
    - Verify both services deploy
 
-### 5.4 Post-deployment validation
+### 5.5 Post-deployment validation
 
 1. Backend:
    ```bash
@@ -952,7 +1036,8 @@ If resources are insufficient:
 - [ ] Create `docker-compose.e2e.yml`
 
 ### GitHub Actions
-- [ ] Create `.github/workflows/pr.yml`
+- [ ] Create `.github/workflows/pr.yml` (fast feedback - unit tests only)
+- [ ] Create `.github/workflows/main.yml` (full validation with E2E tests)
 - [ ] Create `.github/workflows/deploy-database.yml`
 - [ ] Create `.github/workflows/deploy-backend.yml`
 - [ ] Create `.github/workflows/deploy-frontend.yml`
@@ -971,7 +1056,8 @@ If resources are insufficient:
 
 ### Testing
 - [ ] Test Docker Compose locally
-- [ ] Test PR pipeline
+- [ ] Test PR pipeline (verify fast feedback, no E2E)
+- [ ] Test main branch pipeline (verify E2E tests run)
 - [ ] Test deployment pipelines
 - [ ] Validate post-deployment
 - [ ] Test end-to-end user flows

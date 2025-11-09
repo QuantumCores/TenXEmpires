@@ -7,11 +7,15 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5019',
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:5019',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/v1'),
         secure: false,
       },
     },
+  },
+  // Build-time environment variable
+  define: {
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || ''),
   },
 })

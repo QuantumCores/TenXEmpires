@@ -332,8 +332,12 @@ namespace TenXEmpires.Server
 
             var app = builder.Build();
 
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
+            // Only serve static files if in development (for local testing)
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseDefaultFiles();
+                app.UseStaticFiles();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -362,7 +366,11 @@ namespace TenXEmpires.Server
 
             app.MapControllers();
 
-            app.MapFallbackToFile("/index.html");
+            // Only serve SPA fallback if in development (for local testing)
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapFallbackToFile("/index.html");
+            }
 
             // Add Serilog request logging
             app.UseSerilogRequestLogging();

@@ -7,31 +7,31 @@ WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-
-# This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS with-node
-RUN apt-get update
-RUN apt-get install curl
-RUN curl -sL https://deb.nodesource.com/setup_20.x | bash
-RUN apt-get -y install nodejs
-
-
-FROM with-node AS build
+# Build stage (no Node.js needed)
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Copy and restore server project
 COPY ["TenXEmpires.Server/TenXEmpires.Server.csproj", "TenXEmpires.Server/"]
-COPY ["tenxempires.client/tenxempires.client.esproj", "tenxempires.client/"]
 RUN dotnet restore "./TenXEmpires.Server/TenXEmpires.Server.csproj"
+
+# Copy domain and infrastructure projects
+COPY ["TenXEmpires.Server.Domain/TenXEmpires.Server.Domain.csproj", "TenXEmpires.Server.Domain/"]
+COPY ["TenXEmpires.Server.Infrastructure/TenXEmpires.Server.Infrastructure.csproj", "TenXEmpires.Server.Infrastructure/"]
+RUN dotnet restore "./TenXEmpires.Server/TenXEmpires.Server.csproj"
+
+# Copy all source and build
 COPY . .
 WORKDIR "/src/TenXEmpires.Server"
 RUN dotnet build "./TenXEmpires.Server.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# This stage is used to publish the service project to be copied to the final stage
+# Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./TenXEmpires.Server.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+# Final stage
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

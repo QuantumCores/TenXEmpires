@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: tenxempires_test
+      POSTGRES_USER: tenxempires_test
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tenxempires_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: TenXEmpires.Server/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=tenxempires_test;Username=tenxempires_test;Password=test_password;SslMode=Prefer;"
+      Cors__AllowedOrigins__0: "http://localhost:5173"
+    ports:
+      - "5019:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./tenxempires.client
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_BASE_URL: "http://localhost:5019"
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
