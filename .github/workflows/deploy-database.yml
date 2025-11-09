@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.branch }}
       
       - name: Deploy to DigitalOcean App Platform
-        uses: digitalocean/app_action@v1
+        uses: digitalocean/app_action@v2
         with:
           app_name: tenxempires-db
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

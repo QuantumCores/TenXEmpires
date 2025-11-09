@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.branch || github.event.inputs.branch }}
       
@@ -55,7 +55,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./tenxempires.client
           file: ./tenxempires.client/Dockerfile
@@ -72,7 +72,7 @@ jobs:
     needs: build-and-push
     steps:
       - name: Deploy to DigitalOcean App Platform
-        uses: digitalocean/app_action@v1
+        uses: digitalocean/app_action@v2
         with:
           app_name: tenxempires-frontend
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

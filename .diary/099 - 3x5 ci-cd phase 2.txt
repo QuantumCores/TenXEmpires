@@ -1,0 +1,45 @@
+Udated workflows with up to date data thanks to github-action.mdc
+
+GitHub Actions version verification — complete
+Updated actions
+Action	Old Version	New Version	Status
+actions/checkout	v4	v5	Updated
+actions/setup-dotnet	v4	v5	Updated
+actions/setup-node	v4	v6	Updated
+docker/build-push-action	v5	v6	Updated
+actions/upload-artifact	v4	v5	Updated
+digitalocean/app_action	v1	v2	Updated
+Already at latest
+Action	Version	Status
+docker/setup-buildx-action	v3	Latest
+docker/login-action	v3	Latest
+docker/metadata-action	v5	Latest
+Files updated
+.github/workflows/pr.yml — All actions updated
+.github/workflows/main.yml — All actions updated
+.github/workflows/deploy-backend.yml — All actions updated
+.github/workflows/deploy-frontend.yml — All actions updated
+.github/workflows/deploy-database.yml — All actions updated
+Verification
+No archived repositories detected
+No linting errors
+All workflows use latest major versions
+
+Updated workflows
+.github/workflows/playwright.yml
+actions/checkout@v4 → v5
+actions/setup-node@v4 → v6
+actions/upload-artifact@v4 → v5
+.github/workflows/db-migrate.yml
+actions/checkout@v4 → v5
+actions/setup-dotnet@v4 → v5
+Final status — all workflows
+Workflow	Status	Actions Updated
+pr.yml	Updated	checkout@v5, setup-dotnet@v5, setup-node@v6
+main.yml	Updated	checkout@v5, setup-dotnet@v5, setup-node@v6, upload-artifact@v5
+deploy-backend.yml	Updated	checkout@v5, setup-dotnet@v5, build-push-action@v6, app_action@v2
+deploy-frontend.yml	Updated	checkout@v5, build-push-action@v6, app_action@v2
+deploy-database.yml	Updated	checkout@v5, app_action@v2
+deploy-fullstack.yml	Updated	(uses other workflows)
+playwright.yml	Updated	checkout@v5, setup-node@v6, upload-artifact@v5
+db-migrate.yml	Updated	checkout@v5, setup-dotnet@v5
