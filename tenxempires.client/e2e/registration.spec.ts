@@ -12,7 +12,7 @@ test.describe('User Registration', () => {
     registerPage = new RegisterPage(page)
   })
 
-  test('should complete registration flow', async ({ page }) => {
+  test('should complete registration flow', async () => {
     // 1. User opens landing page
     await landingPage.goto()
     await expect(landingPage.registerButton).toBeVisible()
@@ -66,7 +66,7 @@ test.describe('User Registration', () => {
     expect(errors.some(error => error.toLowerCase().includes('email'))).toBeTruthy()
   })
 
-  test('should display validation errors for password that does not meet requirements', async ({ page }) => {
+  test('should display validation errors for password that does not meet requirements', async () => {
     await registerPage.goto()
 
     const testEmail = generateTestEmail()
@@ -83,7 +83,7 @@ test.describe('User Registration', () => {
     expect(isDisabled).toBeTruthy()
   })
 
-  test('should display validation error when passwords do not match', async ({ page }) => {
+  test('should display validation error when passwords do not match', async () => {
     await registerPage.goto()
 
     const testEmail = generateTestEmail()
@@ -104,7 +104,7 @@ test.describe('User Registration', () => {
     expect(errors.some(error => error.toLowerCase().includes('match'))).toBeTruthy()
   })
 
-  test('should enable submit button only when all password rules are met', async ({ page }) => {
+  test('should enable submit button only when all password rules are met', async () => {
     await registerPage.goto()
 
     const testEmail = generateTestEmail()
@@ -125,7 +125,7 @@ test.describe('User Registration', () => {
     expect(isDisabled).toBeFalsy()
   })
 
-  test('should navigate to register page from landing page', async ({ page }) => {
+  test('should navigate to register page from landing page', async () => {
     // Start on landing page
     await landingPage.goto()
     await expect(landingPage.registerButton).toBeVisible()
@@ -139,7 +139,7 @@ test.describe('User Registration', () => {
     await expect(registerPage.form).toBeVisible()
   })
 
-  test('should have all required form fields visible', async ({ page }) => {
+  test('should have all required form fields visible', async () => {
     await registerPage.goto()
 
     // Verify all form elements are visible

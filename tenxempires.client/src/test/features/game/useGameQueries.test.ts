@@ -92,6 +92,7 @@ describe('useAttackUnit', () => {
       ok: true,
       status: 200,
       data: mockResponse,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     vi.mocked(withCsrfRetry).mockImplementation((fn) => fn())
   })
@@ -187,6 +188,7 @@ describe('useAttackUnit', () => {
       data: { code: 'OUT_OF_RANGE', message: 'Target out of range' },
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(attackUnit).mockResolvedValue(mockErrorResponse as any)
     mockHandleError.mockClear()
 
@@ -200,7 +202,7 @@ describe('useAttackUnit', () => {
   })
 
   it('rolls back optimistic update on error', async () => {
-    const wrapper = createWrapper()
+    createWrapper()
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -244,6 +246,7 @@ describe('useAttackUnit', () => {
       data: { code: 'OUT_OF_RANGE', message: 'Target out of range' },
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(attackUnit).mockResolvedValue(mockErrorResponse as any)
 
     const { result } = renderHook(() => useAttackUnit(gameId), {
@@ -340,6 +343,7 @@ describe('useAttackCity', () => {
       ok: true,
       status: 200,
       data: mockResponse,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     vi.mocked(withCsrfRetry).mockImplementation((fn) => fn())
   })
@@ -435,6 +439,7 @@ describe('useAttackCity', () => {
       data: { code: 'OUT_OF_RANGE', message: 'City out of range' },
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(attackCity).mockResolvedValue(mockErrorResponse as any)
     mockHandleError.mockClear()
 
@@ -448,7 +453,7 @@ describe('useAttackCity', () => {
   })
 
   it('rolls back optimistic update on error', async () => {
-    const wrapper = createWrapper()
+    createWrapper()
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -492,6 +497,7 @@ describe('useAttackCity', () => {
       data: { code: 'OUT_OF_RANGE', message: 'City out of range' },
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     vi.mocked(attackCity).mockResolvedValue(mockErrorResponse as any)
 
     const { result } = renderHook(() => useAttackCity(gameId), {
@@ -551,6 +557,7 @@ describe('useAttackCity', () => {
       ok: true,
       status: 200,
       data: null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     const { result } = renderHook(() => useAttackCity(gameId), {

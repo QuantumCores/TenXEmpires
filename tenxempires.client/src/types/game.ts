@@ -130,6 +130,8 @@ export interface AttackCityCommand {
   targetCityId: number
 }
 
+// Empty command type for end turn action
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface EndTurnCommand {}
 
 // ============================================================================

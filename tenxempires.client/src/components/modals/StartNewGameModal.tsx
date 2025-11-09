@@ -91,7 +91,7 @@ export function StartNewGameModal({
       if (result.data) {
         navigate(`/game/${result.data.id}`)
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.')
       setIsCreating(false)
     }
@@ -131,7 +131,7 @@ export function StartNewGameModal({
       setShowDeleteFlow(false)
       setIsDeleting(false)
       handleStartNewGame()
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred while deleting the game.')
       setIsDeleting(false)
     }

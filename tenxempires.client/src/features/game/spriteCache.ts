@@ -82,9 +82,7 @@ export function drawTileSprite(
   ctx: CanvasRenderingContext2D,
   _terrain: string,
   hasResource: boolean,
-  color: string,
-  _logicalWidth?: number,
-  _logicalHeight?: number
+  color: string
 ): void {
   const centerX = HEX_SIZE * 2
   const centerY = HEX_SIZE * 2

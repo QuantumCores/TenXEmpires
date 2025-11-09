@@ -20,13 +20,13 @@ export async function getJson<T>(path: string, init?: RequestInit): Promise<Http
     }
     const data = (await res.json()) as T
     return { ok: res.ok, status, data }
-  } catch (err) {
+  } catch {
     return { ok: false, status: 0 }
   }
 }
 
 function readCookie(name: string): string | undefined {
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'))
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'))
   return match ? decodeURIComponent(match[1]) : undefined
 }
 

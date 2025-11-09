@@ -31,6 +31,7 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
   unobserve() {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any
 
 // Mock ResizeObserver (commonly needed for responsive components)
@@ -39,6 +40,7 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
   observe() {}
   unobserve() {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 } as any
 
 // Extend expect with custom matchers if needed

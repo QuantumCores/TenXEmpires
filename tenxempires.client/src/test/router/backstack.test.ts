@@ -6,6 +6,7 @@ const mockNavigate = vi.fn()
 const mockModalState = { modal: undefined, confirm: undefined, tab: undefined }
 
 vi.mock('react-router-dom', async (importOriginal) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const actual = await importOriginal() as any
   return {
     ...actual,
@@ -28,6 +29,7 @@ describe('useBackstackCloseBehavior', () => {
     originalLocation = window.location
 
     // Mock window.location
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location
     window.location = {
       href: 'http://localhost:3000/game/123',
@@ -35,6 +37,7 @@ describe('useBackstackCloseBehavior', () => {
       search: '',
       hash: '',
       origin: 'http://localhost:3000',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any
 
     // Track popstate event handlers

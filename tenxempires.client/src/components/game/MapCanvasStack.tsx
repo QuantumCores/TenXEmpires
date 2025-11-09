@@ -11,9 +11,6 @@ import {
   oddrToPixel,
   pixelToOddr,
   drawHexPath,
-  HEX_SIZE,
-  HEX_WIDTH,
-  HEX_HEIGHT,
   calculateOptimalHexSize,
   hexDistance,
 } from '../../features/game/hexGeometry'
@@ -580,7 +577,7 @@ export function MapCanvasStack({
       // Otherwise clear selection
       clearSelection()
     },
-    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics]
+    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles]
   )
 
   // Handle right-click to cancel
@@ -590,7 +587,7 @@ export function MapCanvasStack({
       clearSelection()
       setPreview({ kind: null })
     },
-    [clearSelection]
+    [clearSelection, setPreview]
   )
 
   return (

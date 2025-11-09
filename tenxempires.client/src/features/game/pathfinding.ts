@@ -251,8 +251,7 @@ function getHexNeighborsCube(cube: CubeCoord): CubeCoord[] {
 
 function reconstructPath(
   cameFrom: Map<string, CubeCoord>,
-  current: CubeCoord,
-  _start: CubeCoord
+  current: CubeCoord
 ): GridPosition[] {
   const path: GridPosition[] = []
   let currentCube = current

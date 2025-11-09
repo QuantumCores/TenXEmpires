@@ -154,6 +154,7 @@ export const useTurnLogStore = create<TurnLogState>()(
         }),
       clearLog: (gameId) =>
         set((state) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { [gameId]: _, ...rest } = state.logs
           return { logs: rest }
         }),

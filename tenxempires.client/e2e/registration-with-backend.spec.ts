@@ -17,7 +17,7 @@ test.describe('User Registration with Backend', () => {
     registerPage = new RegisterPage(page)
   })
 
-  test('should successfully register and authenticate user', async ({ page, request }) => {
+  test('should successfully register and authenticate user', async ({ request }) => {
     // 1. User opens landing page
     await landingPage.goto()
     await expect(landingPage.registerButton).toBeVisible()
@@ -42,7 +42,7 @@ test.describe('User Registration with Backend', () => {
     // Verify user is authenticated by checking API
     // Note: In a real scenario, you might check for redirect or success message
     // For now, we verify via API that the user was created
-    const userResult = await getCurrentUser(request)
+    await getCurrentUser(request)
     
     // If registration was successful, user should be authenticated
     // This depends on your app's flow - you might need to check for a redirect or modal
@@ -80,7 +80,7 @@ test.describe('User Registration with Backend', () => {
     expect(userResult.user?.email).toBe(testUser.email)
   })
 
-  test('should handle duplicate email registration', async ({ page, request }) => {
+  test('should handle duplicate email registration', async ({ request }) => {
     // Setup: Create a user via API first
     const testUser = await createTestUser(request)
     expect(testUser.success).toBeTruthy()

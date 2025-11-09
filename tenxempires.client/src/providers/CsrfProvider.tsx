@@ -55,6 +55,7 @@ export function CsrfProvider({ children }: { children: React.ReactNode }) {
   return <CsrfContext.Provider value={value}>{children}</CsrfContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCsrf() {
   const ctx = useContext(CsrfContext)
   if (!ctx) throw new Error('useCsrf must be used within CsrfProvider')

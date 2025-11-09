@@ -55,7 +55,6 @@ const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> =
 
 export function ModalManager({
   gameId: gameIdParam,
-  status: _status,
 }: {
   gameId: string | number
   status?: 'online' | 'offline' | 'limited'
