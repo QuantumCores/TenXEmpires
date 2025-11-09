@@ -1,0 +1,31 @@
+Please read my [Dockerfile](TenXEmpires.Server/Dockerfile) , [TenXEmpires.Server.csproj](TenXEmpires.Server/TenXEmpires.Server.csproj) , [tenxempires.client.esproj](tenxempires.client/tenxempires.client.esproj) , [DbMigrate.csproj](tools/DbMigrate/DbMigrate.csproj) , [playwright.config.ts](tenxempires.client/playwright.config.ts) , [tech-stack.md](.ai/tech-stack.md) . My repository is public on github at https://github.com/QuantumCores/TenXEmpires.  
+
+
+I want to preapre my app for demo release but my infrastucuture is not ready yet. My plan is to have 3 separate docker images. One for postgresql database (cheap and enough for demo), one for .net core 8 server (backend) app, one for React 19 client (frontend) web. 
+
+I want to have CI/CD pipelined in github actions. I want to have one pipeline that riggers build and tests whenewer a new PR is created and a new commit to this PR is commited. I also want to have four separeate deploy pipelines. One for each docker image (dn. server, client) and one for client and frontend deployed together. Db migrations should be executed whenewer backend app is deployed. Deploy pipelines should only have manual triggers from selected branch. I want to be able to select a branch because I want to have hotfix or test feature on production ability. 
+
+Help me with the following questions
+1. I'm not sure how to fit playwrigt tests into this setup. Should I create separate env on DigitalOcean for these? Seems like to much toruble for a demo app.
+2. How should I store my secrets? Db connection string with user and password. Email configuration with user and password for sending emails from my .net app.
+3. Do I have t change @TenXEmpires.Server.csproj (on start cleint is also spawned)? If yes how will that change affect e2e playwright tests?
+4. Can I ahve so many pipelines in free public github repository?
+5. Which plan in DigitalOcean should I pick and is my setup with docker images still valid?
+6. Do you see any other concerns about my plan? 
+
+Please write me a summary of my plan with pros and cons, recomendations
+
+DO NOT MAKE ANY CHANGES TO THE PROJECT YET. This is a brain storm session only.
+
+
+
+-----------------
+
+I want production ports to be the same as in local/dev invironment. Is this ok? Or dao I have to use 80 for client because it's default if want to have domain address without port?
+
+I'm concerned about network configuration (service communication, CORS) in DigitalOcean. I don't even know where to start and how to setup this in DO.
+
+------------------
+
+I'll use posgresql Docker Hub image. Great now that we have all in place please please condacne our conversations into a detailed plan, step by step walktrough in points what needs to be done to prepare solution for rollout to production. Inlcuding code changes, setting up pipelines, e2e tests in pipelines using Docer compose, running migrations on backend deploy, preapring Digital Ocean environment, networks, domains, CORS and so on. Every single thing that is required to make it work.
+
