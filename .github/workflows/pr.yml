@@ -1,0 +1,55 @@
+name: PR Build and Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore TenXEmpires.Server/TenXEmpires.Server.csproj
+      
+      - name: Build
+        run: dotnet build TenXEmpires.Server/TenXEmpires.Server.csproj --configuration Release --no-restore
+      
+      - name: Run unit tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: tenxempires.client/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: tenxempires.client
+        run: npm ci
+      
+      - name: Lint
+        working-directory: tenxempires.client
+        run: npm run lint
+      
+      - name: Run unit tests
+        working-directory: tenxempires.client
+        run: npm test
+      
+      - name: Build
+        working-directory: tenxempires.client
+        run: npm run build
+
