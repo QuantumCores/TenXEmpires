@@ -22,22 +22,9 @@ create schema if not exists auth;
 create schema if not exists app;
 
 -- --------------------------------------------------------------------------
--- Roles and grants
--- app_user     : application role subject to RLS; used by the web API.
--- app_admin    : admin role for maintenance procedures; BYPASSRLS.
--- app_migrator : migrations/seeding role (DDL, seeds).
+-- Note: Roles (app_user, app_admin, app_migrator) are created in the earlier
+-- migration (20251019130000_create_identity_schema.sql).
 -- --------------------------------------------------------------------------
-do $$ begin
-  if not exists (select 1 from pg_roles where rolname = 'app_user') then
-    create role app_user nologin;
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'app_admin') then
-    create role app_admin nologin bypassrls; -- admin flows through procs only
-  end if;
-  if not exists (select 1 from pg_roles where rolname = 'app_migrator') then
-    create role app_migrator nologin;
-  end if;
-end $$;
 
 -- Lock down schemas; explicit grants follow
 revoke all on schema app from public;

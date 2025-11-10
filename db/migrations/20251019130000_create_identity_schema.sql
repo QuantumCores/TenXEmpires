@@ -12,6 +12,27 @@
 -- Ensure auth schema exists
 create schema if not exists auth;
 
+-- ============================================================================
+-- Create application roles (if they don't exist)
+-- These roles are referenced in grants below and in later migrations
+-- ============================================================================
+-- Roles and grants
+-- app_user     : application role subject to RLS; used by the web API.
+-- app_admin    : admin role for maintenance procedures; BYPASSRLS.
+-- app_migrator : migrations/seeding role (DDL, seeds).
+-- --------------------------------------------------------------------------
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'app_user') then
+    create role app_user nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'app_admin') then
+    create role app_admin nologin bypassrls;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'app_migrator') then
+    create role app_migrator nologin;
+  end if;
+end $$;
+
 -- Users table (AspNetUsers)
 create table if not exists auth."AspNetUsers" (
   "Id"                    uuid primary key,
