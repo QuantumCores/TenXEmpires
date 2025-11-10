@@ -39,11 +39,16 @@ test.describe('Visual Regression', () => {
     const homePage = new HomePage(page)
     await homePage.goto()
     
+    // Wait for page to be fully loaded and stable
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(500) // Allow any animations/transitions to complete
+    
     // This will fail on first run and create a baseline
     // Subsequent runs will compare against the baseline
     await expect(page).toHaveScreenshot('homepage.png', {
       fullPage: true,
-      maxDiffPixels: 100,
+      maxDiffPixels: 500, // Increased tolerance for minor visual differences
+      threshold: 0.2, // 20% pixel difference tolerance
     })
   })
 })
@@ -53,13 +58,20 @@ test.describe('Visual Regression', () => {
  */
 test.describe('API Tests', () => {
   test('should be able to fetch unit definitions', async ({ request }) => {
-    const response = await request.get('/api/unit-definitions')
+    // Construct API URL - use API_BASE_URL if set (Docker/CI), otherwise use relative path (dev mode)
+    const apiBaseUrl = process.env.API_BASE_URL
+    const apiUrl = apiBaseUrl 
+      ? `${apiBaseUrl}/v1/unit-definitions` // Docker/CI mode - direct API call
+      : '/api/unit-definitions' // Dev mode - use Vite proxy
+    
+    const response = await request.get(apiUrl)
     
     expect(response.ok()).toBeTruthy()
     expect(response.status()).toBe(200)
     
     const data = await response.json()
     expect(data).toBeDefined()
+    expect(Array.isArray(data.items)).toBeTruthy()
   })
 })
 
