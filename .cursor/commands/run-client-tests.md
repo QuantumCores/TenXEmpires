@@ -32,3 +32,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host "Running E2E tests..." -ForegroundColor Cyan
 npm run test:e2e
 ```
+
+If the homepage changes intentionally, update the baseline by running:
+```
+npx playwright test e2e/example.spec.ts -g "homepage should match screenshot" --update-snapshots
+```
+
