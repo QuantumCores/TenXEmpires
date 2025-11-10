@@ -61,34 +61,38 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
+  // In CI with Docker Compose, services are already running, so skip webServer
   webServer: 
-    // If API_BASE_URL is set and not localhost, only start frontend
-    process.env.API_BASE_URL && !process.env.API_BASE_URL.includes('localhost')
-      ? {
-          command: 'npm run dev',
-          url: 'http://localhost:5173',
-          reuseExistingServer: !process.env.CI,
-          timeout: 120 * 1000,
-        }
-      : // Start both frontend and backend servers separately for tests
-        // This is more reliable than relying on SPA proxy in test environment
-        [
-          // Frontend dev server
-          {
+    // If running in CI with Docker Compose (API_BASE_URL points to localhost), don't start servers
+    process.env.CI && process.env.API_BASE_URL && process.env.API_BASE_URL.includes('localhost')
+      ? undefined
+      : // If API_BASE_URL is set and not localhost, only start frontend
+        process.env.API_BASE_URL && !process.env.API_BASE_URL.includes('localhost')
+        ? {
             command: 'npm run dev',
             url: 'http://localhost:5173',
             reuseExistingServer: !process.env.CI,
             timeout: 120 * 1000,
-            cwd: configDir,
-          },
-          // Backend API server
-          {
-            command: 'dotnet run --project ../TenXEmpires.Server/TenXEmpires.Server.csproj',
-            url: 'http://localhost:5019/swagger',
-            reuseExistingServer: !process.env.CI,
-            timeout: 180 * 1000,
-            cwd: configDir,
-          },
-        ],
+          }
+        : // Start both frontend and backend servers separately for tests
+          // This is more reliable than relying on SPA proxy in test environment
+          [
+            // Frontend dev server
+            {
+              command: 'npm run dev',
+              url: 'http://localhost:5173',
+              reuseExistingServer: !process.env.CI,
+              timeout: 120 * 1000,
+              cwd: configDir,
+            },
+            // Backend API server
+            {
+              command: 'dotnet run --project ../TenXEmpires.Server/TenXEmpires.Server.csproj',
+              url: 'http://localhost:5019/swagger',
+              reuseExistingServer: !process.env.CI,
+              timeout: 180 * 1000,
+              cwd: configDir,
+            },
+          ],
 })
 
