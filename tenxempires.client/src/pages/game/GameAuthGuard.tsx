@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { getJson, getApiUrl } from '../../api/http'
-import type { GameSummary, PagedResult } from '../../types/api'
+import { getApiUrl } from '../../api/http'
 
 export function GameAuthGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
@@ -11,16 +10,28 @@ export function GameAuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const baseUrl = getApiUrl('/api/games')
-      const url = new URL(baseUrl)
-      url.searchParams.set('status', 'active')
-      url.searchParams.set('sort', 'lastTurnAt')
-      url.searchParams.set('order', 'desc')
-      url.searchParams.set('pageSize', '1')
+      // Build query string first, then append to path
+      const queryParams = new URLSearchParams({
+        status: 'active',
+        sort: 'lastTurnAt',
+        order: 'desc',
+        pageSize: '1',
+      })
+      // Use getApiUrl to handle dev mode (relative) vs Docker/CI (absolute URL)
+      // getApiUrl preserves query strings, so we can include them in the path
+      const url = getApiUrl(`/api/games?${queryParams.toString()}`)
 
-      const { ok, status } = await getJson<PagedResult<GameSummary>>(url.toString())
+      // Use fetch directly since we've already processed the URL via getApiUrl
+      const res = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' },
+      })
       if (cancelled) return
 
+      const status = res.status
+      const ok = res.ok
+      
       if (!ok && (status === 401 || status === 403)) {
         const returnUrl = encodeURIComponent(location.pathname + location.search)
         navigate(`/login?returnUrl=${returnUrl}`, { replace: true })
