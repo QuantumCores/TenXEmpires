@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { getApiUrl } from '../api/http'
 
 type CsrfStatus = 'idle' | 'initializing' | 'ready' | 'error'
 
@@ -12,7 +13,8 @@ const CsrfContext = createContext<CsrfContextValue | undefined>(undefined)
 
 async function requestCsrf(): Promise<{ ok: boolean; status: number }> {
   try {
-    const res = await fetch('/api/auth/csrf', {
+    const url = getApiUrl('/api/auth/csrf')
+    const res = await fetch(url, {
       method: 'GET',
       credentials: 'include',
       headers: { 'Accept': 'application/json' },

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { getJson } from '../../api/http'
+import { getJson, getApiUrl } from '../../api/http'
 import type { GameSummary, PagedResult } from '../../types/api'
 
 export function GameAuthGuard({ children }: { children: React.ReactNode }) {
@@ -11,7 +11,8 @@ export function GameAuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const url = new URL('/api/games', window.location.origin)
+      const baseUrl = getApiUrl('/api/games')
+      const url = new URL(baseUrl)
       url.searchParams.set('status', 'active')
       url.searchParams.set('sort', 'lastTurnAt')
       url.searchParams.set('order', 'desc')

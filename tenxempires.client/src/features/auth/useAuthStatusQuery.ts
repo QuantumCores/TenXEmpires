@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getJson } from '../../api/http'
+import { getJson, getApiUrl } from '../../api/http'
 import type { CurrentUser } from '../../types/api'
 import type { AuthStatus } from '../../types/view'
 import { useNotifications } from '../../components/ui/notifications'
@@ -10,8 +10,8 @@ function nowIsoSeconds(): string {
 }
 
 async function rawFetchAuthStatus(): Promise<{ status: number; auth: AuthStatus }> {
-  const url = new URL('/api/auth/me', window.location.origin)
-  const { ok, status } = await getJson<CurrentUser>(url.toString())
+  const url = getApiUrl('/api/auth/me')
+  const { ok, status } = await getJson<CurrentUser>(url)
 
   // Default unauthenticated state
   const base: AuthStatus = {

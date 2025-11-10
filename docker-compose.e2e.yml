@@ -39,8 +39,8 @@ services:
     build:
       context: ./tenxempires.client
       dockerfile: Dockerfile
-    environment:
-      VITE_API_BASE_URL: "http://localhost:5019"
+      args:
+        VITE_API_BASE_URL: "http://localhost:5019"
     ports:
       - "5173:80"
     depends_on:

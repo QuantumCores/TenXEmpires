@@ -4,6 +4,26 @@ export interface HttpResult<T> {
   data?: T
 }
 
+/**
+ * Constructs the full API URL for a given path.
+ * - If VITE_API_BASE_URL is set, uses it as the base URL and appends /v1 + path
+ * - Otherwise, uses relative path (for dev mode with Vite proxy)
+ */
+export function getApiUrl(path: string): string {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+  if (apiBaseUrl) {
+    // Remove leading slash from path if present, then construct full URL
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path
+    // Replace /api prefix with /v1 if present, otherwise add /v1
+    const apiPath = cleanPath.startsWith('api/') 
+      ? cleanPath.replace(/^api\//, 'v1/')
+      : `v1/${cleanPath}`
+    return `${apiBaseUrl}/${apiPath}`
+  }
+  // Dev mode: use relative path (Vite proxy will handle /api -> /v1)
+  return path
+}
+
 const defaultInit: RequestInit = {
   credentials: 'include',
   headers: {
@@ -13,7 +33,8 @@ const defaultInit: RequestInit = {
 
 export async function getJson<T>(path: string, init?: RequestInit): Promise<HttpResult<T>> {
   try {
-    const res = await fetch(path, { ...defaultInit, ...init, method: 'GET' })
+    const url = getApiUrl(path)
+    const res = await fetch(url, { ...defaultInit, ...init, method: 'GET' })
     const status = res.status
     if (!res.headers.get('content-type')?.includes('application/json')) {
       return { ok: res.ok, status }
@@ -51,7 +72,8 @@ async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE',
       headers['X-XSRF-TOKEN'] = token
     }
 
-    const res = await fetch(path, {
+    const url = getApiUrl(path)
+    const res = await fetch(url, {
       ...defaultInit,
       ...init,
       method,

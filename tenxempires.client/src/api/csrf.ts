@@ -1,3 +1,5 @@
+import { getApiUrl } from './http'
+
 let csrfRefreshPromise: Promise<boolean> | null = null
 
 /**
@@ -14,7 +16,8 @@ export async function refreshCsrfToken(): Promise<boolean> {
     try {
       // Call server endpoint that sets new CSRF cookie
       // Uses the same endpoint as CsrfProvider for consistency
-      const response = await fetch('/api/auth/csrf', {
+      const url = getApiUrl('/api/auth/csrf')
+      const response = await fetch(url, {
         method: 'GET',
         credentials: 'include',
         headers: { 'Accept': 'application/json' },
