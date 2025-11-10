@@ -43,3 +43,73 @@ deploy-database.yml	Updated	checkout@v5, app_action@v2
 deploy-fullstack.yml	Updated	(uses other workflows)
 playwright.yml	Updated	checkout@v5, setup-node@v6, upload-artifact@v5
 db-migrate.yml	Updated	checkout@v5, setup-dotnet@v5
+
+
+
+Here’s a practical workflow for client changes:
+
+## Recommended workflow
+
+### During development
+1. Make code changes
+2. Run lint frequently (or use your editor’s ESLint integration)
+   ```bash
+   npm run lint
+   ```
+3. Run tests if you changed test-related code
+   ```bash
+   npm test
+   ```
+
+### Before committing
+1. Run lint to catch issues
+   ```bash
+   npm run lint
+   ```
+2. Run build to ensure TypeScript compiles
+   ```bash
+   npm run build
+   ```
+3. Run tests to ensure nothing broke
+   ```bash
+   npm test
+   ```
+
+### CI/CD handles this automatically
+- PR workflow: runs lint, build, and unit tests
+- Main workflow: runs lint, build, unit tests, and E2E tests
+
+## Optional: automate locally
+
+### Option 1: Pre-commit hook (recommended)
+Add a pre-commit hook to run lint and build before commits:
+
+```bash
+# Install husky (if not already installed)
+npm install --save-dev husky
+
+# Add pre-commit hook
+npx husky add .husky/pre-commit "cd tenxempires.client && npm run lint && npm run build"
+```
+
+### Option 2: Watch mode (during development)
+For faster feedback during development, you can use watch mode:
+
+```bash
+# In one terminal - watch for changes and rebuild
+npm run build -- --watch
+
+# In another terminal - watch for lint errors
+npm run lint -- --watch
+```
+
+### Option 3: VS Code tasks
+You can create VS Code tasks to run these commands easily.
+
+## Summary
+
+- During development: rely on editor linting; run `npm run lint` when needed
+- Before committing: run `npm run lint` and `npm run build`
+- CI/CD: runs everything automatically, so you’ll catch issues there too
+
+The most important thing is to run both lint and build before pushing to ensure your code is ready for CI/CD.
