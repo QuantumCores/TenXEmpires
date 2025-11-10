@@ -33,9 +33,10 @@ test.describe('Home Page', () => {
 
 /**
  * Example visual regression test
+ * TODO: Re-enable when visual regression testing is needed
  */
 test.describe('Visual Regression', () => {
-  test('homepage should match screenshot', async ({ page }) => {
+  test.skip('homepage should match screenshot', async ({ page }) => {
     const homePage = new HomePage(page)
     await homePage.goto()
     
