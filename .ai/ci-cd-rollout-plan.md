@@ -561,9 +561,18 @@ on:
         required: true
         type: string
         default: 'main'
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
 
 env:
-  REGISTRY: registry.digitalocean.com
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
   IMAGE_NAME: tenxempires/backend
 
 jobs:
@@ -571,19 +580,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ inputs.branch || github.event.inputs.branch }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Log in to DigitalOcean Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Extract metadata
         id: meta
@@ -591,11 +600,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix={{branch}}-
+            type=raw,value={{sha}}
             type=raw,value=latest,enable={{is_default_branch}}
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: TenXEmpires.Server/Dockerfile
@@ -610,12 +619,12 @@ jobs:
     needs: build-and-push
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ inputs.branch || github.event.inputs.branch }}
       
       - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
       
@@ -641,12 +650,14 @@ jobs:
     needs: [build-and-push, run-migrations]
     steps:
       - name: Deploy to DigitalOcean App Platform
-        uses: digitalocean/app_action@v1
+        uses: digitalocean/app_action@v2
         with:
           app_name: tenxempires-backend
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          # App Platform will pull the latest image from registry
+          # App Platform will pull the latest image from GHCR
 ```
+
+This workflow always produces a tag equal to the exact commit SHA (plus `latest` on the default branch), so deployed backend images map directly to the commit on `main`.
 
 ### 2.5 Deploy frontend pipeline
 
@@ -668,9 +679,21 @@ on:
         required: true
         type: string
         default: 'https://api.yourdomain.com'
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+      api_base_url:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
 
 env:
-  REGISTRY: registry.digitalocean.com
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
   IMAGE_NAME: tenxempires/frontend
 
 jobs:
@@ -678,19 +701,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ inputs.branch || github.event.inputs.branch }}
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Log in to DigitalOcean Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          password: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Extract metadata
         id: meta
@@ -698,11 +721,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix={{branch}}-
+            type=raw,value={{sha}}
             type=raw,value=latest,enable={{is_default_branch}}
       
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./tenxempires.client
           file: ./tenxempires.client/Dockerfile
@@ -710,7 +733,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_API_BASE_URL=${{ github.event.inputs.api_base_url }}
+            VITE_API_BASE_URL=${{ inputs.api_base_url || github.event.inputs.api_base_url }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -719,7 +742,7 @@ jobs:
     needs: build-and-push
     steps:
       - name: Deploy to DigitalOcean App Platform
-        uses: digitalocean/app_action@v1
+        uses: digitalocean/app_action@v2
         with:
           app_name: tenxempires-frontend
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
@@ -786,15 +809,21 @@ Add these secrets:
 4. `EMAIL_SMTP_PASSWORD` (if using email)
    - SMTP password
 
+> Note: Pushing to GHCR uses the built-in `GITHUB_TOKEN`, so no extra PAT/secret (like `GHCR_TOKEN`) is required as long as the repository and packages remain public. The `GITHUB_TOKEN` is automatically available in GitHub Actions workflows.
+
 ---
 
 ## Phase 4: DigitalOcean App Platform setup
 
-### 4.1 Create Container Registry
+### 4.1 Configure GitHub Container Registry (GHCR)
 
-1. Go to: DigitalOcean > Container Registry
-2. Create registry: `tenxempires` (or your preferred name)
-3. Note the registry URL: `registry.digitalocean.com/tenxempires`
+1. Images live under `ghcr.io/<github_owner>/tenxempires/*`, so no DigitalOcean registry is required.
+   - Backend: `ghcr.io/quantumcores/tenxempires/backend`
+   - Frontend: `ghcr.io/quantumcores/tenxempires/frontend`
+2. Because the repository (and GHCR packages) are public, App Platform can pull the images anonymously—no additional credentials or PATs are needed.
+3. For pushing images, the workflows use the built-in `GITHUB_TOKEN` (no `GHCR_TOKEN` secret needed for public packages).
+4. If you ever switch the packages to private, create read/write PATs at that time and update both GitHub Actions (push) and App Platform (pull).
+5. Images are tagged with the commit SHA (`{{sha}}`) plus `latest` tag on the default branch.
 
 ### 4.2 Create App Platform app
 
@@ -824,10 +853,10 @@ Add these secrets:
 ### 4.4 Add backend service
 
 1. "Add Component" > "Service"
-2. Source: Container Registry
-3. Registry: `tenxempires`
-4. Image: `tenxempires/backend`
-5. Tag: `latest` (or branch-specific)
+2. Source: Container Image (Other Container Registry)
+3. Image: `ghcr.io/quantumcores/tenxempires/backend` (replace `quantumcores` if your GitHub org/user differs)
+4. Tag: `latest` (or use specific SHA tag like `abc123def` for a specific commit)
+5. Registry credentials: not required (image is public on GHCR)
 6. Name: `tenxempires-backend`
 7. Plan: $10/month (1 vCPU, 1 GiB RAM)
 8. HTTP Port: `8080`
@@ -853,10 +882,10 @@ Add these secrets:
 ### 4.5 Add frontend service
 
 1. "Add Component" > "Service"
-2. Source: Container Registry
-3. Registry: `tenxempires`
-4. Image: `tenxempires/frontend`
-5. Tag: `latest`
+2. Source: Container Image (Other Container Registry)
+3. Image: `ghcr.io/quantumcores/tenxempires/frontend`
+4. Tag: `latest` (or use specific SHA tag like `abc123def` for a specific commit)
+5. Registry credentials: not required (image is public on GHCR)
 6. Name: `tenxempires-frontend`
 7. Plan: $5/month (1 vCPU, 512 MiB RAM)
 8. HTTP Port: `80`
@@ -1045,7 +1074,7 @@ If resources are insufficient:
 - [ ] Configure GitHub secrets
 
 ### DigitalOcean
-- [ ] Create Container Registry
+- [ ] Point App Platform services to GHCR images
 - [ ] Create App Platform app
 - [ ] Add PostgreSQL service ($10/month)
 - [ ] Add backend service ($10/month)
