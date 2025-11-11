@@ -3,8 +3,21 @@ import { AppRouter } from './router/AppRouter'
 import { AppProviders } from './providers/AppProviders'
 
 function App(): React.JSX.Element {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '(not set)'
+
   return (
     <AppProviders>
+      <div
+        style={{
+          padding: '0.25rem 0.75rem',
+          backgroundColor: '#fef3c7',
+          color: '#92400e',
+          fontSize: '0.85rem',
+          textAlign: 'center',
+        }}
+      >
+        API base URL: {apiBaseUrl}
+      </div>
       <AppRouter />
     </AppProviders>
   )
