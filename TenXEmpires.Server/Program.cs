@@ -340,7 +340,34 @@ namespace TenXEmpires.Server
                 builder.Services.AddHostedService<OpenApiExportHostedService>();
             }
 
+            // Register database migration service
+            builder.Services.AddSingleton<Infrastructure.DatabaseMigrationService>();
+
             var app = builder.Build();
+
+            // Run database migrations on startup (only in production, skip in development for faster startup)
+            if (!app.Environment.IsDevelopment())
+            {
+                try
+                {
+                    var migrationService = app.Services.GetRequiredService<Infrastructure.DatabaseMigrationService>();
+                    Log.Information("Running database migrations on startup...");
+                    
+                    var migrationSuccess = migrationService.RunMigrations(ensureDatabase: false);
+                    if (!migrationSuccess)
+                    {
+                        Log.Fatal("Database migrations failed. Application will not start.");
+                        throw new InvalidOperationException("Database migrations failed. Check logs for details.");
+                    }
+                    
+                    Log.Information("Database migrations completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Log.Fatal(ex, "Failed to run database migrations on startup");
+                    throw;
+                }
+            }
 
             // Use forwarded headers FIRST (before any other middleware that needs to know about the original request)
             app.UseForwardedHeaders();

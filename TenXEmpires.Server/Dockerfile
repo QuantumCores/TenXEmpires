@@ -35,4 +35,6 @@ RUN dotnet publish "./TenXEmpires.Server.csproj" -c $BUILD_CONFIGURATION -o /app
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Copy database migrations to the app directory
+COPY --from=build /src/db/migrations ./db/migrations
 ENTRYPOINT ["dotnet", "TenXEmpires.Server.dll"]

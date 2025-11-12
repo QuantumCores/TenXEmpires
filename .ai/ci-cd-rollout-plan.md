@@ -125,6 +125,8 @@ RUN dotnet publish "./TenXEmpires.Server.csproj" -c $BUILD_CONFIGURATION -o /app
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Copy database migrations to the app directory (for automatic migrations on startup)
+COPY --from=build /src/db/migrations ./db/migrations
 ENTRYPOINT ["dotnet", "TenXEmpires.Server.dll"]
 ```
 
@@ -514,11 +516,15 @@ jobs:
         run: docker-compose -f docker-compose.e2e.yml down -v
 ```
 
-### 2.3 Database migrations (no separate database app)
+### 2.3 Database migrations (automatic on startup)
 
-**Note:** Since we're using a DigitalOcean Managed Database (not an App Platform app), database migrations are handled as part of the backend deployment workflow (see 2.4). There is no separate database deployment workflow needed.
+**Note:** Database migrations run automatically when the backend application starts up in production. The `DatabaseMigrationService` in `Program.cs` handles this, so no separate migration step is needed in the deployment workflow.
 
-The database is a managed service that runs independently. Migrations run automatically when the backend is deployed (see `run-migrations` job in `deploy-backend.yml`).
+The migration service:
+- Runs migrations from `db/migrations` directory on application startup (production only)
+- Uses the same DbUp logic as the standalone migration tool
+- Fails fast if migrations fail (prevents app from starting with outdated schema)
+- Skips migrations in development for faster startup
 
 ### 2.4 Deploy backend pipeline
 
@@ -588,40 +594,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  run-migrations:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.branch || github.event.inputs.branch }}
-      
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-      
-      - name: Restore
-        run: dotnet restore tools/DbMigrate/DbMigrate.csproj
-      
-      - name: Build
-        run: dotnet build --configuration Release tools/DbMigrate/DbMigrate.csproj
-      
-      - name: Run migrations
-        env:
-          TENX_DB_CONNECTION: ${{ secrets.TENX_DB_CONNECTION }}
-        run: |
-          if [ -z "${TENX_DB_CONNECTION}" ]; then
-            echo "TENX_DB_CONNECTION secret is not set" >&2; exit 2; fi
-          dotnet run --project tools/DbMigrate --configuration Release -- \
-            --connection "$TENX_DB_CONNECTION" \
-            --scripts db/migrations \
-            --ensure-database
-
   deploy:
     runs-on: ubuntu-latest
-    needs: [build-and-push, run-migrations]
+    needs: build-and-push
     steps:
       - name: Deploy to DigitalOcean App Platform
         uses: digitalocean/app_action@v2
@@ -632,6 +607,8 @@ jobs:
 ```
 
 This workflow always produces a tag equal to the exact commit SHA (plus `latest` on the default branch), so deployed backend images map directly to the commit on `main`.
+
+**Note:** Database migrations run automatically when the backend application starts up in production. The `DatabaseMigrationService` handles this, so no manual migration steps are needed. See section 4.7 for details.
 
 ### 2.5 Deploy frontend pipeline
 
@@ -936,7 +913,31 @@ If you prefer to keep everything in App Platform:
    - DNS propagation: 5 minutes to 48 hours (usually < 1 hour)
    - SSL certificates: Auto-provisioned after DNS resolves (usually a few minutes)
 
-### 4.7 Update CORS with actual domains
+### 4.7 Database migrations (automatic on startup)
+
+**Automatic Migrations:** Database migrations run automatically when the backend application starts up in production. The `DatabaseMigrationService` (configured in `Program.cs`) handles this automatically.
+
+**How it works:**
+- On application startup in production, the service checks for pending migrations in `db/migrations`
+- Migrations are applied automatically before the app starts serving requests
+- If migrations fail, the application will not start (fail-fast behavior)
+- In development, migrations are skipped for faster startup
+- Migrations use the same DbUp logic as the standalone migration tool
+
+**Migration files:** The `db/migrations` directory is included in the Docker image (see `Dockerfile`), so all migration scripts are available at runtime.
+
+**Manual migration (if needed):** If you need to run migrations manually (e.g., for troubleshooting), you can use the App Platform console:
+1. Go to your backend app: `tenxempires-backend`
+2. Navigate to the `api-tenxempires` component
+3. Use "Run Command" to execute:
+   ```bash
+   dotnet tools/DbMigrate/DbMigrate.dll \
+     --connection "Host=tenxempires-db;Port=5432;Database=<db-name>;Username=<user>;Password=<password>;SslMode=Prefer;" \
+     --scripts db/migrations \
+     --ensure-database
+   ```
+
+### 4.8 Update CORS with actual domains
 
 1. In backend service environment variables, update:
    ```
@@ -997,8 +998,8 @@ docker-compose -f docker-compose.e2e.yml down -v
    - Select branch: `main`
    - Verify:
      - Image builds and pushes
-     - Migrations run
      - Service deploys
+     - Migrations run automatically on startup (check logs to verify)
      - Health check passes
 
 2. Test frontend deployment:
@@ -1035,7 +1036,8 @@ docker-compose -f docker-compose.e2e.yml down -v
    - Test main features
 
 4. Database:
-   - Verify migrations applied (check `schemaversions` table)
+   - Verify migrations applied automatically on startup (check application logs for migration messages)
+   - Verify migrations recorded in `schemaversions` table
    - Test database connectivity from backend
 
 ---
@@ -1076,7 +1078,10 @@ If resources are insufficient:
 - [ ] Create `tenxempires.client/nginx.conf`
 - [ ] Update `TenXEmpires.Server/Dockerfile` (remove Node.js)
 - [ ] Remove SPA proxy from `TenXEmpires.Server.csproj`
-- [ ] Update `Program.cs` (remove static files or make conditional)
+- [ ] Update `Program.cs` (remove static files or make conditional, add forwarded headers, add migration service)
+- [ ] Create `DatabaseMigrationService.cs` (automatic migrations on startup)
+- [ ] Add `dbup-postgresql` package to `TenXEmpires.Server.csproj`
+- [ ] Update `TenXEmpires.Server/Dockerfile` (include migrations directory)
 - [ ] Create `HealthController.cs`
 - [ ] Update `appsettings.json` CORS
 - [ ] Create `appsettings.Production.json`
@@ -1086,7 +1091,7 @@ If resources are insufficient:
 ### GitHub Actions
 - [ ] Create `.github/workflows/pr.yml` (fast feedback - unit tests only)
 - [ ] Create `.github/workflows/main.yml` (full validation with E2E tests)
-- [ ] Create `.github/workflows/deploy-backend.yml` (includes database migrations)
+- [ ] Create `.github/workflows/deploy-backend.yml` (migrations run automatically on startup)
 - [ ] Create `.github/workflows/deploy-frontend.yml`
 - [ ] Create `.github/workflows/deploy-fullstack.yml`
 - [ ] Configure GitHub secrets
