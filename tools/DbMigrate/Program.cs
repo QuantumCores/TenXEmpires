@@ -133,13 +133,84 @@ namespace TenX.DbMigrate
         {
             if (argDict.TryGetValue("--connection", out var conn) && !string.IsNullOrWhiteSpace(conn))
             { 
+                var isUrl = conn.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) 
+                    || conn.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+                
+                Console.WriteLine($"Connection from --connection argument: {(isUrl ? "URL format" : "Connection string format")}");
+                
+                if (isUrl)
+                {
+                    var parsed = ParseDatabaseUrl(conn);
+                    if (parsed != null)
+                    {
+                        Console.WriteLine("Successfully parsed URL to connection string format");
+                        return parsed;
+                    }
+                    Console.WriteLine("Warning: Failed to parse URL, using original value");
+                    return conn;
+                }
                 return conn;
             }
 
-            var envConn = Environment.GetEnvironmentVariable("TENX_DB_CONNECTION")
-                        ?? Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-                        ?? ParseDatabaseUrl(Environment.GetEnvironmentVariable("DATABASE_URL"));
-            return envConn ?? string.Empty;
+            var tenxConn = Environment.GetEnvironmentVariable("TENX_DB_CONNECTION");
+            if (!string.IsNullOrWhiteSpace(tenxConn))
+            {
+                var isUrl = tenxConn.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) 
+                    || tenxConn.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+                
+                Console.WriteLine($"TENX_DB_CONNECTION found: {(isUrl ? "URL format" : "Connection string format")}");
+                
+                if (isUrl)
+                {
+                    var parsed = ParseDatabaseUrl(tenxConn);
+                    if (parsed != null)
+                    {
+                        Console.WriteLine("Successfully parsed URL to connection string format");
+                        return parsed;
+                    }
+                    Console.WriteLine("Warning: Failed to parse URL, using original value");
+                    return tenxConn;
+                }
+                return tenxConn;
+            }
+
+            var postgresConn = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
+            if (!string.IsNullOrWhiteSpace(postgresConn))
+            {
+                var isUrl = postgresConn.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) 
+                    || postgresConn.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase);
+                
+                Console.WriteLine($"POSTGRES_CONNECTION_STRING found: {(isUrl ? "URL format" : "Connection string format")}");
+                
+                if (isUrl)
+                {
+                    var parsed = ParseDatabaseUrl(postgresConn);
+                    if (parsed != null)
+                    {
+                        Console.WriteLine("Successfully parsed URL to connection string format");
+                        return parsed;
+                    }
+                    Console.WriteLine("Warning: Failed to parse URL, using original value");
+                    return postgresConn;
+                }
+                return postgresConn;
+            }
+
+            var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            if (!string.IsNullOrWhiteSpace(databaseUrl))
+            {
+                Console.WriteLine("DATABASE_URL found: URL format");
+                var parsed = ParseDatabaseUrl(databaseUrl);
+                if (parsed != null)
+                {
+                    Console.WriteLine("Successfully parsed URL to connection string format");
+                    return parsed;
+                }
+                Console.WriteLine("Warning: Failed to parse URL, using original value");
+                return databaseUrl;
+            }
+
+            return string.Empty;
         }
 
         private static string? ParseDatabaseUrl(string? url)
