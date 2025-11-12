@@ -3,11 +3,13 @@
 ## Overview
 
 **Architecture:**
-- Frontend: React 19 + Vite (Nginx) — $5/month (512 MiB)
-- Backend: .NET 8 API — $10/month (1 GiB)
-- Database: PostgreSQL 16 Alpine (Docker) — $10/month (1 GiB)
+- Frontend: React 19 + Vite (Nginx) — Separate App Platform app — $5/month (512 MiB)
+- Backend: .NET 8 API — Separate App Platform app — $10/month (1 GiB)
+- Database: PostgreSQL 16 Managed Database — $10/month (1 GiB)
 
 **Total cost:** $25/month
+
+**Note:** Frontend and backend are deployed as separate App Platform apps to enable different domain assignments (`yourdomain.com` for frontend, `api.yourdomain.com` for backend), since DigitalOcean manages domains at the app level, not per component.
 
 ---
 
@@ -512,39 +514,11 @@ jobs:
         run: docker-compose -f docker-compose.e2e.yml down -v
 ```
 
-### 2.3 Deploy database pipeline
+### 2.3 Database migrations (no separate database app)
 
-**File:** `.github/workflows/deploy-database.yml`
+**Note:** Since we're using a DigitalOcean Managed Database (not an App Platform app), database migrations are handled as part of the backend deployment workflow (see 2.4). There is no separate database deployment workflow needed.
 
-```yaml
-name: Deploy Database
-
-on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to deploy from'
-        required: true
-        type: string
-        default: 'main'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
-      
-      - name: Deploy to DigitalOcean App Platform
-        uses: digitalocean/app_action@v1
-        with:
-          app_name: tenxempires-db
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          # Note: Database service configuration is done in App Platform UI
-          # This workflow is mainly for tracking/audit purposes
-```
+The database is a managed service that runs independently. Migrations run automatically when the backend is deployed (see `run-migrations` job in `deploy-backend.yml`).
 
 ### 2.4 Deploy backend pipeline
 
@@ -744,7 +718,7 @@ jobs:
       - name: Deploy to DigitalOcean App Platform
         uses: digitalocean/app_action@v2
         with:
-          app_name: tenxempires-frontend
+          app_name: tenxempires
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 ```
 
@@ -825,97 +799,142 @@ Add these secrets:
 4. If you ever switch the packages to private, create read/write PATs at that time and update both GitHub Actions (push) and App Platform (pull).
 5. Images are tagged with the commit SHA (`{{sha}}`) plus `latest` tag on the default branch.
 
-### 4.2 Create App Platform app
+### 4.2 Architecture decision: Separate apps for domain routing
+
+**Important:** DigitalOcean App Platform manages domains at the **app level**, not per component. To assign different domains to backend (`api.yourdomain.com`) and frontend (`yourdomain.com`), we need to deploy each service as a **separate App Platform app**.
+
+**Architecture:**
+- **Backend App Platform:** `tenxempires-backend`
+  - Web Service Component: `api-tenxempires` → `api.yourdomain.com`
+  - Database Component: `tenxempires-db` (PostgreSQL 16)
+- **Frontend App Platform:** `tenxempires`
+  - Web Service Component: `tenxempires-web` → `yourdomain.com`
+
+**Cost impact:** Same total cost ($25/month).
+
+### 4.3 Create managed PostgreSQL database
+
+**Option 1: DigitalOcean Managed Database (Recommended)**
+
+1. Go to: DigitalOcean > Databases > Create Database Cluster
+2. Choose: PostgreSQL 16
+3. Plan: Basic - $10/month (1 vCPU, 1 GiB RAM)
+4. Datacenter: Same region as your apps
+5. Database name: `tenxempires`
+6. User: `tenxempires`
+7. Password: Generate strong password (save it!)
+8. Create database
+9. **Note the connection string** from the database overview page (you'll need this for backend app)
+
+**Option 2: Database as component in backend app (Alternative)**
+
+If you prefer to keep everything in App Platform:
+1. Create backend app first (see 4.4)
+2. In backend app, add database as a component:
+   - Click "Add Component" > "Database"
+   - Choose: PostgreSQL 16
+   - Name: `tenxempires-db` (or similar)
+   - Plan: Basic - $10/month (1 vCPU, 1 GiB RAM)
+3. **Connection String:** App Platform automatically provides a `DATABASE_URL` environment variable in PostgreSQL URL format (`postgres://user:pass@host:port/dbname`). You have two options:
+   
+   **Option A:** Use `DATABASE_URL` directly (if your app supports it)
+   
+   **Option B:** Convert to connection string format. App Platform also provides individual variables:
+   - `DB_HOST` - internal hostname (e.g., `tenxempires-db`)
+   - `DB_PORT` - port (usually `5432`)
+   - `DB_NAME` - database name
+   - `DB_USER` - username
+   - `DB_PASSWORD` - password
+   
+   Set `ConnectionStrings__DefaultConnection` in backend environment variables:
+   ```
+   ConnectionStrings__DefaultConnection=Host=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};SslMode=Prefer;
+   ```
+   
+   Or manually construct it using the actual values from the database component's settings.
+
+### 4.4 Create backend app
 
 1. Go to: DigitalOcean > App Platform > Create App
-2. Connect GitHub repository: `QuantumCores/TenXEmpires`
-3. Select branch: `main` (or your default branch)
-4. Name: `tenxempires`
-
-### 4.3 Add PostgreSQL database service
-
-1. In App Platform app, click "Add Component" > "Service"
-2. Source: Docker Hub
-3. Image: `postgres:16-alpine`
-4. Name: `tenxempires-db`
-5. Plan: $10/month (1 vCPU, 1 GiB RAM)
-6. HTTP Port: Leave empty (or 5432, won't be exposed)
-7. Environment Variables:
-   ```
-   POSTGRES_DB=tenxempires
-   POSTGRES_USER=tenxempires
-   POSTGRES_PASSWORD=<generate-strong-password>
-   POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=en_US.UTF-8
-   ```
-8. Health Check: None (or TCP on port 5432)
-9. Save and note the internal hostname (e.g., `tenxempires-db`)
-
-### 4.4 Add backend service
-
-1. "Add Component" > "Service"
-2. Source: Container Image (Other Container Registry)
-3. Image: `ghcr.io/quantumcores/tenxempires/backend` (replace `quantumcores` if your GitHub org/user differs)
-4. Tag: `latest` (or use specific SHA tag like `abc123def` for a specific commit)
-5. Registry credentials: not required (image is public on GHCR)
-6. Name: `tenxempires-backend`
-7. Plan: $10/month (1 vCPU, 1 GiB RAM)
-8. HTTP Port: `8080`
-9. Environment Variables:
+2. Choose: "Container Image" (not GitHub)
+3. Image: `ghcr.io/quantumcores/tenxempires/backend:latest`
+4. Registry: GitHub Container Registry (ghcr.io)
+5. Registry credentials: Not required (public image)
+6. App name: `tenxempires-backend`
+7. Component name: `api-tenxempires` (or let App Platform auto-generate, then rename)
+8. Plan: Basic - $10/month (1 vCPU, 1 GiB RAM)
+9. HTTP Port: `8080` (App Platform will automatically set `PORT=8080` environment variable)
+10. Environment Variables:
    ```
    ASPNETCORE_ENVIRONMENT=Production
-   ASPNETCORE_HTTP_PORTS=8080
-   ConnectionStrings__DefaultConnection=Host=tenxempires-db;Port=5432;Database=tenxempires;Username=tenxempires;Password=<same-password-as-db>;SslMode=Prefer;
+   ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+   ConnectionStrings__DefaultConnection=<use-connection-string-from-managed-db>
    Cors__AllowedOrigins__0=https://yourdomain.com
    Cors__AllowedOrigins__1=https://www.yourdomain.com
    Cors__AllowCredentials=true
    ```
+   **Note:** `ASPNETCORE_HTTP_PORTS=8080` is optional since App Platform sets `PORT=8080` automatically and .NET 8 reads it. However, you can add it for explicitness if desired.
+   
+   **Database Connection:** Since you're using a database component (`tenxempires-db`), set the connection string using the component's environment variables:
+   ```
+   ConnectionStrings__DefaultConnection=Host=tenxempires-db;Port=5432;Database=<db-name>;Username=<user>;Password=<password>;SslMode=Prefer;
+   ```
+   (Check the database component's settings for actual values, or use the provided `DB_*` environment variables)
    (Add email config if needed)
-10. Health Check:
+11. Health Check:
     - Path: `/api/health`
     - Initial delay: 30s
     - Period: 10s
     - Timeout: 5s
     - Success threshold: 1
     - Failure threshold: 3
-11. Auto-deploy: Disabled (manual via GitHub Actions)
+12. Auto-deploy: Disabled (manual via GitHub Actions)
+13. **Domain:** Add domain `api.yourdomain.com` (Settings > Domains)
+    - SSL: Auto (free)
 
-### 4.5 Add frontend service
+### 4.5 Create frontend app
 
-1. "Add Component" > "Service"
-2. Source: Container Image (Other Container Registry)
-3. Image: `ghcr.io/quantumcores/tenxempires/frontend`
-4. Tag: `latest` (or use specific SHA tag like `abc123def` for a specific commit)
-5. Registry credentials: not required (image is public on GHCR)
-6. Name: `tenxempires-frontend`
-7. Plan: $5/month (1 vCPU, 512 MiB RAM)
-8. HTTP Port: `80`
-9. Environment Variables:
+1. Go to: DigitalOcean > App Platform > Create App
+2. Choose: "Container Image" (not GitHub)
+3. Image: `ghcr.io/quantumcores/tenxempires/frontend:latest`
+4. Registry: GitHub Container Registry (ghcr.io)
+5. Registry credentials: Not required (public image)
+6. App name: `tenxempires`
+7. Component name: `tenxempires-web` (or let App Platform auto-generate, then rename)
+8. Plan: Basic - $5/month (1 vCPU, 512 MiB RAM)
+9. HTTP Port: `80`
+10. Environment Variables:
    ```
    VITE_API_BASE_URL=https://api.yourdomain.com
    ```
-   (Note: Build-time variable, may need to rebuild)
-10. Health Check:
+   (Note: This is a build-time variable. If the image was built without it, rebuild with the build arg)
+11. Health Check:
     - Path: `/health`
     - Initial delay: 10s
     - Period: 10s
     - Timeout: 5s
-11. Auto-deploy: Disabled
+12. Auto-deploy: Disabled
+13. **Domain:** Add domain `yourdomain.com` (Settings > Domains)
+    - SSL: Auto (free)
+    - **Add www alias:** Add `www.yourdomain.com` as additional domain
 
-### 4.6 Configure domains
+### 4.6 Configure DNS
 
-1. In App Platform app, go to Settings > Domains
-2. Add domain for backend:
-   - Domain: `api.yourdomain.com`
-   - Component: `tenxempires-backend`
-   - SSL: Auto (free)
-3. Add domain for frontend:
-   - Domain: `yourdomain.com`
-   - Component: `tenxempires-frontend`
-   - SSL: Auto (free)
-   - Add `www.yourdomain.com` as alias
-4. Update DNS:
-   - Add A/CNAME records pointing to App Platform
-   - Wait for SSL certificates (usually a few minutes)
+1. **For backend app (`api.yourdomain.com`):**
+   - In backend app, go to Settings > Domains
+   - DigitalOcean will show DNS records (usually CNAME)
+   - Add CNAME record in your DNS provider: `api.yourdomain.com` → shown CNAME target
+
+2. **For frontend app (`yourdomain.com` and `www.yourdomain.com`):**
+   - In frontend app, go to Settings > Domains
+   - DigitalOcean will show DNS records
+   - Add records in your DNS provider:
+     - `yourdomain.com` → shown CNAME/A record target
+     - `www.yourdomain.com` → shown CNAME/A record target
+
+3. **Wait for propagation:**
+   - DNS propagation: 5 minutes to 48 hours (usually < 1 hour)
+   - SSL certificates: Auto-provisioned after DNS resolves (usually a few minutes)
 
 ### 4.7 Update CORS with actual domains
 
@@ -1067,21 +1086,24 @@ If resources are insufficient:
 ### GitHub Actions
 - [ ] Create `.github/workflows/pr.yml` (fast feedback - unit tests only)
 - [ ] Create `.github/workflows/main.yml` (full validation with E2E tests)
-- [ ] Create `.github/workflows/deploy-database.yml`
-- [ ] Create `.github/workflows/deploy-backend.yml`
+- [ ] Create `.github/workflows/deploy-backend.yml` (includes database migrations)
 - [ ] Create `.github/workflows/deploy-frontend.yml`
 - [ ] Create `.github/workflows/deploy-fullstack.yml`
 - [ ] Configure GitHub secrets
 
 ### DigitalOcean
-- [ ] Point App Platform services to GHCR images
-- [ ] Create App Platform app
-- [ ] Add PostgreSQL service ($10/month)
-- [ ] Add backend service ($10/month)
-- [ ] Add frontend service ($5/month)
-- [ ] Configure domains and SSL
-- [ ] Set environment variables
-- [ ] Configure health checks
+- [ ] Create backend App Platform app: `tenxempires-backend`
+  - [ ] Add web service component: `api-tenxempires` (pointing to GHCR image)
+  - [ ] Add database component: `tenxempires-db` (PostgreSQL 16)
+  - [ ] Configure domain `api.yourdomain.com` for backend app
+  - [ ] Set environment variables (including database connection string)
+  - [ ] Configure health checks
+- [ ] Create frontend App Platform app: `tenxempires`
+  - [ ] Add web service component: `tenxempires-web` (pointing to GHCR image)
+  - [ ] Configure domains `yourdomain.com` and `www.yourdomain.com` for frontend app
+  - [ ] Set environment variables
+  - [ ] Configure health checks
+- [ ] Update DNS records
 
 ### Testing
 - [ ] Test Docker Compose locally

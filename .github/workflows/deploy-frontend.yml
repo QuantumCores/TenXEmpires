@@ -78,6 +78,6 @@ jobs:
       - name: Deploy to DigitalOcean App Platform
         uses: digitalocean/app_action@v2
         with:
-          app_name: tenxempires-frontend
+          app_name: tenxempires
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 

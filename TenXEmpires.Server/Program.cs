@@ -11,6 +11,7 @@ using TenXEmpires.Server.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using TenXEmpires.Server.Domain.DataContracts;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace TenXEmpires.Server
 {
@@ -67,6 +68,15 @@ namespace TenXEmpires.Server
 
             // Add response caching for HTTP caching support
             builder.Services.AddResponseCaching();
+
+            // Configure forwarded headers for proxy/load balancer support (DigitalOcean App Platform)
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+                // Trust all proxies (DigitalOcean App Platform)
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
 
             // Configure Antiforgery for SPA CSRF protection
             builder.Services.AddAntiforgery(o =>
@@ -332,6 +342,9 @@ namespace TenXEmpires.Server
 
             var app = builder.Build();
 
+            // Use forwarded headers FIRST (before any other middleware that needs to know about the original request)
+            app.UseForwardedHeaders();
+
             // Only serve static files if in development (for local testing)
             if (app.Environment.IsDevelopment())
             {
@@ -346,7 +359,12 @@ namespace TenXEmpires.Server
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            // HTTPS redirection - disabled in production since we're behind a proxy that handles SSL termination
+            // Forwarded headers middleware above will make the app aware of the original HTTPS protocol
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
 
             // Enable response caching (must be before CORS and auth)
             app.UseResponseCaching();
