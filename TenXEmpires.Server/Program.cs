@@ -341,7 +341,8 @@ namespace TenXEmpires.Server
             }
 
             // Register database migration service
-            builder.Services.AddSingleton<Infrastructure.DatabaseMigrationService>();
+            builder.Services.AddSingleton<Infrastructure.DatabaseMigrationService>(sp => 
+                new Infrastructure.DatabaseMigrationService(sp.GetRequiredService<IConfiguration>()));
 
             var app = builder.Build();
 

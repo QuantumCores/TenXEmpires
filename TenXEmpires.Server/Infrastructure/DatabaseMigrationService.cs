@@ -2,7 +2,7 @@ using System.IO;
 using DbUp;
 using DbUp.Engine.Output;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+using Serilog;
 
 namespace TenXEmpires.Server.Infrastructure;
 
@@ -12,12 +12,10 @@ namespace TenXEmpires.Server.Infrastructure;
 public class DatabaseMigrationService
 {
     private readonly IConfiguration _configuration;
-    private readonly ILogger<DatabaseMigrationService> _logger;
 
-    public DatabaseMigrationService(IConfiguration configuration, ILogger<DatabaseMigrationService> logger)
+    public DatabaseMigrationService(IConfiguration configuration)
     {
         _configuration = configuration;
-        _logger = logger;
     }
 
     /// <summary>
@@ -30,7 +28,7 @@ public class DatabaseMigrationService
         var connectionString = _configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            _logger.LogError("Connection string 'DefaultConnection' is not configured");
+            Log.Error("Connection string 'DefaultConnection' is not configured");
             return false;
         }
 
@@ -46,28 +44,28 @@ public class DatabaseMigrationService
             }
             else
             {
-                _logger.LogWarning("Migrations directory not found at {MigrationsPath}. Skipping migrations.", migrationsPath);
+                Log.Warning("Migrations directory not found at {MigrationsPath}. Skipping migrations.", migrationsPath);
                 return true; // Don't fail startup if migrations directory doesn't exist
             }
         }
 
         if (!Directory.GetFiles(migrationsPath, "*.sql", SearchOption.TopDirectoryOnly).Any())
         {
-            _logger.LogInformation("No migration scripts found in {MigrationsPath}. Skipping migrations.", migrationsPath);
+            Log.Information("No migration scripts found in {MigrationsPath}. Skipping migrations.", migrationsPath);
             return true;
         }
 
         try
         {
-            _logger.LogInformation("Starting database migrations from {MigrationsPath}", migrationsPath);
+            Log.Information("Starting database migrations from {MigrationsPath}", migrationsPath);
 
             if (ensureDatabase)
             {
-                _logger.LogInformation("Ensuring database exists...");
+                Log.Information("Ensuring database exists...");
                 EnsureDatabase.For.PostgresqlDatabase(connectionString);
             }
 
-            var log = new SerilogUpgradeLog(_logger);
+            var log = new SerilogUpgradeLog();
             var upgrader = DeployChanges.To
                 .PostgresqlDatabase(connectionString)
                 .WithScriptsFromFileSystem(migrationsPath)
@@ -79,76 +77,69 @@ public class DatabaseMigrationService
 
             if (!result.Successful)
             {
-                _logger.LogError(result.Error, "Database migration failed");
+                Log.Error(result.Error, "Database migration failed");
                 return false;
             }
 
-            _logger.LogInformation("Database migrations completed successfully. {ScriptsExecuted} script(s) executed.", 
+            Log.Information("Database migrations completed successfully. {ScriptsExecuted} script(s) executed.", 
                 result.Scripts.Count());
             return true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error running database migrations");
+            Log.Error(ex, "Error running database migrations");
             return false;
         }
     }
 
     /// <summary>
-    /// Custom DbUp log adapter that uses Serilog/ILogger.
+    /// Custom DbUp log adapter that uses Serilog directly.
     /// </summary>
     private class SerilogUpgradeLog : IUpgradeLog
     {
-        private readonly ILogger<DatabaseMigrationService> _logger;
-
-        public SerilogUpgradeLog(ILogger<DatabaseMigrationService> logger)
-        {
-            _logger = logger;
-        }
-
         public void WriteInformation(string format, params object[] args)
         {
-            _logger.LogInformation(format, args);
+            Log.Information(format, args);
         }
 
         public void WriteError(string format, params object[] args)
         {
-            _logger.LogError(format, args);
+            Log.Error(format, args);
         }
 
         public void WriteWarning(string format, params object[] args)
         {
-            _logger.LogWarning(format, args);
+            Log.Warning(format, args);
         }
 
         public void LogTrace(string format, params object[] args)
         {
-            _logger.LogTrace(format, args);
+            Log.Verbose(format, args);
         }
 
         public void LogDebug(string format, params object[] args)
         {
-            _logger.LogDebug(format, args);
+            Log.Debug(format, args);
         }
 
         public void LogInformation(string format, params object[] args)
         {
-            _logger.LogInformation(format, args);
+            Log.Information(format, args);
         }
 
         public void LogWarning(string format, params object[] args)
         {
-            _logger.LogWarning(format, args);
+            Log.Warning(format, args);
         }
 
         public void LogError(string format, params object[] args)
         {
-            _logger.LogError(format, args);
+            Log.Error(format, args);
         }
 
         public void LogError(Exception ex, string format, params object[] args)
         {
-            _logger.LogError(ex, format, args);
+            Log.Error(ex, format, args);
         }
     }
 }
