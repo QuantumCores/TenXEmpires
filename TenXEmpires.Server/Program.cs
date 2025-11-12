@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using TenXEmpires.Server.Domain.DataContracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace TenXEmpires.Server
 {
@@ -372,6 +373,33 @@ namespace TenXEmpires.Server
 
             // Use forwarded headers FIRST (before any other middleware that needs to know about the original request)
             app.UseForwardedHeaders();
+
+            // Global exception handler for API endpoints (returns JSON instead of HTML)
+            // This ensures all unhandled exceptions return consistent JSON error responses
+            app.UseExceptionHandler(appError =>
+            {
+                appError.Run(async context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    context.Response.ContentType = "application/json";
+
+                    var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
+                    if (contextFeature != null)
+                    {
+                        var exception = contextFeature.Error;
+                        Log.Error(exception, "Unhandled exception: {Message}", exception.Message);
+                        
+                        var errorResponse = new ApiErrorDto(
+                            "INTERNAL_ERROR",
+                            app.Environment.IsDevelopment() 
+                                ? exception.Message 
+                                : "An error occurred while processing your request."
+                        );
+                        
+                        await context.Response.WriteAsJsonAsync(errorResponse);
+                    }
+                });
+            });
 
             // Only serve static files if in development (for local testing)
             if (app.Environment.IsDevelopment())
