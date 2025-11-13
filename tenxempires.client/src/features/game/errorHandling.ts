@@ -6,7 +6,6 @@ import type { HttpResult } from '../../api/http'
 // Error codes from the backend
 export const ErrorCodes = {
   // Authentication
-  CSRF_INVALID: 'CSRF_INVALID',
   UNAUTHORIZED: 'UNAUTHORIZED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
 
@@ -72,16 +71,6 @@ export function parseGameError(result: HttpResult<unknown>): GameError {
   const errorData = data as ErrorResponse | undefined
   const code = errorData?.code || 'UNKNOWN_ERROR'
   const message = errorData?.message || 'An unexpected error occurred'
-
-  // CSRF invalid - needs special handling
-  if (status === 403 && code === ErrorCodes.CSRF_INVALID) {
-    return {
-      code: ErrorCodes.CSRF_INVALID,
-      message: 'Security token expired. Refreshing...',
-      status,
-      shouldRetry: true,
-    }
-  }
 
   // Unauthorized / Session expired
   if (status === 401 || status === 403) {
@@ -158,15 +147,6 @@ export function getErrorNotification(error: GameError): {
   message: string
   ttlMs?: number
 } {
-  // CSRF - informational (will auto-retry)
-  if (error.code === ErrorCodes.CSRF_INVALID) {
-    return {
-      kind: 'info',
-      message: error.message,
-      ttlMs: 3000,
-    }
-  }
-
   // Turn in progress - informational
   if (error.code === ErrorCodes.TURN_IN_PROGRESS) {
     return {

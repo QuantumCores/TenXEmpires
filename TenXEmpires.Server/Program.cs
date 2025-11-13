@@ -79,24 +79,6 @@ namespace TenXEmpires.Server
                 options.KnownProxies.Clear();
             });
 
-            // Configure shared cookie domain for cross-subdomain SPA
-            var sharedCookieDomain = builder.Configuration["Cookies:SharedDomain"];
-
-            // Configure Antiforgery for SPA CSRF protection
-            builder.Services.AddAntiforgery(o =>
-            {
-                o.HeaderName = TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader;
-                o.Cookie.SameSite = builder.Environment.IsDevelopment()
-                    ? SameSiteMode.Lax
-                    : SameSiteMode.None;
-                o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
-                    ? CookieSecurePolicy.None 
-                    : CookieSecurePolicy.Always;
-                o.Cookie.Domain = sharedCookieDomain;
-                o.Cookie.Path = "/";
-                o.SuppressXFrameOptionsHeader = false;
-            });
-
             // Configure CORS
             var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
             var corsAllowCredentials = builder.Configuration.GetValue<bool>("Cors:AllowCredentials", true);
@@ -105,8 +87,7 @@ namespace TenXEmpires.Server
             var defaultExposedHeaders = new[]
             {
                 "ETag",
-                "X-Tenx-Total-Count",
-                TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader
+                "X-Tenx-Total-Count"
             };
             var corsExposedHeaders = builder.Configuration.GetSection("Cors:ExposedHeaders").Get<string[]>() ?? defaultExposedHeaders;
 
@@ -249,6 +230,9 @@ namespace TenXEmpires.Server
                     }, cancellationToken: token);
                 };
             });
+
+            // Configure shared cookie domain for cross-subdomain SPA
+            var sharedCookieDomain = builder.Configuration["Cookies:SharedDomain"];
 
             builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddCookie(IdentityConstants.ApplicationScheme, options =>

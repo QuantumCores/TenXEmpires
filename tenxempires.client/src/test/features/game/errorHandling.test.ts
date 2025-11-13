@@ -54,20 +54,7 @@ describe('errorHandling - parseGameError', () => {
       expect(error.shouldRedirect).toContain('/login')
     })
 
-    it('handles 403 CSRF_INVALID with retry', () => {
-      const result: HttpResult<unknown> = {
-        ok: false,
-        status: 403,
-        data: { code: 'CSRF_INVALID', message: 'Invalid token' },
-      }
-      const error = parseGameError(result)
-
-      expect(error.code).toBe(ErrorCodes.CSRF_INVALID)
-      expect(error.status).toBe(403)
-      expect(error.shouldRetry).toBe(true)
-    })
-
-    it('handles 403 without CSRF as unauthorized', () => {
+    it('handles 403 as unauthorized', () => {
       const result: HttpResult<unknown> = {
         ok: false,
         status: 403,
@@ -195,18 +182,6 @@ describe('errorHandling - parseGameError', () => {
 
 describe('errorHandling - getErrorNotification', () => {
   describe('notification types', () => {
-    it('returns info notification for CSRF_INVALID', () => {
-      const error = {
-        code: ErrorCodes.CSRF_INVALID,
-        message: 'Token expired',
-        status: 403,
-        shouldRetry: true,
-      }
-      const notification = getErrorNotification(error)
-
-      expect(notification.kind).toBe('info')
-      expect(notification.ttlMs).toBe(3000)
-    })
 
     it('returns info notification for TURN_IN_PROGRESS', () => {
       const error = {

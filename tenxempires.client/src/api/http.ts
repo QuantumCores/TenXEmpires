@@ -1,5 +1,3 @@
-import { getCsrfToken } from './csrfStore'
-
 export interface HttpResult<T> {
   ok: boolean
   status: number
@@ -48,11 +46,6 @@ export async function getJson<T>(path: string, init?: RequestInit): Promise<Http
   }
 }
 
-function readCookie(name: string): string | undefined {
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)'))
-  return match ? decodeURIComponent(match[1]) : undefined
-}
-
 async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE', body?: TReq, init?: RequestInit): Promise<HttpResult<TRes>> {
   try {
     const headers: Record<string, string> = {
@@ -66,12 +59,6 @@ async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE',
       initHeaders.forEach((value, key) => {
         headers[key] = value
       })
-    }
-
-    const token = getCsrfToken() ?? readCookie('XSRF-TOKEN')
-    if (token) {
-      // Server expects this header name per SecurityConstants.XsrfHeader
-      headers['X-XSRF-TOKEN'] = token
     }
 
     const url = getApiUrl(path)

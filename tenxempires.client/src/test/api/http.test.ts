@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getJson, postJson, putJson, deleteJson } from '../../api/http'
 
 // Mock global fetch
@@ -114,154 +114,6 @@ describe('http - getJson', () => {
     // Headers are merged from init, check they're present
     const headers = new Headers(callArgs.headers)
     expect(headers.get('x-custom')).toBe('value')
-  })
-})
-
-describe('http - Cookie Parsing', () => {
-  let originalCookie: string
-
-  beforeEach(() => {
-    originalCookie = document.cookie
-    // Clear cookies
-    document.cookie.split(';').forEach((c) => {
-      const eqPos = c.indexOf('=')
-      const name = eqPos > -1 ? c.substring(0, eqPos).trim() : c.trim()
-      document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'
-    })
-    mockFetch.mockClear()
-  })
-
-  afterEach(() => {
-    // Restore original cookie
-    document.cookie = originalCookie
-  })
-
-  it('includes CSRF token from cookie in POST request', async () => {
-    // Set XSRF-TOKEN cookie
-    document.cookie = 'XSRF-TOKEN=test-csrf-token-123; path=/'
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await postJson('/api/test', { data: 'test' })
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-XSRF-TOKEN': 'test-csrf-token-123',
-        }),
-      })
-    )
-  })
-
-  it('includes CSRF token in PUT request', async () => {
-    document.cookie = 'XSRF-TOKEN=test-token; path=/'
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await putJson('/api/test', { data: 'test' })
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-XSRF-TOKEN': 'test-token',
-        }),
-      })
-    )
-  })
-
-  it('includes CSRF token in DELETE request', async () => {
-    document.cookie = 'XSRF-TOKEN=delete-token; path=/'
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 204,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await deleteJson('/api/test')
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-XSRF-TOKEN': 'delete-token',
-        }),
-      })
-    )
-  })
-
-  it('handles missing CSRF token gracefully', async () => {
-    // No XSRF-TOKEN cookie set
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await postJson('/api/test', { data: 'test' })
-
-    // Should not include X-XSRF-TOKEN header if cookie not present
-    const callArgs = mockFetch.mock.calls[0][1] as RequestInit
-    const headers = callArgs.headers as Record<string, string>
-    expect(headers['X-XSRF-TOKEN']).toBeUndefined()
-  })
-
-  it('handles URL-encoded CSRF token', async () => {
-    // Set cookie with special characters
-    const encodedToken = encodeURIComponent('token+with/special=chars')
-    document.cookie = `XSRF-TOKEN=${encodedToken}; path=/`
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await postJson('/api/test', {})
-
-    const callArgs = mockFetch.mock.calls[0][1] as RequestInit
-    const headers = callArgs.headers as Record<string, string>
-    expect(headers['X-XSRF-TOKEN']).toBe('token+with/special=chars')
-  })
-
-  it('extracts correct cookie when multiple cookies present', async () => {
-    document.cookie = 'session=abc123; path=/'
-    document.cookie = 'XSRF-TOKEN=correct-token; path=/'
-    document.cookie = 'other=value; path=/'
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'application/json']]),
-      json: async () => ({}),
-    })
-
-    await postJson('/api/test', {})
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/test',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-XSRF-TOKEN': 'correct-token',
-        }),
-      })
-    )
   })
 })
 
@@ -517,7 +369,8 @@ describe('http - Header Handling', () => {
     // Check headers are present (note: may be normalized to lowercase by Headers API)
     expect(headers['Content-Type']).toBe('application/json')
     expect(headers['Accept']).toBe('application/json')
-    expect(headers['X-XSRF-TOKEN']).toBe('test-token')
+    // CSRF token is no longer included
+    expect(headers['X-XSRF-TOKEN']).toBeUndefined()
     // Custom headers from new Headers() are normalized to lowercase
     expect(headers['x-custom-header'] || headers['X-Custom-Header']).toBe('custom-value')
     expect(headers['authorization'] || headers['Authorization']).toBe('Bearer token')

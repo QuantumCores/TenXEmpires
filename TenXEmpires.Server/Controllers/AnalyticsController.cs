@@ -7,7 +7,6 @@ using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Extensions;
-using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -43,7 +42,6 @@ public class AnalyticsController : ControllerBase
     /// <response code="429">Too many requests (rate-limited per identity).</response>
     /// <response code="500">Server error.</response>
     [HttpPost("batch")]
-    [ValidateAntiForgeryTokenApi]
     [SwaggerRequestExample(typeof(AnalyticsBatchCommand), typeof(TenXEmpires.Server.Examples.AnalyticsBatchCommandExample))]
     [ProducesResponseType(typeof(AnalyticsBatchResponse), StatusCodes.Status202Accepted)]
     [SwaggerResponseExample(StatusCodes.Status202Accepted, typeof(TenXEmpires.Server.Examples.AnalyticsBatchResponseExample))]

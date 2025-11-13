@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6149539+00:00
-                clientRequestId: 2dd574ab-b295-461b-bb66-55ccf4300b54
+                occurredAt: 2025-11-13T20:40:47.6225451+00:00
+                clientRequestId: 39f29f51-a593-4e4e-8df6-cbce5a9a9f83
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6151093+00:00
-                clientRequestId: 5014e178-0aa2-44e2-a1b1-fec06ac54f8b
+                occurredAt: 2025-11-13T20:40:47.6226733+00:00
+                clientRequestId: 28aa3bf9-ebec-41de-9dbe-e34361ec5f7d
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6149539+00:00
-                clientRequestId: 2dd574ab-b295-461b-bb66-55ccf4300b54
+                occurredAt: 2025-11-13T20:40:47.6225451+00:00
+                clientRequestId: 39f29f51-a593-4e4e-8df6-cbce5a9a9f83
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6151093+00:00
-                clientRequestId: 5014e178-0aa2-44e2-a1b1-fec06ac54f8b
+                occurredAt: 2025-11-13T20:40:47.6226733+00:00
+                clientRequestId: 28aa3bf9-ebec-41de-9dbe-e34361ec5f7d
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6149539+00:00
-                clientRequestId: 2dd574ab-b295-461b-bb66-55ccf4300b54
+                occurredAt: 2025-11-13T20:40:47.6225451+00:00
+                clientRequestId: 39f29f51-a593-4e4e-8df6-cbce5a9a9f83
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-13T19:38:49.6151093+00:00
-                clientRequestId: 5014e178-0aa2-44e2-a1b1-fec06ac54f8b
+                occurredAt: 2025-11-13T20:40:47.6226733+00:00
+                clientRequestId: 28aa3bf9-ebec-41de-9dbe-e34361ec5f7d
                 payload: 
       responses:
         202:
@@ -95,36 +95,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Server error.
-  /v1/auth/csrf:
-    get:
-      tags:
-      - v1
-      summary: Issues or refreshes the CSRF token cookie for the SPA.
-      description: >-
-        Sets a non-HttpOnly XSRF-TOKEN cookie that the client should echo via the X-XSRF-TOKEN header
-
-        on subsequent non-GET requests protected with ValidateAntiForgeryToken.
-      responses:
-        204:
-          description: Token issued via Set-Cookie (no response body).
-        429:
-          description: Too many requests (rate limited).
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiErrorDto'
-              example:
-                code: RATE_LIMIT_EXCEEDED
-                message: Too many requests. Please try again later.
-        500:
-          description: Failed to issue token.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiErrorDto'
-              example:
-                code: CSRF_ISSUE_FAILED
-                message: Unable to issue CSRF token.
   /v1/auth/keepalive:
     get:
       tags:

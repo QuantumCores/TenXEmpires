@@ -17,38 +17,12 @@ public class AuthEndpointIntegrationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task Get_Csrf_IssuesXsrfCookie_WithSameSiteLax()
+    public async Task Post_AnalyticsBatch_ShouldReturn202()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
         });
-
-        var response = await client.GetAsync("/v1/auth/csrf");
-
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
-
-        response.Headers.TryGetValues("Set-Cookie", out var setCookieValues).Should().BeTrue();
-        var setCookie = string.Join("; ", setCookieValues!);
-        setCookie.Should().Contain("XSRF-TOKEN=");
-        setCookie.Should().ContainEquivalentOf("SameSite=Lax");
-        setCookie.Should().ContainEquivalentOf("Path=/");
-        // In test/development environment, cookie should NOT be marked as Secure
-        setCookie.Should().NotContainEquivalentOf("Secure");
-
-        response.Headers.CacheControl?.NoStore.Should().BeTrue();
-    }
-    [Fact]
-    public async Task Post_AnalyticsBatch_WithXsrfHeader_ShouldReturn202()
-    {
-        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false
-        });
-
-        // Obtain token cookie (not strictly required by test antiforgery but mirrors client flow)
-        var csrf = await client.GetAsync("/v1/auth/csrf");
-        csrf.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
 
         // Prepare minimal valid analytics batch
         var payload = new
@@ -61,10 +35,9 @@ public class AuthEndpointIntegrationTests : IClassFixture<WebAppFactory>
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        // Send with XSRF header expected by our test antiforgery
+        // Send analytics batch (CSRF validation removed)
         var request = new HttpRequestMessage(HttpMethod.Post, "/v1/analytics/batch");
         request.Content = content;
-        request.Headers.Add("X-XSRF-TOKEN", "integration-token");
 
         var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();

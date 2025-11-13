@@ -16,9 +16,7 @@ import type {
   ActionStateResponse,
   EndTurnResponse,
 } from '../../types/game'
-import type { ApiErrorDto } from '../../types/errors'
 import { useRef } from 'react'
-import { withCsrfRetry } from '../../api/csrf'
 import { useModalParam } from '../../router/query'
 import { useGameErrorHandler } from './errorHandling'
 
@@ -138,10 +136,6 @@ interface MutationContext {
   previousState?: GameStateDto
 }
 
-function isCsrfError(data: unknown): data is ApiErrorDto {
-  return typeof data === 'object' && data !== null && 'code' in data && (data as ApiErrorDto).code === 'CSRF_INVALID'
-}
-
 export function useMoveUnit(gameId: number) {
   const queryClient = useQueryClient()
   const { handleError } = useGameErrorHandler()
@@ -155,11 +149,7 @@ export function useMoveUnit(gameId: number) {
     mutationFn: async (command: MoveUnitCommand) => {
       const idempotencyKey = generateIdempotencyKey()
       
-      // Wrap with CSRF retry logic
-      const result = await withCsrfRetry(
-        () => moveUnit(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && isCsrfError(res.data)
-      )
+      const result = await moveUnit(gameId, command, idempotencyKey)
       
       if (!result.ok || !result.data) {
         handleError(result)
@@ -205,11 +195,7 @@ export function useAttackUnit(gameId: number) {
     mutationFn: async (command: AttackUnitCommand) => {
       const idempotencyKey = generateIdempotencyKey()
       
-      // Wrap with CSRF retry logic
-      const result = await withCsrfRetry(
-        () => attackUnit(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && isCsrfError(res.data)
-      )
+      const result = await attackUnit(gameId, command, idempotencyKey)
       
       if (!result.ok || !result.data) {
         handleError(result)
@@ -249,11 +235,7 @@ export function useAttackCity(gameId: number) {
     mutationFn: async (command: AttackCityCommand) => {
       const idempotencyKey = generateIdempotencyKey()
       
-      // Wrap with CSRF retry logic
-      const result = await withCsrfRetry(
-        () => attackCity(gameId, command, idempotencyKey),
-        (res) => res.status === 403 && isCsrfError(res.data)
-      )
+      const result = await attackCity(gameId, command, idempotencyKey)
       
       if (!result.ok || !result.data) {
         handleError(result)
@@ -293,11 +275,7 @@ export function useEndTurn(gameId: number) {
     mutationFn: async () => {
       const idempotencyKey = generateIdempotencyKey()
       
-      // Wrap with CSRF retry logic
-      const result = await withCsrfRetry(
-        () => endTurn(gameId, idempotencyKey),
-        (res) => res.status === 403 && isCsrfError(res.data)
-      )
+      const result = await endTurn(gameId, idempotencyKey)
       
       if (!result.ok || !result.data) {
         handleError(result)

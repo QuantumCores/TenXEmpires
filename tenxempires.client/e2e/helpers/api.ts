@@ -26,44 +26,6 @@ export interface ApiError {
 }
 
 /**
- * Get CSRF token from the API
- */
-export async function getCsrfToken(request: APIRequestContext): Promise<string | null> {
-  try {
-    // Use absolute URL to ensure we hit the backend directly
-    // Playwright's request fixture respects absolute URLs
-    const response = await request.get(`${API_BASE_URL}/${API_VERSION}/auth/csrf`, {
-      // Ensure we're hitting the backend, not going through frontend proxy
-      ignoreHTTPSErrors: true,
-    })
-    
-    if (!response.ok()) {
-      console.error(`[API Helper] CSRF token request failed: ${response.status()} ${response.statusText()}`)
-      return null
-    }
-    
-    // Extract CSRF token from Set-Cookie header
-    const setCookieHeader = response.headers()['set-cookie']
-    if (!setCookieHeader) {
-      console.error('[API Helper] No Set-Cookie header in CSRF response')
-      return null
-    }
-    
-    // Handle both string and array formats
-    const cookieString = Array.isArray(setCookieHeader) ? setCookieHeader.join('; ') : setCookieHeader
-    const xsrfMatch = cookieString.match(/XSRF-TOKEN=([^;]+)/)
-    if (!xsrfMatch) {
-      console.error('[API Helper] XSRF-TOKEN not found in Set-Cookie header')
-      return null
-    }
-    return decodeURIComponent(xsrfMatch[1])
-  } catch (error) {
-    console.error('[API Helper] Error getting CSRF token:', error)
-    return null
-  }
-}
-
-/**
  * Register a new user via API
  */
 export async function registerUser(
@@ -73,12 +35,6 @@ export async function registerUser(
   confirm?: string
 ): Promise<{ success: boolean; error?: ApiError }> {
   try {
-    // Get CSRF token first
-    const csrfToken = await getCsrfToken(request)
-    if (!csrfToken) {
-      return { success: false, error: { code: 'CSRF_FAILED', message: 'Failed to get CSRF token' } }
-    }
-
     // Backend requires Confirm field (password confirmation)
     const confirmPassword = confirm ?? password
 
@@ -87,7 +43,6 @@ export async function registerUser(
       data: { email, password, confirm: confirmPassword },
       headers: {
         'Content-Type': 'application/json',
-        'X-XSRF-TOKEN': csrfToken,
       },
     })
 
@@ -113,17 +68,10 @@ export async function loginUser(
   password: string,
   rememberMe = false
 ): Promise<{ success: boolean; cookies?: string[]; error?: ApiError }> {
-  // Get CSRF token first
-  const csrfToken = await getCsrfToken(request)
-  if (!csrfToken) {
-    return { success: false, error: { code: 'CSRF_FAILED', message: 'Failed to get CSRF token' } }
-  }
-
   const response = await request.post(`${API_BASE_URL}/${API_VERSION}/auth/login`, {
     data: { email, password, rememberMe },
     headers: {
       'Content-Type': 'application/json',
-      'X-XSRF-TOKEN': csrfToken,
     },
   })
 
@@ -141,17 +89,7 @@ export async function loginUser(
  * Logout current user via API
  */
 export async function logoutUser(request: APIRequestContext): Promise<{ success: boolean; error?: ApiError }> {
-  // Get CSRF token first
-  const csrfToken = await getCsrfToken(request)
-  if (!csrfToken) {
-    return { success: false, error: { code: 'CSRF_FAILED', message: 'Failed to get CSRF token' } }
-  }
-
-  const response = await request.post(`${API_BASE_URL}/${API_VERSION}/auth/logout`, {
-    headers: {
-      'X-XSRF-TOKEN': csrfToken,
-    },
-  })
+  const response = await request.post(`${API_BASE_URL}/${API_VERSION}/auth/logout`)
 
   if (response.ok()) {
     return { success: true }

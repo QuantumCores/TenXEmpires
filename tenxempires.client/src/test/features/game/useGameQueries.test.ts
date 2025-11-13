@@ -11,11 +11,6 @@ vi.mock('../../../api/games', () => ({
   attackCity: vi.fn(),
 }))
 
-// Mock the CSRF retry logic
-vi.mock('../../../api/csrf', () => ({
-  withCsrfRetry: vi.fn((fn) => fn()),
-}))
-
 // Mock the error handler
 const mockHandleError = vi.fn()
 vi.mock('../../../features/game/errorHandling', () => ({
@@ -26,7 +21,6 @@ vi.mock('../../../features/game/errorHandling', () => ({
 
 // Import mocked modules after mocking
 import { attackUnit, attackCity } from '../../../api/games'
-import { withCsrfRetry } from '../../../api/csrf'
 
 // Note: useGameErrorHandler is mocked above, so we don't import it here
 
@@ -94,7 +88,6 @@ describe('useAttackUnit', () => {
       data: mockResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    vi.mocked(withCsrfRetry).mockImplementation((fn) => fn())
   })
 
   afterEach(() => {
@@ -133,19 +126,6 @@ describe('useAttackUnit', () => {
     expect(typeof secondCall).toBe('string')
   })
 
-  it('wraps API call with CSRF retry logic', async () => {
-    const { result } = renderHook(() => useAttackUnit(gameId), {
-      wrapper: createWrapper(),
-    })
-
-    await result.current.mutateAsync(mockCommand)
-
-    expect(withCsrfRetry).toHaveBeenCalledTimes(1)
-    expect(withCsrfRetry).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.any(Function)
-    )
-  })
 
   it('returns ActionStateResponse on success', async () => {
     const { result } = renderHook(() => useAttackUnit(gameId), {
@@ -345,7 +325,6 @@ describe('useAttackCity', () => {
       data: mockResponse,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    vi.mocked(withCsrfRetry).mockImplementation((fn) => fn())
   })
 
   afterEach(() => {
@@ -384,19 +363,6 @@ describe('useAttackCity', () => {
     expect(typeof secondCall).toBe('string')
   })
 
-  it('wraps API call with CSRF retry logic', async () => {
-    const { result } = renderHook(() => useAttackCity(gameId), {
-      wrapper: createWrapper(),
-    })
-
-    await result.current.mutateAsync(mockCommand)
-
-    expect(withCsrfRetry).toHaveBeenCalledTimes(1)
-    expect(withCsrfRetry).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.any(Function)
-    )
-  })
 
   it('returns ActionStateResponse on success', async () => {
     const { result } = renderHook(() => useAttackCity(gameId), {

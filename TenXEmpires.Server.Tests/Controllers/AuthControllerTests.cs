@@ -1,38 +1,26 @@
 using System.Security.Claims;
 using FluentAssertions;
-using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Controllers;
-using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.DataContracts;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
 public class AuthControllerTests
 {
-    private readonly Mock<IAntiforgery> _antiforgeryMock;
     private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly Mock<SignInManager<IdentityUser<Guid>>> _signInManagerMock;
     private readonly Mock<UserManager<IdentityUser<Guid>>> _userManagerMock;
-    private readonly Mock<IWebHostEnvironment> _environmentMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
     {
-        _antiforgeryMock = new Mock<IAntiforgery>();
         _loggerMock = new Mock<ILogger<AuthController>>();
-        _environmentMock = new Mock<IWebHostEnvironment>();
-        
-        // Setup environment as Development for tests
-        _environmentMock.Setup(e => e.EnvironmentName).Returns(Environments.Development);
         
         // Mock UserManager dependencies
         var userStoreMock = new Mock<IUserStore<IdentityUser<Guid>>>();
@@ -47,16 +35,11 @@ public class AuthControllerTests
             contextAccessorMock.Object,
             claimsPrincipalFactoryMock.Object,
             null!, null!, null!, null!);
-        
-        var configuration = new ConfigurationBuilder().Build();
 
         _controller = new AuthController(
-            _antiforgeryMock.Object, 
             _loggerMock.Object, 
             _signInManagerMock.Object, 
-            _userManagerMock.Object,
-            _environmentMock.Object,
-            configuration)
+            _userManagerMock.Object)
         {
             ControllerContext = new ControllerContext
             {
@@ -66,51 +49,6 @@ public class AuthControllerTests
         // Ensure RequestServices is available to avoid InvalidOperationException in tests
         _controller.HttpContext.RequestServices = new ServiceCollection()
             .BuildServiceProvider();
-    }
-
-    [Fact]
-    public void GetCsrfToken_ShouldReturn204_AndSetCookie()
-    {
-        var tokens = new AntiforgeryTokenSet(
-            requestToken: "test-token",
-            cookieToken: "cookie-token",
-            formFieldName: "__RequestVerificationToken",
-            headerName: SecurityConstants.XsrfHeader);
-
-        _antiforgeryMock.Setup(a => a.GetAndStoreTokens(It.IsAny<HttpContext>()))
-            .Returns(tokens);
-
-        var result = _controller.GetCsrfToken();
-
-        result.Should().BeOfType<NoContentResult>();
-
-        var setCookie = _controller.Response.Headers["Set-Cookie"].ToString();
-        setCookie.Should().Contain($"{SecurityConstants.XsrfCookie}=test-token");
-        setCookie.Should().ContainEquivalentOf("Path=/");
-        setCookie.Should().ContainEquivalentOf("SameSite=Lax");
-        // In development, cookie should not be marked as Secure
-        setCookie.Should().NotContainEquivalentOf("Secure");
-
-        _controller.Response.Headers["Cache-Control"].ToString()
-            .Should().Contain("no-store");
-    }
-
-    [Fact]
-    public void GetCsrfToken_ShouldReturn500_WhenTokenMissing()
-    {
-        var tokens = new AntiforgeryTokenSet(
-            requestToken: string.Empty,
-            cookieToken: "cookie-token",
-            formFieldName: "__RequestVerificationToken",
-            headerName: SecurityConstants.XsrfHeader);
-
-        _antiforgeryMock.Setup(a => a.GetAndStoreTokens(It.IsAny<HttpContext>()))
-            .Returns(tokens);
-
-        var result = _controller.GetCsrfToken();
-
-        var obj = result.Should().BeOfType<ObjectResult>().Subject;
-        obj.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
 
     [Fact]

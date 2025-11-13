@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { CsrfProvider } from './CsrfProvider'
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const client = useMemo(() => new QueryClient({
@@ -18,9 +17,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <CsrfProvider>
-        {children}
-      </CsrfProvider>
+      {children}
     </QueryClientProvider>
   )
 }

@@ -1,14 +1,11 @@
 using Asp.Versioning;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Swashbuckle.AspNetCore.Filters;
-using TenXEmpires.Server.Domain.Constants;
 using TenXEmpires.Server.Domain.DataContracts;
-using TenXEmpires.Server.Infrastructure.Filters;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -24,86 +21,19 @@ namespace TenXEmpires.Server.Controllers;
 [EnableRateLimiting("PublicApi")]
 public class AuthController : ControllerBase
 {
-    private readonly IAntiforgery _antiforgery;
     private readonly ILogger<AuthController> _logger;
     private readonly SignInManager<IdentityUser<Guid>> _signInManager;
     private readonly UserManager<IdentityUser<Guid>> _userManager;
-    private readonly IWebHostEnvironment _environment;
-    private readonly string? _sharedCookieDomain;
 
     [ActivatorUtilitiesConstructor]
     public AuthController(
-        IAntiforgery antiforgery,
         ILogger<AuthController> logger,
         SignInManager<IdentityUser<Guid>> signInManager,
-        UserManager<IdentityUser<Guid>> userManager,
-        IWebHostEnvironment environment,
-        IConfiguration configuration)
+        UserManager<IdentityUser<Guid>> userManager)
     {
-        _antiforgery = antiforgery;
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
-        _environment = environment;
-        _sharedCookieDomain = configuration["Cookies:SharedDomain"];
-    }
-
-    
-
-    /// <summary>
-    /// Issues or refreshes the CSRF token cookie for the SPA.
-    /// </summary>
-    /// <remarks>
-    /// Sets a non-HttpOnly XSRF-TOKEN cookie that the client should echo via the X-XSRF-TOKEN header
-    /// on subsequent non-GET requests protected with ValidateAntiForgeryToken.
-    /// </remarks>
-    /// <response code="204">Token issued via Set-Cookie (no response body).</response>
-    /// <response code="429">Too many requests (rate limited).</response>
-    /// <response code="500">Failed to issue token.</response>
-    [HttpGet("csrf")]
-    [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status429TooManyRequests)]
-    [SwaggerResponseExample(StatusCodes.Status429TooManyRequests, typeof(TenXEmpires.Server.Examples.ApiErrorRateLimitExample))]
-    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status500InternalServerError)]
-    [SwaggerResponseExample(StatusCodes.Status500InternalServerError, typeof(TenXEmpires.Server.Examples.ApiErrorCsrfIssueFailedExample))]
-    public IActionResult GetCsrfToken()
-    {
-        try
-        {
-            var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-
-            if (string.IsNullOrWhiteSpace(tokens.RequestToken))
-            {
-                _logger.LogWarning("Antiforgery returned an empty request token.");
-                return StatusCode(StatusCodes.Status500InternalServerError, new { code = "CSRF_ISSUE_FAILED", message = "Unable to issue CSRF token." });
-            }
-
-            Response.Cookies.Append(
-                SecurityConstants.XsrfCookie,
-                tokens.RequestToken!,
-                new CookieOptions
-                {
-                    HttpOnly = false,
-                    Secure = !_environment.IsDevelopment(),
-                    SameSite = _environment.IsDevelopment()
-                        ? SameSiteMode.Lax
-                        : SameSiteMode.None,
-                    Path = "/",
-                    Domain = _sharedCookieDomain
-                });
-
-            Response.Headers[SecurityConstants.XsrfHeader] = tokens.RequestToken!;
-            // Prevent caching of this response
-            Response.Headers[StandardHeaders.CacheControl] = "no-store";
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to issue CSRF token.");
-            return StatusCode(StatusCodes.Status500InternalServerError, new { code = "CSRF_ISSUE_FAILED", message = "Unable to issue CSRF token." });
-        }
     }
 
     /// <summary>
@@ -132,7 +62,7 @@ public class AuthController : ControllerBase
         try
         {
             // Mark response as non-cacheable
-            Response.Headers[StandardHeaders.CacheControl] = "no-store";
+            Response.Headers[TenXEmpires.Server.Domain.Constants.StandardHeaders.CacheControl] = "no-store";
 
             // If user is authenticated, re-issue auth cookie to extend sliding expiration.
             if (HttpContext.User?.Identity?.IsAuthenticated == true)
@@ -197,7 +127,6 @@ public class AuthController : ControllerBase
     /// <response code="400">Invalid input or user already exists.</response>
     [HttpPost("register")]
     [AllowAnonymous]
-    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -240,7 +169,6 @@ public class AuthController : ControllerBase
     /// <response code="400">Invalid credentials.</response>
     [HttpPost("login")]
     [AllowAnonymous]
-    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -275,7 +203,6 @@ public class AuthController : ControllerBase
     /// <response code="401">Unauthorized.</response>
     [HttpPost("logout")]
     [Authorize]
-    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status401Unauthorized)]
     [SwaggerResponseExample(StatusCodes.Status401Unauthorized, typeof(TenXEmpires.Server.Examples.ApiErrorUnauthorizedExample))]
@@ -301,7 +228,6 @@ public class AuthController : ControllerBase
     /// <response code="429">Too many requests (rate limited).</response>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
-    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
@@ -356,7 +282,6 @@ public class AuthController : ControllerBase
     /// <response code="429">Too many requests (rate limited).</response>
     [HttpPost("resend-verification")]
     [AllowAnonymous]
-    [ValidateAntiForgeryTokenApi]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
     [SwaggerResponseExample(StatusCodes.Status400BadRequest, typeof(TenXEmpires.Server.Examples.ApiErrorInvalidInputExample))]
