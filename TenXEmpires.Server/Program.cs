@@ -233,6 +233,8 @@ namespace TenXEmpires.Server
 
             // Configure shared cookie domain for cross-subdomain SPA
             // Environment variables use double underscore (Cookies__SharedDomain) which maps to Cookies:SharedDomain
+            // IMPORTANT: For cross-origin cookies (SameSite=None), do NOT set Domain attribute
+            // The cookie will be scoped to the backend origin and sent automatically with credentials: 'include'
             var sharedCookieDomain = builder.Configuration["Cookies:SharedDomain"];
 
             builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
@@ -245,8 +247,12 @@ namespace TenXEmpires.Server
                     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
                         ? CookieSecurePolicy.None 
                         : CookieSecurePolicy.Always;
-                    // Only set Domain if sharedCookieDomain is provided (for cross-subdomain scenarios)
-                    if (!string.IsNullOrEmpty(sharedCookieDomain))
+                    // For cross-origin requests (production), do NOT set Domain attribute
+                    // Browsers will reject cookies with Domain attribute in cross-origin scenarios
+                    // The cookie will be scoped to the backend origin (tenxempires-backend-3vir4.ondigitalocean.app)
+                    // and will be sent automatically with credentials: 'include' from the frontend
+                    // Only set Domain for same-origin scenarios (development with shared domain)
+                    if (!string.IsNullOrEmpty(sharedCookieDomain) && builder.Environment.IsDevelopment())
                     {
                         options.Cookie.Domain = sharedCookieDomain;
                     }
