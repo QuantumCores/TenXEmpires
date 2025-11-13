@@ -11,7 +11,9 @@ export interface HttpResult<T> {
  */
 export function getApiUrl(path: string): string {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
-  if (apiBaseUrl) {
+  // Use relative paths if VITE_API_BASE_URL is not set or empty (for nginx proxy)
+  // This ensures same-origin requests so cookies work properly
+  if (apiBaseUrl && apiBaseUrl.trim() !== '') {
     // Remove leading slash from path if present, then construct full URL
     const cleanPath = path.startsWith('/') ? path.slice(1) : path
     // Replace /api prefix with /v1 if present, otherwise add /v1
@@ -20,7 +22,9 @@ export function getApiUrl(path: string): string {
       : `v1/${cleanPath}`
     return `${apiBaseUrl}/${apiPath}`
   }
-  // Dev mode: use relative path (Vite proxy will handle /api -> /v1)
+  // Production with nginx proxy OR dev mode: use relative path
+  // - Dev: Vite proxy will handle /api -> /v1
+  // - Production: nginx proxy will handle /api -> backend /v1
   return path
 }
 
