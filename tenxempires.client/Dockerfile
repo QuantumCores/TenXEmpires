@@ -2,7 +2,8 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Accept build argument for API base URL
+# Accept build argument for API base URL (optional - if not set, uses relative paths via nginx proxy)
+# For production with nginx proxy, leave this unset so frontend uses relative /api paths
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
