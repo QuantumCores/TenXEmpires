@@ -83,7 +83,7 @@ namespace TenXEmpires.Server
             builder.Services.AddAntiforgery(o =>
             {
                 o.HeaderName = TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader;
-                o.Cookie.SameSite = SameSiteMode.Lax;
+                o.Cookie.SameSite = SameSiteMode.None;
                 o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
                     ? CookieSecurePolicy.None 
                     : CookieSecurePolicy.Always;
