@@ -192,7 +192,17 @@ public class AuthController : ControllerBase
             return BadRequest(new ApiErrorDto("INVALID_CREDENTIALS", "Invalid email or password."));
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: body.RememberMe);
+        // Sign in with explicit authentication properties to ensure cookie is set correctly
+        var authProperties = new Microsoft.AspNetCore.Authentication.AuthenticationProperties
+        {
+            IsPersistent = body.RememberMe,
+            AllowRefresh = true,
+            ExpiresUtc = body.RememberMe 
+                ? DateTimeOffset.UtcNow.AddDays(30) 
+                : DateTimeOffset.UtcNow.AddMinutes(30)
+        };
+        
+        await _signInManager.SignInAsync(user, authProperties);
         return NoContent();
     }
 

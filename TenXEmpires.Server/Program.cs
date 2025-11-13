@@ -232,6 +232,7 @@ namespace TenXEmpires.Server
             });
 
             // Configure shared cookie domain for cross-subdomain SPA
+            // Environment variables use double underscore (Cookies__SharedDomain) which maps to Cookies:SharedDomain
             var sharedCookieDomain = builder.Configuration["Cookies:SharedDomain"];
 
             builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
@@ -249,6 +250,8 @@ namespace TenXEmpires.Server
                     {
                         options.Cookie.Domain = sharedCookieDomain;
                     }
+                    // Set Path to root so cookie is accessible from all paths
+                    options.Cookie.Path = "/";
                     options.Cookie.HttpOnly = true;
                     options.SlidingExpiration = true;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
