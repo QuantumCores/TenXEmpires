@@ -121,6 +121,14 @@ namespace TenXEmpires.Server
                     else
                     {
                         // If no origins specified, allow any origin (not recommended for production)
+                        // Note: AllowAnyOrigin() is incompatible with AllowCredentials()
+                        // If credentials are required, specific origins must be configured
+                        if (corsAllowCredentials)
+                        {
+                            throw new InvalidOperationException(
+                                "CORS configuration error: AllowCredentials cannot be used with AllowAnyOrigin(). " +
+                                "Please specify allowed origins in configuration when credentials are required.");
+                        }
                         policy.AllowAnyOrigin();
                     }
 
