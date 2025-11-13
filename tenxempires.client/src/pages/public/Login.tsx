@@ -35,8 +35,9 @@ export default function Login() {
     setIsSubmitting(false)
     
     if (ok) {
-      // Login successful - invalidate auth cache and redirect
-      qc.invalidateQueries({ queryKey: ['auth-status'] })
+      // Login successful - invalidate auth cache, wait for refetch, then redirect
+      await qc.invalidateQueries({ queryKey: ['auth-status'] })
+      await qc.refetchQueries({ queryKey: ['auth-status'] })
       navigate(returnUrl, { replace: true })
       return
     }

@@ -244,7 +244,11 @@ namespace TenXEmpires.Server
                     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
                         ? CookieSecurePolicy.None 
                         : CookieSecurePolicy.Always;
-                    options.Cookie.Domain = sharedCookieDomain;
+                    // Only set Domain if sharedCookieDomain is provided (for cross-subdomain scenarios)
+                    if (!string.IsNullOrEmpty(sharedCookieDomain))
+                    {
+                        options.Cookie.Domain = sharedCookieDomain;
+                    }
                     options.Cookie.HttpOnly = true;
                     options.SlidingExpiration = true;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
