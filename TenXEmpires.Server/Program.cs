@@ -79,14 +79,22 @@ namespace TenXEmpires.Server
                 options.KnownProxies.Clear();
             });
 
+            // Configure shared cookie domain for cross-subdomain SPA
+            var sharedCookieDomain = builder.Environment.IsDevelopment()
+                ? null
+                : ".ondigitalocean.app";
+
             // Configure Antiforgery for SPA CSRF protection
             builder.Services.AddAntiforgery(o =>
             {
                 o.HeaderName = TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader;
-                o.Cookie.SameSite = SameSiteMode.None;
+                o.Cookie.SameSite = builder.Environment.IsDevelopment()
+                    ? SameSiteMode.Lax
+                    : SameSiteMode.None;
                 o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
                     ? CookieSecurePolicy.None 
                     : CookieSecurePolicy.Always;
+                o.Cookie.Domain = sharedCookieDomain;
                 o.Cookie.Path = "/";
                 o.SuppressXFrameOptionsHeader = false;
             });
@@ -234,10 +242,13 @@ namespace TenXEmpires.Server
                 .AddCookie(IdentityConstants.ApplicationScheme, options =>
                 {
                     options.Cookie.Name = "tenx.auth";
-                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SameSite = builder.Environment.IsDevelopment()
+                        ? SameSiteMode.Lax
+                        : SameSiteMode.None;
                     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
                         ? CookieSecurePolicy.None 
                         : CookieSecurePolicy.Always;
+                    options.Cookie.Domain = sharedCookieDomain;
                     options.Cookie.HttpOnly = true;
                     options.SlidingExpiration = true;
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);

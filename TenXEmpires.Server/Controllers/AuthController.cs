@@ -83,8 +83,13 @@ public class AuthController : ControllerBase
                 {
                     HttpOnly = false,
                     Secure = !_environment.IsDevelopment(),
-                    SameSite = SameSiteMode.None,
-                    Path = "/"
+                    SameSite = _environment.IsDevelopment()
+                        ? SameSiteMode.Lax
+                        : SameSiteMode.None,
+                    Path = "/",
+                    Domain = _environment.IsDevelopment()
+                        ? null
+                        : ".ondigitalocean.app"
                 });
 
             // Prevent caching of this response
