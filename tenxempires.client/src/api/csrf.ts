@@ -1,4 +1,7 @@
 import { getApiUrl } from './http'
+import { clearCsrfToken, getCsrfToken, setCsrfToken } from './csrfStore'
+
+const XSRF_HEADER = 'X-XSRF-TOKEN'
 
 let csrfRefreshPromise: Promise<boolean> | null = null
 
@@ -22,9 +25,20 @@ export async function refreshCsrfToken(): Promise<boolean> {
         credentials: 'include',
         headers: { 'Accept': 'application/json' },
       })
+      if (response.ok) {
+        const headerToken = response.headers.get(XSRF_HEADER)
+        if (headerToken) {
+          setCsrfToken(headerToken)
+        } else {
+          clearCsrfToken()
+        }
+      } else {
+        clearCsrfToken()
+      }
       return response.ok
     } catch (err: unknown) {
       console.error('[CSRF] Token refresh failed:', err)
+      clearCsrfToken()
       return false
     } finally {
       // Clear the promise after completion
@@ -56,5 +70,13 @@ export async function withCsrfRetry<T>(
   }
 
   return result
+}
+
+export function getStoredCsrfToken(): string | null {
+  return getCsrfToken()
+}
+
+export function resetStoredCsrfToken() {
+  clearCsrfToken()
 }
 

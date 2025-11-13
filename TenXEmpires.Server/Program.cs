@@ -80,9 +80,7 @@ namespace TenXEmpires.Server
             });
 
             // Configure shared cookie domain for cross-subdomain SPA
-            var sharedCookieDomain = builder.Environment.IsDevelopment()
-                ? null
-                : ".ondigitalocean.app";
+            var sharedCookieDomain = builder.Configuration["Cookies:SharedDomain"];
 
             // Configure Antiforgery for SPA CSRF protection
             builder.Services.AddAntiforgery(o =>
@@ -104,7 +102,13 @@ namespace TenXEmpires.Server
             var corsAllowCredentials = builder.Configuration.GetValue<bool>("Cors:AllowCredentials", true);
             var corsAllowedMethods = builder.Configuration.GetSection("Cors:AllowedMethods").Get<string[]>() ?? new[] { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
             var corsAllowedHeaders = builder.Configuration.GetSection("Cors:AllowedHeaders").Get<string[]>() ?? new[] { "*" };
-            var corsExposedHeaders = builder.Configuration.GetSection("Cors:ExposedHeaders").Get<string[]>() ?? new[] { "ETag" };
+            var defaultExposedHeaders = new[]
+            {
+                "ETag",
+                "X-Tenx-Total-Count",
+                TenXEmpires.Server.Domain.Constants.SecurityConstants.XsrfHeader
+            };
+            var corsExposedHeaders = builder.Configuration.GetSection("Cors:ExposedHeaders").Get<string[]>() ?? defaultExposedHeaders;
 
             builder.Services.AddCors(options =>
             {

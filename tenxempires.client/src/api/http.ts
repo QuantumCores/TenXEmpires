@@ -1,3 +1,5 @@
+import { getCsrfToken } from './csrfStore'
+
 export interface HttpResult<T> {
   ok: boolean
   status: number
@@ -66,7 +68,7 @@ async function sendJson<TReq, TRes>(path: string, method: 'POST'|'PUT'|'DELETE',
       })
     }
 
-    const token = readCookie('XSRF-TOKEN')
+    const token = getCsrfToken() ?? readCookie('XSRF-TOKEN')
     if (token) {
       // Server expects this header name per SecurityConstants.XsrfHeader
       headers['X-XSRF-TOKEN'] = token

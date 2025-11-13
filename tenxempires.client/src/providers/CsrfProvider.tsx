@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { getApiUrl } from '../api/http'
+import { refreshCsrfToken } from '../api/csrf'
 
 type CsrfStatus = 'idle' | 'initializing' | 'ready' | 'error'
 
@@ -11,21 +11,6 @@ interface CsrfContextValue {
 
 const CsrfContext = createContext<CsrfContextValue | undefined>(undefined)
 
-async function requestCsrf(): Promise<{ ok: boolean; status: number }> {
-  try {
-    const url = getApiUrl('/api/auth/csrf')
-    const res = await fetch(url, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { 'Accept': 'application/json' },
-    })
-    return { ok: res.ok, status: res.status }
-  } catch (err: unknown) {
-    console.error('[CSRF] Request failed:', err)
-    return { ok: false, status: 0 }
-  }
-}
-
 export function CsrfProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<CsrfStatus>('idle')
   const [lastError, setLastError] = useState<string | undefined>(undefined)
@@ -33,17 +18,17 @@ export function CsrfProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     setStatus('initializing')
     setLastError(undefined)
-    const res = await requestCsrf()
-    if (res.ok) {
+    const res = await refreshCsrfToken()
+    if (res) {
       setStatus('ready')
     } else {
       // Retry once after brief delay
       await new Promise((r) => setTimeout(r, 300))
-      const retry = await requestCsrf()
-      if (retry.ok) setStatus('ready')
+      const retry = await refreshCsrfToken()
+      if (retry) setStatus('ready')
       else {
         setStatus('error')
-        setLastError(`Failed to init CSRF (${retry.status || 'network'})`)
+        setLastError('Failed to init CSRF')
       }
     }
   }, [])
@@ -63,4 +48,3 @@ export function useCsrf() {
   if (!ctx) throw new Error('useCsrf must be used within CsrfProvider')
   return ctx
 }
-

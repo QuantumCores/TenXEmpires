@@ -29,6 +29,7 @@ public class AuthController : ControllerBase
     private readonly SignInManager<IdentityUser<Guid>> _signInManager;
     private readonly UserManager<IdentityUser<Guid>> _userManager;
     private readonly IWebHostEnvironment _environment;
+    private readonly string? _sharedCookieDomain;
 
     [ActivatorUtilitiesConstructor]
     public AuthController(
@@ -36,13 +37,15 @@ public class AuthController : ControllerBase
         ILogger<AuthController> logger,
         SignInManager<IdentityUser<Guid>> signInManager,
         UserManager<IdentityUser<Guid>> userManager,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IConfiguration configuration)
     {
         _antiforgery = antiforgery;
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
         _environment = environment;
+        _sharedCookieDomain = configuration["Cookies:SharedDomain"];
     }
 
     
@@ -87,11 +90,10 @@ public class AuthController : ControllerBase
                         ? SameSiteMode.Lax
                         : SameSiteMode.None,
                     Path = "/",
-                    Domain = _environment.IsDevelopment()
-                        ? null
-                        : ".ondigitalocean.app"
+                    Domain = _sharedCookieDomain
                 });
 
+            Response.Headers[SecurityConstants.XsrfHeader] = tokens.RequestToken!;
             // Prevent caching of this response
             Response.Headers[StandardHeaders.CacheControl] = "no-store";
 
