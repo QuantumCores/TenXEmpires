@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -47,12 +48,15 @@ public class AuthControllerTests
             claimsPrincipalFactoryMock.Object,
             null!, null!, null!, null!);
         
+        var configuration = new ConfigurationBuilder().Build();
+
         _controller = new AuthController(
             _antiforgeryMock.Object, 
             _loggerMock.Object, 
             _signInManagerMock.Object, 
             _userManagerMock.Object,
-            _environmentMock.Object)
+            _environmentMock.Object,
+            configuration)
         {
             ControllerContext = new ControllerContext
             {
