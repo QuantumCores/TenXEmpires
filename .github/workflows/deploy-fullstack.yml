@@ -9,10 +9,10 @@ on:
         type: string
         default: 'main'
       api_base_url:
-        description: 'Backend API URL (DEPRECATED - not used, nginx proxy handles API routing)'
-        required: false
+        description: 'Backend API URL'
+        required: true
         type: string
-        default: ''
+        default: 'https://tenxempires-backend-3vir4.ondigitalocean.app/'
 
 jobs:
   deploy-backend:
