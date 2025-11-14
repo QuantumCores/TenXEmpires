@@ -468,7 +468,7 @@ public class AuthControllerTests
 
         // Assert
         result.Should().BeOfType<NoContentResult>();
-        _signInManagerMock.Verify(sm => sm.SignInAsync(user, true, null), Times.Once);
+        _signInManagerMock.Verify(sm => sm.SignInAsync(user, It.IsAny<Microsoft.AspNetCore.Authentication.AuthenticationProperties>(), null), Times.Once);
     }
 
     #endregion
