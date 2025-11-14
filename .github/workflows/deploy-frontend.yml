@@ -8,17 +8,9 @@ on:
         required: true
         type: string
         default: 'main'
-      api_base_url:
-        description: 'Backend API URL'
-        required: true
-        type: string
-        default: 'https://tenxempires-backend-3vir4.ondigitalocean.app/'
   workflow_call:
     inputs:
       branch:
-        required: true
-        type: string
-      api_base_url:
         required: true
         type: string
 
@@ -67,7 +59,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_API_BASE_URL=${{ inputs.api_base_url || github.event.inputs.api_base_url }}
+            VITE_API_BASE_URL=${{ secrets.API_BASE_URL }}
             
           cache-from: type=gha
           cache-to: type=gha,mode=max

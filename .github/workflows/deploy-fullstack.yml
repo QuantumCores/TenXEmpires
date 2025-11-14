@@ -8,11 +8,6 @@ on:
         required: true
         type: string
         default: 'main'
-      api_base_url:
-        description: 'Backend API URL'
-        required: true
-        type: string
-        default: 'https://tenxempires-backend-3vir4.ondigitalocean.app/'
 
 jobs:
   deploy-backend:
@@ -27,5 +22,4 @@ jobs:
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
-      api_base_url: ${{ github.event.inputs.api_base_url }}
 
