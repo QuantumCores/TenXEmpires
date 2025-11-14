@@ -26,8 +26,6 @@ import {
   drawUnitSprite,
   generateCitySprite,
   drawCitySprite,
-  generateGridSprite,
-  drawGridSprite,
 } from '../../features/game/spriteCache'
 import { getGlobalImageLoader, DEFAULT_MANIFEST } from '../../features/game/imageLoader'
 
@@ -286,17 +284,17 @@ export function MapCanvasStack({
   }, [mapTiles, camera, dimensions, spriteCache, imageLoader, imagesLoaded, hexMetrics])
 
   // Render grid layer
-  useEffect(() => {
-    const canvas = gridCanvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    if (gridOn) {
-      renderGrid(ctx, gameState.map, camera, dimensions, spriteCache, hexMetrics)
-    } else {
-      ctx.clearRect(0, 0, dimensions.width, dimensions.height)
-    }
-  }, [gameState.map, camera, dimensions, gridOn, spriteCache, hexMetrics])
+    useEffect(() => {
+      const canvas = gridCanvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      if (gridOn) {
+        renderGrid(ctx, gameState.map, camera, dimensions, hexMetrics)
+      } else {
+        ctx.clearRect(0, 0, dimensions.width, dimensions.height)
+      }
+    }, [gameState.map, camera, dimensions, gridOn, hexMetrics])
 
   // Render features layer
   useEffect(() => {
@@ -721,37 +719,32 @@ function renderTiles(
   })
 }
 
-function renderGrid(
-  ctx: CanvasRenderingContext2D,
-  map: { width: number; height: number },
-  camera: CameraState,
-  viewport: { width: number; height: number },
-  spriteCache: ReturnType<typeof getGlobalSpriteCache>,
-  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
-) {
-  ctx.clearRect(0, 0, viewport.width, viewport.height)
+  function renderGrid(
+    ctx: CanvasRenderingContext2D,
+    map: { width: number; height: number },
+    camera: CameraState,
+    viewport: { width: number; height: number },
+    hexMetrics: ReturnType<typeof calculateOptimalHexSize>
+  ) {
+    ctx.clearRect(0, 0, viewport.width, viewport.height)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)'
+    const strokeWidth = 2 / camera.scale
 
-  // Get cached grid sprite
-  const gridSprite = spriteCache.get(
-    generateGridSprite(),
-    hexMetrics.hexSize * 4,
-    hexMetrics.hexSize * 4,
-    (spriteCtx) => drawGridSprite(spriteCtx)
-  )
+    for (let row = 0; row < map.height; row++) {
+      for (let col = 0; col < map.width; col++) {
+        const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
+        const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
 
-  for (let row = 0; row < map.height; row++) {
-    for (let col = 0; col < map.width; col++) {
-      const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
-      const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
-
-      ctx.save()
-      ctx.translate(screen.x, screen.y)
-      ctx.scale(camera.scale, camera.scale)
-      ctx.drawImage(gridSprite, -hexMetrics.hexSize * 2, -hexMetrics.hexSize * 2)
-      ctx.restore()
+        ctx.save()
+        ctx.translate(screen.x, screen.y)
+        ctx.scale(camera.scale, camera.scale)
+        ctx.lineWidth = strokeWidth
+        drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
+        ctx.stroke()
+        ctx.restore()
+      }
     }
   }
-}
 
 function renderFeatures(
   ctx: CanvasRenderingContext2D,

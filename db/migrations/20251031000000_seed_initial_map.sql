@@ -24,7 +24,7 @@ DECLARE
     v_rand float;
     v_width constant int := 20;
     v_height constant int := 15;
-    v_terrains constant text[] := ARRAY['desert', 'grassland', 'tropical', 'tundra', 'water'];
+    v_terrains constant text[] := ARRAY['desert', 'grassland', 'tropical', 'tundra'];
 BEGIN
     -- Set seed for reproducible terrain generation
     PERFORM setseed(0.42);
@@ -81,7 +81,7 @@ BEGIN
                     v_terrain := v_terrains[1 + floor(random() * 5)::int];
                 END IF;
             ELSE
-                -- Inner layers: no ocean, only land/water terrains
+                -- Inner layers: no ocean, only land terrains
                 v_terrain := v_terrains[1 + floor(random() * 5)::int];
             END IF;
             

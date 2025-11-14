@@ -178,30 +178,3 @@ export function drawCitySprite(
   ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size)
 }
 
-/**
- * Generates a hex grid sprite key
- */
-export function generateGridSprite(): string {
-  return 'grid-v2-hex'
-}
-
-/**
- * Draws a hex grid sprite
- */
-export function drawGridSprite(
-  ctx: CanvasRenderingContext2D,
-  logicalWidth?: number,
-  logicalHeight?: number
-): void {
-  // Use passed dimensions or fall back to defaults
-  // The canvas is created as hexSize * 4, so center is at half that
-  const centerX = (logicalWidth ?? HEX_SIZE * 4) / 2
-  const centerY = (logicalHeight ?? HEX_SIZE * 4) / 2
-  const hexSize = centerX / 2
-
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
-  ctx.lineWidth = 1
-  drawHexPath(ctx, centerX, centerY, hexSize)
-  ctx.stroke()
-}
-
