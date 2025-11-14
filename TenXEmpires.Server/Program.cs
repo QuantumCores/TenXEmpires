@@ -291,7 +291,7 @@ namespace TenXEmpires.Server
                     options.User.RequireUniqueEmail = true;
                     
                     // Disable email confirmation requirement in development
-                    options.SignIn.RequireConfirmedEmail = !builder.Environment.IsDevelopment();
+                    options.SignIn.RequireConfirmedEmail = false; // !builder.Environment.IsDevelopment();
                 })
                 .AddRoles<IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<AppIdentityDbContext>()

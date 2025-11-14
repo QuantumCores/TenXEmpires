@@ -148,7 +148,7 @@ public class AuthController : ControllerBase
             Id = Guid.NewGuid(),
             UserName = body.Email,
             Email = body.Email,
-            EmailConfirmed = false,
+            EmailConfirmed = true,
         };
 
         var createResult = await _userManager.CreateAsync(user, body.Password);

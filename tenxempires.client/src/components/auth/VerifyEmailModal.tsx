@@ -27,7 +27,8 @@ export function VerifyEmailModal({ email, onRequestClose }: VerifyEmailModalProp
     setIsResending(false)
 
     if (ok || status === 204) {
-      setSuccessMessage('Verification email sent! Please check your inbox.')
+      // setSuccessMessage('Verification email sent! Please check your inbox.')
+      setSuccessMessage('You can now login.')
       return
     }
 
@@ -44,7 +45,8 @@ export function VerifyEmailModal({ email, onRequestClose }: VerifyEmailModalProp
     }
 
     // Handle other errors
-    setErrorMessage(data?.message || 'Unable to send verification email. Please try again.')
+    // setErrorMessage(data?.message || 'Unable to send verification email. Please try again.')
+    setErrorMessage(data?.message || 'Something went wrong. Please try again.')
   }
 
   return (
