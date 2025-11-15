@@ -7,7 +7,8 @@ import { ConsentBanner } from '../../components/landing/ConsentBanner'
 import { Banners } from '../../components/ui/Banners'
 
 export default function Landing(): React.JSX.Element {
-  const { data: auth } = useAuthStatusQuery()
+  const { data: authResult } = useAuthStatusQuery()
+  const auth = authResult?.auth
 
   return (
     <PublicLayout>

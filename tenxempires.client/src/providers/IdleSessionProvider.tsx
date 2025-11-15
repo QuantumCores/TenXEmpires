@@ -15,7 +15,8 @@ export function IdleSessionProvider({ children }: { children: React.ReactNode })
   const showTimerRef = useRef<number | null>(null)
   const notifications = useNotifications()
   const { state, openModal } = useModalParam()
-  const { data: auth } = useAuthStatusQuery()
+  const { data: authResult } = useAuthStatusQuery()
+  const auth = authResult?.auth
 
   const scheduleTimers = useCallback(() => {
     // Clear existing timers

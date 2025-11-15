@@ -9,7 +9,12 @@ function nowIsoSeconds(): string {
   return iso.replace(/\.\d{3}Z$/, 'Z')
 }
 
-async function rawFetchAuthStatus(): Promise<{ status: number; auth: AuthStatus }> {
+export interface AuthStatusResult {
+  status: number
+  auth: AuthStatus
+}
+
+async function rawFetchAuthStatus(): Promise<AuthStatusResult> {
   // getJson already calls getApiUrl internally, so pass the path directly
   const { ok, status } = await getJson<CurrentUser>('/api/auth/me')
 
@@ -50,7 +55,7 @@ export function useAuthStatusQuery() {
       } else if (s === 0 || (s >= 500 && s < 600)) {
         notify.add({ id: 'auth-status-fail', kind: 'info', message: "Couldn't check session. You can still log in or register.", ttlMs: 7000 })
       }
-      return res.auth
+      return res
     },
   })
 }
