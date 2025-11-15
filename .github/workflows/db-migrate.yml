@@ -14,12 +14,12 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [ main ]
-    paths:
-      - 'db/migrations/**'
-      - 'tools/DbMigrate/**'
-      - '.github/workflows/db-migrate.yml'
+  # push:
+    # branches: [ main ]
+    # paths:
+      # - 'db/migrations/**'
+      # - 'tools/DbMigrate/**'
+      # - '.github/workflows/db-migrate.yml'
 
 jobs:
   migrate:
