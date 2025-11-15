@@ -64,25 +64,25 @@ BEGIN
                 IF v_rand < 0.9 THEN
                     v_terrain := 'ocean';
                 ELSE
-                    v_terrain := v_terrains[1 + floor(random() * 5)::int];
+                    v_terrain := v_terrains[1 + floor(random() * cardinality(v_terrains))::int];
                 END IF;
             ELSIF v_layer = 1 THEN
                 -- Second layer: 50% ocean, 50% other terrains
                 IF v_rand < 0.5 THEN
                     v_terrain := 'ocean';
                 ELSE
-                    v_terrain := v_terrains[1 + floor(random() * 5)::int];
+                    v_terrain := v_terrains[1 + floor(random() * cardinality(v_terrains))::int];
                 END IF;
             ELSIF v_layer = 2 THEN
                 -- Third layer: 25% ocean, 75% other terrains
                 IF v_rand < 0.25 THEN
                     v_terrain := 'ocean';
                 ELSE
-                    v_terrain := v_terrains[1 + floor(random() * 5)::int];
+                    v_terrain := v_terrains[1 + floor(random() * cardinality(v_terrains))::int];
                 END IF;
             ELSE
                 -- Inner layers: no ocean, only land terrains
-                v_terrain := v_terrains[1 + floor(random() * 5)::int];
+                v_terrain := v_terrains[1 + floor(random() * cardinality(v_terrains))::int];
             END IF;
             
             -- Insert tile (resources left NULL for game-time generation)
