@@ -69,6 +69,11 @@ export function MapCanvasStack({
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [hoverTile, setHoverTile] = useState<GridPosition | null>(null)
   const [preview, setPreview] = useState<PreviewState>({ kind: null })
+  const tileLookup = useMemo(() => {
+    const lookup = new Map<number, MapTileDto>()
+    mapTiles.forEach((tile) => lookup.set(tile.id, tile))
+    return lookup
+  }, [mapTiles])
 
   // Calculate optimal hex size based on viewport and map dimensions
   const hexMetrics = useMemo(() => {
@@ -320,8 +325,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderOverlay(ctx, selection, gameState, preview, hoverTile, camera, dimensions, debug, hexMetrics)
-  }, [selection, gameState, preview, hoverTile, camera, dimensions, debug, hexMetrics])
+    renderOverlay(ctx, selection, gameState, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics)
+  }, [selection, gameState, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics])
 
   // Handle pointer move
   const handlePointerMove = useCallback(
@@ -849,6 +854,7 @@ function renderOverlay(
   ctx: CanvasRenderingContext2D,
   selection: SelectionState,
   gameState: GameStateDto,
+  tileLookup: Map<number, MapTileDto>,
   preview: PreviewState,
   hoverTile: GridPosition | null,
   camera: CameraState,
@@ -857,6 +863,7 @@ function renderOverlay(
   hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
+  const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
 
   // Draw reachable tiles
   if (preview.reachable) {
@@ -892,6 +899,32 @@ function renderOverlay(
 
       ctx.restore()
     })
+  }
+
+  // Highlight managed city tiles when a city is selected
+  if (selection.kind === 'city' && selection.id) {
+    const selectedCity = gameState.cities.find((c) => c.id === selection.id)
+    if (selectedCity) {
+      const workedTiles = gameState.cityTiles.filter((t) => t.cityId === selectedCity.id)
+      const isPlayerCity = selectedCity.participantId === playerParticipant?.id
+      workedTiles.forEach((link) => {
+        const mapTile = tileLookup.get(link.tileId)
+        if (!mapTile) return
+
+        const pos = oddrToPixel(mapTile.col, mapTile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
+        const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+
+        ctx.save()
+        ctx.translate(screen.x, screen.y)
+        ctx.scale(camera.scale, camera.scale)
+
+        drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
+        ctx.fillStyle = isPlayerCity ? 'rgba(253, 253, 253, 0.4)' : 'rgba(248, 113, 113, 0.2)'
+        ctx.fill()
+
+        ctx.restore()
+      })
+    }
   }
 
   // Draw path preview
