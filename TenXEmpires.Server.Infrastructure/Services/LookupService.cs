@@ -17,14 +17,14 @@ public class LookupService : ILookupService
     private readonly TenXDbContext _context;
     private readonly IMemoryCache _cache;
     private readonly ILogger<LookupService> _logger;
-    
+
     private const string UnitDefinitionsCacheKey = "Lookup.UnitDefinitions";
     private const string UnitDefinitionsETagCacheKey = "Lookup.UnitDefinitions.ETag";
     private const string MapByCodeCacheKeyPrefix = "Lookup.Map.";
     private const string MapTilesCacheKeyPrefix = "Lookup.MapTiles.";
     private const string MapTilesETagCacheKeyPrefix = "Lookup.MapTiles.ETag.";
     private static readonly TimeSpan CacheExpiration = TimeSpan.FromMinutes(10);
-    
+
     private const int DefaultPageSize = 500;
     private const int MaxPageSize = 500;
 
@@ -113,7 +113,7 @@ public class LookupService : ILookupService
 
             // If not cached, fetch the data (which will cache both data and ETag)
             var unitDefinitions = await GetUnitDefinitionsAsync();
-            
+
             // ETag should now be cached, retrieve it
             if (_cache.TryGetValue<string>(UnitDefinitionsETagCacheKey, out cachedETag))
             {
@@ -139,7 +139,7 @@ public class LookupService : ILookupService
         // Create a stable representation: count + sorted codes + key stats
         var representation = new StringBuilder();
         representation.Append(unitDefinitions.Count);
-        
+
         foreach (var unit in unitDefinitions)
         {
             representation.Append('|');
@@ -267,13 +267,16 @@ public class LookupService : ILookupService
             // Order by row, then col for stable pagination
             var skip = (effectivePage - 1) * effectivePageSize;
 
-            var tiles = await _context.MapTiles
+            var allTiles = await _context.MapTiles
                 .AsNoTracking()
                 .Where(t => t.MapId == map.Id)
                 .OrderBy(t => t.Row)
                 .ThenBy(t => t.Col)
                 .Skip(skip)
                 .Take(effectivePageSize)
+                .ToListAsync();
+
+            var tiles = allTiles
                 .Select(t => new MapTileDto(
                     t.Id,
                     t.Row,
@@ -281,7 +284,7 @@ public class LookupService : ILookupService
                     t.Terrain,
                     t.ResourceType,
                     t.ResourceAmount))
-                .ToListAsync();
+                .ToList();
 
             // Get total count for pagination metadata (only for first page to optimize)
             // For large maps, we can cache the count separately

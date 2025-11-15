@@ -3,13 +3,14 @@
  * Preloads and caches PNG images for rendering on canvas.
  */
 
-export type ImageCategory = 'terrain' | 'feature' | 'unit' | 'city'
+export type ImageCategory = 'terrain' | 'feature' | 'unit' | 'city' | 'resources'
 
 interface ImageManifest {
   terrain: string[]
   feature: string[]
   unit: string[]
   city: string[]
+  resources: string[]
 }
 
 class ImageLoader {
@@ -160,6 +161,12 @@ export const DEFAULT_MANIFEST: ImageManifest = {
   ],
   city: [
     // City sprites will use fallback
+  ],
+  resources: [
+    'wood',
+    'stone',
+    'wheat',
+    'iron',
   ],
 }
 

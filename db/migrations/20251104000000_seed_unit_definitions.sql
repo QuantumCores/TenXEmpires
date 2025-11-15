@@ -12,7 +12,7 @@
 INSERT INTO app.unit_definitions (code, is_ranged, attack, defence, range_min, range_max, move_points, health)
 VALUES
     ('warrior', false, 20, 10, 0, 0, 2, 100),
-    ('slinger', true,  15,  8, 2, 2, 2,  80)
+    ('slinger', true,  15,  8, 1, 2, 2,  80)
 ON CONFLICT (code) DO NOTHING;
 
 -- Verify insertion

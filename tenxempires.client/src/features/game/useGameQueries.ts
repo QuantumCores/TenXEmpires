@@ -119,7 +119,7 @@ export function useMapTiles(mapCode: string | undefined) {
       }
       return result.data.items
     },
-    staleTime: Infinity, // Never refetch
+    staleTime: 45_000,
     enabled: !!mapCode,
   })
 }

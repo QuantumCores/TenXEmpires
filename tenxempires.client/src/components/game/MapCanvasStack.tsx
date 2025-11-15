@@ -325,8 +325,21 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderOverlay(ctx, selection, gameState, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics)
-  }, [selection, gameState, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics])
+    renderOverlay(
+      ctx,
+      selection,
+      gameState,
+      mapTiles,
+      tileLookup,
+      preview,
+      hoverTile,
+      camera,
+      dimensions,
+      debug,
+      hexMetrics,
+      imageLoader
+    )
+  }, [selection, gameState, mapTiles, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics, imageLoader, imagesLoaded])
 
   // Handle pointer move
   const handlePointerMove = useCallback(
@@ -712,14 +725,6 @@ function renderTiles(
       ctx.drawImage(sprite, -hexMetrics.hexSize * 2, -hexMetrics.hexSize * 2)
     }
 
-    // Draw resource indicator if present (always drawn on top)
-    if (tile.resourceType) {
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'
-      ctx.beginPath()
-      ctx.arc(0, 0, 8, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
     ctx.restore()
   })
 }
@@ -854,16 +859,49 @@ function renderOverlay(
   ctx: CanvasRenderingContext2D,
   selection: SelectionState,
   gameState: GameStateDto,
+  mapTiles: MapTileDto[],
   tileLookup: Map<number, MapTileDto>,
   preview: PreviewState,
   hoverTile: GridPosition | null,
   camera: CameraState,
   viewport: { width: number; height: number },
   debug: boolean,
-  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>,
+  imageLoader: ReturnType<typeof getGlobalImageLoader>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
   const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
+
+  // Draw resource icons below selection overlays
+  const iconSize = hexMetrics.hexSize * 1.1
+  const resourceFallbacks: Record<string, string> = {
+    wood: 'rgba(163, 98, 41, 0.65)',
+    stone: 'rgba(120, 120, 120, 0.65)',
+    wheat: 'rgba(236, 201, 75, 0.65)',
+    iron: 'rgba(90, 106, 128, 0.65)',
+  }
+  mapTiles.forEach((tile) => {
+    if (!tile.resourceType) return
+    const resourceKey = tile.resourceType.toLowerCase()
+    const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
+    const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+
+    ctx.save()
+    ctx.translate(screen.x, screen.y)
+    ctx.scale(camera.scale, camera.scale)
+
+    const icon = imageLoader.getImage('resources', resourceKey)
+    if (icon) {
+      ctx.drawImage(icon, -iconSize / 2, -iconSize / 2, iconSize, iconSize)
+    } else {
+      ctx.fillStyle = resourceFallbacks[resourceKey] ?? 'rgba(255, 215, 0, 0.6)'
+      ctx.beginPath()
+      ctx.arc(0, 0, Math.max(6, iconSize / 2.5), 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.restore()
+  })
 
   // Draw reachable tiles
   if (preview.reachable) {
