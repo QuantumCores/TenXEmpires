@@ -74,16 +74,17 @@ public class GameSeedingService : IGameSeedingService
 
         // Determine starting positions using RNG seed
         var random = new Random((int)(rngSeed % int.MaxValue));
-        var startingPositions = DetermineStartingPositions(allTiles, map.Width, map.Height, random);
+        //var startingPositions = DetermineStartingPositions(allTiles, map.Width, map.Height, random);
 
-        if (startingPositions.Count < 2)
-        {
-            throw new InvalidOperationException(
-                $"Not enough valid starting positions found on map. Found {startingPositions.Count}, need at least 2.");
-        }
 
-        var humanStartTile = startingPositions[0];
-        var aiStartTile = startingPositions[1];
+        //if (startingPositions.Count < 2)
+        //{
+        //    throw new InvalidOperationException(
+        //        $"Not enough valid starting positions found on map. Found {startingPositions.Count}, need at least 2.");
+        //}
+
+        var humanStartTile = allTiles.Single(x => x.Row == 4 && x.Col == 2);
+        var aiStartTile = allTiles.Single(x => x.Row == 12 && x.Col == 17);
 
         // Create starting cities
         var humanCity = new City
@@ -117,21 +118,61 @@ public class GameSeedingService : IGameSeedingService
             aiStartTile.Col);
 
         // Create city tiles (initially just the city's own tile)
-        var humanCityTile = new CityTile
+        var humanCityTiles = new List<CityTile>()
         {
-            GameId = gameId,
-            CityId = humanCity.Id,
-            TileId = humanStartTile.Id
+            new CityTile{
+                GameId = gameId,
+                CityId = humanCity.Id,
+                TileId = humanStartTile.Id
+            }
         };
+        var humanManagedTiles = allTiles
+            .Where(x =>
+                x.Row == 3 && x.Col == 1 ||
+                x.Row == 3 && x.Col == 2 ||
+                x.Row == 4 && x.Col == 1 ||
+                x.Row == 4 && x.Col == 3 ||
+                x.Row == 5 && x.Col == 2 ||
+                x.Row == 6 && x.Col == 1
+            )
+            .Select(x =>
+                new CityTile {
+                    GameId = gameId,
+                    CityId = humanCity.Id,
+                    TileId = x.Id,
+                })
+            .ToList();
+        humanCityTiles.AddRange(humanManagedTiles);
 
-        var aiCityTile = new CityTile
+        var aiCityTiles = new List<CityTile>()
         {
-            GameId = gameId,
-            CityId = aiCity.Id,
-            TileId = aiStartTile.Id
+            new CityTile{
+                GameId = gameId,
+                CityId = aiCity.Id,
+                TileId = aiStartTile.Id
+            }
         };
+        var aiManagedTiles = allTiles
+            .Where(x =>
+                x.Row == 12 && x.Col == 18 ||
+                x.Row == 13 && x.Col == 16 ||
+                x.Row == 12 && x.Col == 16 ||
+                x.Row == 13 && x.Col == 17 ||
+                x.Row == 11 && x.Col == 16 ||
+                x.Row == 10 && x.Col == 18
+            )
+            .Select(x =>
+                new CityTile
+                {
+                    GameId = gameId,
+                    CityId = aiCity.Id,
+                    TileId = x.Id,
+                })
+            .ToList();
+        aiCityTiles.AddRange(aiManagedTiles);
 
-        _context.CityTiles.AddRange(humanCityTile, aiCityTile);
+        _context.CityTiles.AddRange(humanCityTiles);
+        _context.CityTiles.AddRange(aiCityTiles);
         await _context.SaveChangesAsync(cancellationToken);
 
         // Initialize city resources with proper resource types
