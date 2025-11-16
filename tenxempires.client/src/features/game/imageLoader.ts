@@ -79,7 +79,15 @@ class ImageLoader {
    * Loads multiple images for a category
    */
   async loadCategory(category: ImageCategory, names: string[]): Promise<void> {
-    const promises = names.map((name) => this.loadImage(category, name))
+    const promises = names.map(async (name) => {
+      try {
+        return await this.loadImage(category, name)
+      } catch (error) {
+        const path = this.getImagePath(category, name)
+        console.warn(`Failed to load image: ${path}`, error)
+        throw error
+      }
+    })
     await Promise.allSettled(promises)
   }
 
@@ -101,7 +109,13 @@ class ImageLoader {
    */
   getImage(category: ImageCategory, name: string): HTMLImageElement | null {
     const cacheKey = this.getCacheKey(category, name)
-    return this.images.get(cacheKey) || null
+    const image = this.images.get(cacheKey) || null
+    // Debug: log if image not found in development
+    if (process.env.NODE_ENV === 'development' && !image) {
+      const path = this.getImagePath(category, name)
+      console.debug(`Image not in cache: ${path} (key: ${cacheKey})`)
+    }
+    return image
   }
 
   /**
@@ -157,7 +171,8 @@ export const DEFAULT_MANIFEST: ImageManifest = {
     // Features will use fallback sprites for now
   ],
   unit: [
-    // Unit sprites will use fallback
+    'slinger',
+    'warrior', // Note: filename has typo (should be "warrior")
   ],
   city: [
     // City sprites will use fallback

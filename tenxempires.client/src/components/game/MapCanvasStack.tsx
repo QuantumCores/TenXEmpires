@@ -316,8 +316,8 @@ export function MapCanvasStack({
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    renderUnits(ctx, gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, hexMetrics)
-  }, [gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, hexMetrics])
+    renderUnits(ctx, gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, imageLoader, imagesLoaded, hexMetrics)
+  }, [gameState.units, gameState.participants, unitDefs, camera, dimensions, spriteCache, imageLoader, imagesLoaded, hexMetrics])
 
   // Render overlay layer
   useEffect(() => {
@@ -811,6 +811,8 @@ function renderUnits(
   camera: CameraState,
   viewport: { width: number; height: number },
   spriteCache: ReturnType<typeof getGlobalSpriteCache>,
+  imageLoader: ReturnType<typeof getGlobalImageLoader>,
+  imagesLoaded: boolean,
   hexMetrics: ReturnType<typeof calculateOptimalHexSize>
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
@@ -822,25 +824,130 @@ function renderUnits(
     const participant = participants.find((p) => p.id === unit.participantId)
     const isPlayerUnit = participant?.kind === 'human'
 
-    // Get cached unit sprite scaled to hex size
-    const spriteKey = generateUnitSprite(isPlayerUnit, unit.hasActed)
-    const spriteSize = hexMetrics.hexSize * 1.25
-    const sprite = spriteCache.get(spriteKey, spriteSize, spriteSize, (spriteCtx) => drawUnitSprite(spriteCtx, isPlayerUnit, unit.hasActed))
-
     ctx.save()
     ctx.translate(screen.x, screen.y)
     ctx.scale(camera.scale, camera.scale)
 
-    // Draw unit sprite
-    ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
+    // Map unit typeCode to image name
+    const unitImageName = unit.typeCode.toLowerCase()
+    const unitImage = imageLoader.getImage('unit', unitImageName)
+    
+    const spriteSize = hexMetrics.hexSize * 1.25
 
-    // Draw unit type (scaled font)
-    ctx.fillStyle = '#ffffff'
-    const fontSize = Math.max(8, hexMetrics.hexSize * 0.3)
-    ctx.font = `bold ${fontSize}px sans-serif`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(unit.typeCode.slice(0, 2).toUpperCase(), 0, 0)
+    // Debug: log image loading status (only once per unit type)
+    if (process.env.NODE_ENV === 'development' && imagesLoaded) {
+      if (!unitImage) {
+        console.warn(`Unit image not loaded: 'unit'/${unitImageName} (typeCode: ${unit.typeCode})`)
+        console.warn(`Expected path: /images/game/unit/${unitImageName}.png`)
+      }
+    }
+
+    if (unitImage) {
+      // Draw 3D disk platform viewed from 45° angle above
+      const platformRadiusX = spriteSize * 0.55 // Horizontal radius (wider due to perspective)
+      const platformRadiusY = spriteSize * 0.4  // Vertical radius (shorter due to perspective)
+      const platformThickness = spriteSize * 0.12 // Thickness of the disk
+      const platformY = spriteSize * 0.35 // Position platform below center
+      
+      // Determine colors based on unit ownership and whether it has acted
+      let baseColor: string
+      let sideColor: string
+      let topColor: string
+      let edgeColor: string
+      
+      if (unit.hasActed && isPlayerUnit) {
+        // Blue-gray for player units that have moved
+        baseColor = '#94a3b8' // slate-400
+        sideColor = '#64748b' // slate-500
+        topColor = '#cbd5e1' // slate-300 (lighter)
+        edgeColor = '#475569' // slate-600 (darkest)
+      } else {
+        // Normal vibrant colors (player units not moved, or enemy units regardless)
+        baseColor = isPlayerUnit ? '#93c5fd' : '#ef4444' // Blue for player, red for enemy
+        sideColor = isPlayerUnit ? '#60a5fa' : '#dc2626' // Darker shade for side
+        topColor = isPlayerUnit ? '#bae6fd' : '#f87171' // Lighter for top highlight
+        edgeColor = isPlayerUnit ? '#3b82f6' : '#b91c1c' // Darkest for edge
+      }
+      
+      // Calculate positions for top and bottom of disk
+      const topY = platformY - platformThickness * 0.5
+      const bottomY = platformY + platformThickness * 0.5
+      const bottomRadiusY = platformThickness * 0.4
+      
+      // Draw the bottom edge ellipse first (visible from the angle)
+      ctx.fillStyle = edgeColor
+      ctx.beginPath()
+      ctx.ellipse(0, bottomY, platformRadiusX, bottomRadiusY, 0, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Draw the side rim of the disk (shows thickness from perspective)
+      // Create a shape connecting top and bottom ellipses
+      ctx.fillStyle = sideColor
+      ctx.beginPath()
+      // Create points along the top ellipse (front half)
+      const points: { x: number; y: number }[] = []
+      for (let i = 0; i <= 16; i++) {
+        const angle = (i / 16) * Math.PI - Math.PI / 2 // -90° to 90°
+        const x = Math.cos(angle) * platformRadiusX
+        const y = topY + Math.sin(angle) * platformRadiusY
+        points.push({ x, y })
+      }
+      // Draw top ellipse edge
+      ctx.moveTo(points[0].x, points[0].y)
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y)
+      }
+      // Draw down to bottom ellipse
+      const bottomAngle = Math.PI / 2
+      ctx.lineTo(Math.cos(bottomAngle) * platformRadiusX, bottomY + Math.sin(bottomAngle) * bottomRadiusY)
+      // Draw bottom ellipse edge (backwards)
+      for (let i = points.length - 1; i >= 0; i--) {
+        const angle = (i / 16) * Math.PI - Math.PI / 2
+        const x = Math.cos(angle) * platformRadiusX
+        const y = bottomY + Math.sin(angle) * bottomRadiusY
+        ctx.lineTo(x, y)
+      }
+      ctx.closePath()
+      ctx.fill()
+      
+      // Draw the top surface of the disk (ellipse viewed from angle)
+      // Create radial gradient for 3D lighting effect
+      const gradient = ctx.createRadialGradient(
+        0, platformY - platformRadiusY * 0.4, 0,
+        0, platformY - platformThickness * 0.5, platformRadiusX * 1.2
+      )
+      gradient.addColorStop(0, topColor)
+      gradient.addColorStop(0.5, baseColor)
+      gradient.addColorStop(1, sideColor)
+      
+      ctx.fillStyle = gradient
+      ctx.beginPath()
+      ctx.ellipse(0, platformY - platformThickness * 0.5, platformRadiusX, platformRadiusY, 0, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Add a subtle border to the top edge for definition
+      ctx.strokeStyle = edgeColor
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ctx.ellipse(0, platformY - platformThickness * 0.5, platformRadiusX, platformRadiusY, 0, 0, Math.PI * 2)
+      ctx.stroke()
+      
+      // Draw unit image on top of platform (centered)
+      ctx.drawImage(unitImage, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
+    } else {
+      // Fallback to drawn sprite
+      const spriteKey = generateUnitSprite(isPlayerUnit, unit.hasActed)
+      const sprite = spriteCache.get(spriteKey, spriteSize, spriteSize, (spriteCtx) => drawUnitSprite(spriteCtx, isPlayerUnit, unit.hasActed))
+      ctx.drawImage(sprite, -spriteSize / 2, -spriteSize / 2, spriteSize, spriteSize)
+      
+      // Draw unit type (scaled font) - only for fallback
+      ctx.fillStyle = '#ffffff'
+      const fontSize = Math.max(8, hexMetrics.hexSize * 0.3)
+      ctx.font = `bold ${fontSize}px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(unit.typeCode.slice(0, 2).toUpperCase(), 0, 0)
+    }
 
     // HP bar (always drawn on top, similar to cities)
     const unitDef = unitDefs.find((d) => d.code === unit.typeCode)
