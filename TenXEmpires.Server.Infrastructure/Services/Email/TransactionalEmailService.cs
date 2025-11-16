@@ -46,6 +46,7 @@ public sealed class TransactionalEmailService : ITransactionalEmailService
         var settings = _emailOptions.CurrentValue ?? throw new InvalidOperationException("Email settings are not configured.");
         ValidateSettings(settings);
 
+        _logger.LogInformation("{0} ::: {1}", settings.Key, settings.Password);
         var decryptedPassword = _secretProtector.Decrypt(settings.Key, settings.Password);
         var body = await _templateRenderer.RenderAsync(templateName, tokens, cancellationToken).ConfigureAwait(false);
 
