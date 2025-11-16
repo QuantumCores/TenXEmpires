@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { postJson } from '../../api/http'
 import { RegisterForm } from '../../components/auth/RegisterForm'
 import { RegisterSupportLinks } from '../../components/auth/RegisterSupportLinks'
-import { VerifyEmailModal } from '../../components/auth/VerifyEmailModal'
 import type { RegisterFormModel, ApiError } from '../../types/auth'
 
 export default function Register() {
@@ -14,12 +13,9 @@ export default function Register() {
     return searchParams.get('returnUrl') ?? '/game/current'
   }, [searchParams])
   
-  const modalType = searchParams.get('modal')
-  
   const [error, setError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryAfter, setRetryAfter] = useState<number | undefined>()
-  const [registeredEmail, setRegisteredEmail] = useState<string | undefined>()
   const retryTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Cleanup retry timer on unmount
@@ -68,8 +64,12 @@ export default function Register() {
     setIsSubmitting(false)
     
     if (ok) {
-      // Registration successful - save email and show verify modal
-      setRegisteredEmail(model.email)
+      const target = new URLSearchParams()
+      target.set('email', model.email)
+      if (returnUrl) {
+        target.set('returnUrl', returnUrl)
+      }
+      navigate(`/verify-email?${target.toString()}`, { replace: true })
       return
     }
     
@@ -137,19 +137,6 @@ export default function Register() {
     }
   }
 
-  function closeModal() {
-    // If on verify modal after registration, navigate to login
-    if (registeredEmail) {
-      const loginUrl = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
-      navigate(loginUrl, { replace: true })
-      return
-    }
-    
-    const url = new URL(window.location.href)
-    url.searchParams.delete('modal')
-    navigate(url.pathname + (url.search ? `?${url.searchParams.toString()}` : ''), { replace: true })
-  }
-
   return (
     <>
       <main data-testid="register-page" className="mx-auto max-w-md p-6">
@@ -172,8 +159,6 @@ export default function Register() {
         )}
       </main>
 
-      {modalType === 'verify' && <VerifyEmailModal email={searchParams.get('email') ?? undefined} onRequestClose={closeModal} />}
-      {registeredEmail && <VerifyEmailModal email={registeredEmail} onRequestClose={closeModal} />}
     </>
   )
 }

@@ -694,8 +694,8 @@ function renderTiles(
       // Actual hex content: 170x196 (after removing padding)
       const IMG_WIDTH = 274
       const IMG_HEIGHT = 274
-      const IMG_PADDING_H = 52
-      const IMG_PADDING_V = 39
+      const IMG_PADDING_H = 53
+      const IMG_PADDING_V = 40
       
       // Source rectangle (crop to hex content only, no padding)
       const srcX = IMG_PADDING_H
