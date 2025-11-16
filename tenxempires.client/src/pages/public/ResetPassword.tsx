@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { postJson } from '../../api/http'
 import type {
@@ -19,7 +19,6 @@ const resetSchema = z
   })
 
 export default function ResetPassword() {
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
   const emailParam = searchParams.get('email') ?? ''

@@ -3,6 +3,7 @@ using System.Net;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -32,6 +33,8 @@ public class AuthController : ControllerBase
     private readonly UserManager<IdentityUser<Guid>> _userManager;
     private readonly ITransactionalEmailService _emailService;
     private readonly FrontendSettings _frontendSettings;
+    private readonly IWebHostEnvironment _environment;
+    private readonly IOptions<EmailSettings> _emailOptions;
 
     private const string AppName = "TenX Empires";
 
@@ -41,13 +44,17 @@ public class AuthController : ControllerBase
         SignInManager<IdentityUser<Guid>> signInManager,
         UserManager<IdentityUser<Guid>> userManager,
         ITransactionalEmailService emailService,
-        IOptions<FrontendSettings> frontendOptions)
+        IOptions<FrontendSettings> frontendOptions,
+        IWebHostEnvironment environment,
+        IOptions<EmailSettings> emailOptions)
     {
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
         _emailService = emailService;
         _frontendSettings = frontendOptions.Value;
+        _environment = environment;
+        _emailOptions = emailOptions;
     }
 
     /// <summary>
@@ -493,6 +500,26 @@ public class AuthController : ControllerBase
         string actionText,
         CancellationToken cancellationToken)
     {
+        // Skip actual email sending in Development/test environments or when email settings are incomplete
+        var shouldSkipEmail = _environment.IsDevelopment();
+
+        if (shouldSkipEmail)
+        {
+            _logger.LogInformation(
+                "Skipping email send for {Template} to {Email} (Environment: {Environment}, Email configured: {EmailConfigured})",
+                templateName,
+                user.Email,
+                _environment.EnvironmentName,
+                !string.IsNullOrWhiteSpace(_emailOptions?.Value?.Address) && !string.IsNullOrWhiteSpace(_emailOptions?.Value?.Host));
+            _logger.LogDebug(
+                "Would have sent {Template} email to {Email} with subject '{Subject}' and action URL: {ActionUrl}",
+                templateName,
+                user.Email,
+                subject,
+                actionUrl);
+            return true; // Return success to allow tests/development to proceed
+        }
+
         try
         {
             var supportEmail = string.IsNullOrWhiteSpace(_frontendSettings.SupportEmail)

@@ -35,7 +35,7 @@ export default function VerifyEmail() {
       setStatusMessage(undefined)
       const { ok, status, data } = await postJson<ConfirmEmailRequest, ApiError>(
         '/api/auth/confirm-email',
-        { email: emailParam, token },
+        { email: emailParam, token: token! },
       )
       if (cancelled) {
         return
