@@ -20,6 +20,18 @@ export interface RegisterFormModel {
   confirm?: string
 }
 
+export interface ConfirmEmailRequest {
+  email: string
+  token: string
+}
+
+export interface CompleteResetPasswordRequest {
+  email: string
+  token: string
+  password: string
+  confirm: string
+}
+
 // Backend ApiErrorDto structure (serialized as camelCase)
 export interface ApiError {
   code: string

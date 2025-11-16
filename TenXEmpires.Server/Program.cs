@@ -3,6 +3,7 @@ using Asp.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Swashbuckle.AspNetCore.Filters;
+using TenXEmpires.Server.Domain.Configuration;
 using TenXEmpires.Server.Domain.Services;
 using TenXEmpires.Server.Infrastructure;
 using TenXEmpires.Server.Infrastructure.Data;
@@ -13,6 +14,8 @@ using TenXEmpires.Server.Domain.DataContracts;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Diagnostics;
+using TenXEmpires.Server.Infrastructure.Security;
+using TenXEmpires.Server.Infrastructure.Services.Email;
 
 namespace TenXEmpires.Server
 {
@@ -49,8 +52,12 @@ namespace TenXEmpires.Server
                 options.UseNpgsql(connectionString));
 
             // Register configuration settings
-            builder.Services.Configure<TenXEmpires.Server.Domain.Configuration.GameSettings>(
+            builder.Services.Configure<GameSettings>(
                 builder.Configuration.GetSection("GameSettings"));
+            builder.Services.Configure<EmailSettings>(
+                builder.Configuration.GetSection("Email"));
+            builder.Services.Configure<FrontendSettings>(
+                builder.Configuration.GetSection("Frontend"));
 
             // Register application services
             builder.Services.AddScoped<ILookupService, LookupService>();
@@ -60,6 +67,9 @@ namespace TenXEmpires.Server
             builder.Services.AddScoped<ITurnService, TurnService>();
             builder.Services.AddScoped<IActionService, ActionService>();
             builder.Services.AddScoped<ISaveService, SaveService>();
+            builder.Services.AddSingleton<ISecretProtector, SecretProtector>();
+            builder.Services.AddSingleton<IEmailTemplateRenderer, FileSystemEmailTemplateRenderer>();
+            builder.Services.AddScoped<ITransactionalEmailService, TransactionalEmailService>();
             builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
             builder.Services.AddSingleton<IIdempotencyStore, MemoryIdempotencyStore>();
             builder.Services.AddSingleton<IAiNameGenerator, AiNameGenerator>();
@@ -249,7 +259,7 @@ namespace TenXEmpires.Server
                         : CookieSecurePolicy.Always;
                     // For cross-origin requests (production), do NOT set Domain attribute
                     // Browsers will reject cookies with Domain attribute in cross-origin scenarios
-                    // The cookie will be scoped to the backend origin (tenxempires-backend-3vir4.ondigitalocean.app)
+                    // The cookie will be scoped to the backend origin (backend.ondigitalocean.app)
                     // and will be sent automatically with credentials: 'include' from the frontend
                     // Only set Domain for same-origin scenarios (development with shared domain)
                     if (!string.IsNullOrEmpty(sharedCookieDomain) && builder.Environment.IsDevelopment())

@@ -5,7 +5,7 @@
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-![License](https://img.shields.io/badge/License-TBD-lightgrey)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ### Table of Contents
 - [Project description](#project-description)
@@ -180,9 +180,9 @@ If a formal PRD exists, link it here when available.
 ## Project status
 - Status: Early-stage/bootstrap
 - Active development; APIs and UI are expected to evolve
-- CI/CD and comprehensive documentation to be added
+- CI/CD: GitHub Actions workflows (`.github/workflows/main.yml`, `pr.yml`, `deploy-*.yml`) run lint/test suites and coordinate deployments
+- Documentation: PRD, UI plans, API/test plans, and other living docs live under `.ai/` and `docs/` and are kept current alongside the codebase
 
 ## License
-License: TBD. Add a `LICENSE` file and update this section and badge accordingly.
-
+This project is licensed under the [MIT License](LICENSE).
 

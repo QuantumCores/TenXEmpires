@@ -15,6 +15,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{02EA681E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMigrate", "tools\DbMigrate\DbMigrate.csproj", "{4FD49FD9-EBE0-D1F7-31F2-A5501842EE7D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmailCrypto", "tools\EmailCrypto\EmailCrypto.csproj", "{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TenXEmpires.Server.Tests", "TenXEmpires.Server.Tests\TenXEmpires.Server.Tests.csproj", "{687C73D7-25FE-4F99-B07B-4F2E9160880A}"
 EndProject
 Global
@@ -85,6 +87,18 @@ Global
 		{4FD49FD9-EBE0-D1F7-31F2-A5501842EE7D}.Release|x64.Build.0 = Release|Any CPU
 		{4FD49FD9-EBE0-D1F7-31F2-A5501842EE7D}.Release|x86.ActiveCfg = Release|Any CPU
 		{4FD49FD9-EBE0-D1F7-31F2-A5501842EE7D}.Release|x86.Build.0 = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|x64.Build.0 = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Debug|x86.Build.0 = Debug|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|x64.ActiveCfg = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|x64.Build.0 = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|x86.ActiveCfg = Release|Any CPU
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7}.Release|x86.Build.0 = Release|Any CPU
 		{687C73D7-25FE-4F99-B07B-4F2E9160880A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{687C73D7-25FE-4F99-B07B-4F2E9160880A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{687C73D7-25FE-4F99-B07B-4F2E9160880A}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -103,6 +117,7 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{4FD49FD9-EBE0-D1F7-31F2-A5501842EE7D} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{17F9D4F6-6F3F-4B40-85F5-8B2C1A01AFB7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FF3E686C-E35A-44C5-BF98-9169F62275EB}

@@ -4,8 +4,6 @@ import { postJson } from '../../api/http'
 import { useQueryClient } from '@tanstack/react-query'
 import { LoginForm } from '../../components/auth/LoginForm'
 import { LoginSupportLinks } from '../../components/auth/LoginSupportLinks'
-import { ForgotPasswordModal } from '../../components/auth/ForgotPasswordModal'
-import { VerifyEmailModal } from '../../components/auth/VerifyEmailModal'
 import type { LoginFormModel, ApiError } from '../../types/auth'
 
 export default function Login() {
@@ -16,9 +14,6 @@ export default function Login() {
   const returnUrl = useMemo(() => {
     return searchParams.get('returnUrl') ?? '/game/current'
   }, [searchParams])
-  
-  const modalType = searchParams.get('modal')
-  const emailParam = searchParams.get('email') ?? undefined
   
   const [error, setError] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -57,12 +52,6 @@ export default function Login() {
     }
   }
 
-  function closeModal() {
-    const url = new URL(window.location.href)
-    url.searchParams.delete('modal')
-    navigate(url.pathname + (url.search ? `?${url.searchParams.toString()}` : ''), { replace: true })
-  }
-
   return (
     <>
       <main className="mx-auto max-w-md p-6">
@@ -84,8 +73,6 @@ export default function Login() {
         )}
       </main>
 
-      {modalType === 'forgot' && <ForgotPasswordModal onRequestClose={closeModal} />}
-      {modalType === 'verify' && <VerifyEmailModal email={emailParam} onRequestClose={closeModal} />}
     </>
   )
 }

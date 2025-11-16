@@ -31,4 +31,10 @@
     <ProjectReference Include="..\TenXEmpires.Server.Infrastructure\TenXEmpires.Server.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="EmailTemplates\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
