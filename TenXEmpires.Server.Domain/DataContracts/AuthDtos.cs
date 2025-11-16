@@ -25,3 +25,22 @@ public sealed record ForgotPasswordRequestDto(
 
 public sealed record ResendVerificationRequestDto(
     [EmailAddress] string? Email);
+
+public sealed record ConfirmEmailRequestDto(
+    [Required, EmailAddress] string Email,
+    [Required] string Token);
+
+public sealed record ResetPasswordRequestDto
+{
+    [Required, EmailAddress]
+    public string Email { get; init; } = string.Empty;
+
+    [Required]
+    public string Token { get; init; } = string.Empty;
+
+    [Required, MinLength(8)]
+    public string Password { get; init; } = string.Empty;
+
+    [Required, Compare(nameof(Password))]
+    public string Confirm { get; init; } = string.Empty;
+}

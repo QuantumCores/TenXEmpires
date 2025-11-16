@@ -8,6 +8,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using TenXEmpires.Server.Controllers;
 using TenXEmpires.Server.Domain.DataContracts;
+using TenXEmpires.Server.Domain.Configuration;
+using TenXEmpires.Server.Domain.Services;
+using Microsoft.Extensions.Options;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
@@ -16,6 +19,8 @@ public class AuthControllerTests
     private readonly Mock<ILogger<AuthController>> _loggerMock;
     private readonly Mock<SignInManager<IdentityUser<Guid>>> _signInManagerMock;
     private readonly Mock<UserManager<IdentityUser<Guid>>> _userManagerMock;
+    private readonly Mock<ITransactionalEmailService> _emailServiceMock;
+    private readonly IOptions<FrontendSettings> _frontendOptions;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
@@ -36,10 +41,29 @@ public class AuthControllerTests
             claimsPrincipalFactoryMock.Object,
             null!, null!, null!, null!);
 
+        _emailServiceMock = new Mock<ITransactionalEmailService>();
+        _emailServiceMock
+            .Setup(es => es.SendTemplateAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, string?>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _frontendOptions = Options.Create(new FrontendSettings
+        {
+            BaseUrl = "https://example.com",
+            VerifyEmailPath = "/verify",
+            ResetPasswordPath = "/reset",
+            SupportEmail = "support@example.com"
+        });
+
         _controller = new AuthController(
             _loggerMock.Object, 
             _signInManagerMock.Object, 
-            _userManagerMock.Object)
+            _userManagerMock.Object,
+            _emailServiceMock.Object,
+            _frontendOptions)
         {
             ControllerContext = new ControllerContext
             {
@@ -129,6 +153,49 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task ForgotPassword_ShouldReturn500_WhenEmailSendFails()
+    {
+        var request = new ForgotPasswordRequestDto(Email: "test@example.com");
+        var user = new IdentityUser<Guid>
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@example.com",
+            UserName = "test@example.com"
+        };
+
+        _userManagerMock.Setup(um => um.FindByEmailAsync(It.IsAny<string>()))
+            .ReturnsAsync(user);
+        _userManagerMock.Setup(um => um.GeneratePasswordResetTokenAsync(It.IsAny<IdentityUser<Guid>>()))
+            .ReturnsAsync("reset-token-12345");
+
+        _emailServiceMock
+            .Setup(es => es.SendTemplateAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, string?>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("smtp failed"));
+
+        var result = await _controller.ForgotPassword(request);
+
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("EMAIL_FAILED");
+
+        // Restore default behavior for subsequent tests
+        _emailServiceMock
+            .Setup(es => es.SendTemplateAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, string?>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+    }
+
+    [Fact]
     public async Task ForgotPassword_ShouldReturn204_WhenUserDoesNotExist()
     {
         // Arrange
@@ -147,14 +214,13 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task ForgotPassword_ShouldLogToken_WhenUserExists()
+    public async Task ForgotPassword_ShouldSendEmail_WhenUserExists()
     {
         // Arrange
         var request = new ForgotPasswordRequestDto(Email: "test@example.com");
-        var userId = Guid.NewGuid();
         var user = new IdentityUser<Guid>
         {
-            Id = userId,
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             UserName = "test@example.com"
         };
@@ -170,15 +236,13 @@ public class AuthControllerTests
 
         // Assert
         result.Should().BeOfType<NoContentResult>();
-        
-        // Verify logging occurred (check that LogInformation was called)
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains(userId.ToString())),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+        _emailServiceMock.Verify(
+            es => es.SendTemplateAsync(
+                user.Email!,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyDictionary<string, string?>>(),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -374,6 +438,150 @@ public class AuthControllerTests
         // Assert
         result.Should().BeOfType<NoContentResult>();
         _signInManagerMock.Verify(sm => sm.SignInAsync(It.IsAny<IdentityUser<Guid>>(), true, null), Times.Once);
+    }
+
+    #endregion
+
+    #region ConfirmEmail Endpoint Tests
+
+    [Fact]
+    public async Task ConfirmEmail_ShouldReturn400_WhenInputInvalid()
+    {
+        var result = await _controller.ConfirmEmail(new ConfirmEmailRequestDto(string.Empty, string.Empty));
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("INVALID_INPUT");
+    }
+
+    [Fact]
+    public async Task ConfirmEmail_ShouldReturn204_WhenAlreadyConfirmed()
+    {
+        var user = new IdentityUser<Guid> { Email = "user@example.com", EmailConfirmed = true };
+        _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+
+        var result = await _controller.ConfirmEmail(new ConfirmEmailRequestDto(user.Email!, "token"));
+        result.Should().BeOfType<NoContentResult>();
+        _userManagerMock.Verify(um => um.ConfirmEmailAsync(It.IsAny<IdentityUser<Guid>>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ConfirmEmail_ShouldReturn204_WhenConfirmationSucceeds()
+    {
+        var user = new IdentityUser<Guid> { Email = "user@example.com", EmailConfirmed = false };
+        _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+        _userManagerMock.Setup(um => um.ConfirmEmailAsync(user, "token")).ReturnsAsync(IdentityResult.Success);
+
+        var result = await _controller.ConfirmEmail(new ConfirmEmailRequestDto(user.Email!, "token"));
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task ConfirmEmail_ShouldReturn400_WhenUserMissing()
+    {
+        _userManagerMock.Setup(um => um.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((IdentityUser<Guid>?)null);
+
+        var result = await _controller.ConfirmEmail(new ConfirmEmailRequestDto("missing@example.com", "token"));
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("INVALID_TOKEN");
+    }
+
+    [Fact]
+    public async Task ConfirmEmail_ShouldReturn400_WhenIdentityReturnsErrors()
+    {
+        var user = new IdentityUser<Guid> { Email = "user@example.com", EmailConfirmed = false };
+        _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+        _userManagerMock
+            .Setup(um => um.ConfirmEmailAsync(user, "token"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Token invalid" }));
+
+        var result = await _controller.ConfirmEmail(new ConfirmEmailRequestDto(user.Email!, "token"));
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("CONFIRMATION_FAILED");
+    }
+
+    #endregion
+
+    #region ResetPassword Endpoint Tests
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturn400_WhenPasswordsDoNotMatch()
+    {
+        var request = new ResetPasswordRequestDto
+        {
+            Email = "user@example.com",
+            Token = "token",
+            Password = "Password123!",
+            Confirm = "Mismatch123!"
+        };
+
+        var result = await _controller.ResetPassword(request);
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("PASSWORDS_DO_NOT_MATCH");
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturn204_WhenSuccess()
+    {
+        var user = new IdentityUser<Guid> { Email = "user@example.com" };
+        var request = new ResetPasswordRequestDto
+        {
+            Email = user.Email!,
+            Token = "token",
+            Password = "Password123!",
+            Confirm = "Password123!"
+        };
+
+        _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+        _userManagerMock
+            .Setup(um => um.ResetPasswordAsync(user, request.Token, request.Password))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await _controller.ResetPassword(request);
+        result.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturn400_WhenUserMissing()
+    {
+        _userManagerMock.Setup(um => um.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((IdentityUser<Guid>?)null);
+        var request = new ResetPasswordRequestDto
+        {
+            Email = "missing@example.com",
+            Token = "token",
+            Password = "Password123!",
+            Confirm = "Password123!"
+        };
+
+        var result = await _controller.ResetPassword(request);
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("INVALID_TOKEN");
+    }
+
+    [Fact]
+    public async Task ResetPassword_ShouldReturn400_WhenIdentityFails()
+    {
+        var user = new IdentityUser<Guid> { Email = "user@example.com" };
+        _userManagerMock.Setup(um => um.FindByEmailAsync(user.Email!)).ReturnsAsync(user);
+        _userManagerMock
+            .Setup(um => um.ResetPasswordAsync(user, "token", "Password123!"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Token invalid" }));
+
+        var request = new ResetPasswordRequestDto
+        {
+            Email = user.Email!,
+            Token = "token",
+            Password = "Password123!",
+            Confirm = "Password123!"
+        };
+
+        var result = await _controller.ResetPassword(request);
+        var objectResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        var error = objectResult.Value.Should().BeOfType<ApiErrorDto>().Subject;
+        error.Code.Should().Be("RESET_FAILED");
     }
 
     #endregion

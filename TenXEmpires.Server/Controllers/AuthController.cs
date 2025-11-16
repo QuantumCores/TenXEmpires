@@ -1,11 +1,17 @@
+using System.Globalization;
+using System.Net;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Filters;
 using TenXEmpires.Server.Domain.DataContracts;
+using TenXEmpires.Server.Domain.Configuration;
+using TenXEmpires.Server.Domain.Constants;
+using TenXEmpires.Server.Domain.Services;
 
 namespace TenXEmpires.Server.Controllers;
 
@@ -24,16 +30,24 @@ public class AuthController : ControllerBase
     private readonly ILogger<AuthController> _logger;
     private readonly SignInManager<IdentityUser<Guid>> _signInManager;
     private readonly UserManager<IdentityUser<Guid>> _userManager;
+    private readonly ITransactionalEmailService _emailService;
+    private readonly FrontendSettings _frontendSettings;
+
+    private const string AppName = "TenX Empires";
 
     [ActivatorUtilitiesConstructor]
     public AuthController(
         ILogger<AuthController> logger,
         SignInManager<IdentityUser<Guid>> signInManager,
-        UserManager<IdentityUser<Guid>> userManager)
+        UserManager<IdentityUser<Guid>> userManager,
+        ITransactionalEmailService emailService,
+        IOptions<FrontendSettings> frontendOptions)
     {
         _logger = logger;
         _signInManager = signInManager;
         _userManager = userManager;
+        _emailService = emailService;
+        _frontendSettings = frontendOptions.Value;
     }
 
     /// <summary>
@@ -143,12 +157,14 @@ public class AuthController : ControllerBase
             return BadRequest(new ApiErrorDto("USER_EXISTS", "An account with this email already exists."));
         }
 
+        var cancellationToken = HttpContext.RequestAborted;
+
         var user = new IdentityUser<Guid>
         {
             Id = Guid.NewGuid(),
             UserName = body.Email,
             Email = body.Email,
-            EmailConfirmed = true,
+            EmailConfirmed = false,
         };
 
         var createResult = await _userManager.CreateAsync(user, body.Password);
@@ -156,6 +172,15 @@ public class AuthController : ControllerBase
         {
             var message = string.Join("; ", createResult.Errors.Select(e => e.Description));
             return BadRequest(new ApiErrorDto("REGISTRATION_FAILED", message));
+        }
+
+        var verificationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+        var sent = await TrySendVerificationEmailAsync(user, verificationToken, cancellationToken);
+        if (!sent)
+        {
+            _logger.LogWarning("Registration email failed for user {UserId}. Rolling back account creation.", user.Id);
+            await _userManager.DeleteAsync(user);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorDto("EMAIL_FAILED", "Unable to send verification email. Please try again."));
         }
 
         await _signInManager.SignInAsync(user, isPersistent: true);
@@ -249,33 +274,31 @@ public class AuthController : ControllerBase
         {
             return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email is required."));
         }
+        var cancellationToken = HttpContext.RequestAborted;
 
         // Find user by email
         var user = await _userManager.FindByEmailAsync(body.Email);
         
         // Always return success to prevent account enumeration
         // If user exists, generate and log the reset token (email sending not implemented yet)
-        if (user is not null)
-        {
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            
-            // TODO: Send email with reset link containing the token
-            // For now, just log it for development purposes
-            _logger.LogInformation(
-                "Password reset requested for user {UserId}. Token: {Token} (Email sending not implemented)",
-                user.Id,
-                token
-            );
-        }
-        else
+        if (user is null)
         {
             _logger.LogInformation(
                 "Password reset requested for non-existent email: {Email}",
                 body.Email
             );
+            return NoContent();
         }
 
-        // Always return 204 regardless of whether user exists
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var sent = await TrySendPasswordResetEmailAsync(user, token, cancellationToken);
+        if (!sent)
+        {
+            _logger.LogWarning("Password reset email failed to dispatch for user {UserId}.", user.Id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ApiErrorDto("EMAIL_FAILED", "Unable to send password reset email. Please try again."));
+        }
+
+        // Always return 204 to avoid enumeration when successful
         return NoContent();
     }
 
@@ -300,6 +323,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ResendVerification([FromBody] TenXEmpires.Server.Domain.DataContracts.ResendVerificationRequestDto body)
     {
         string? targetEmail = null;
+        var cancellationToken = HttpContext.RequestAborted;
 
         // If user is authenticated, use their email
         if (User?.Identity?.IsAuthenticated == true)
@@ -330,14 +354,11 @@ public class AuthController : ControllerBase
         if (user is not null && !user.EmailConfirmed)
         {
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            
-            // TODO: Send email with verification link containing the token
-            // For now, just log it for development purposes
-            _logger.LogInformation(
-                "Email verification requested for user {UserId}. Token: {Token} (Email sending not implemented)",
-                user.Id,
-                token
-            );
+            var sent = await TrySendVerificationEmailAsync(user, token, cancellationToken);
+            if (!sent)
+            {
+                _logger.LogWarning("Verification email resend failed for user {UserId}.", user.Id);
+            }
         }
         else if (user is not null && user.EmailConfirmed)
         {
@@ -356,5 +377,169 @@ public class AuthController : ControllerBase
 
         // Always return 204 regardless of whether user exists or is already verified
         return NoContent();
+    }
+
+    /// <summary>
+    /// Confirms a user's email address using the token sent via email.
+    /// </summary>
+    /// <response code="204">Email confirmed.</response>
+    /// <response code="400">Invalid input, token, or email.</response>
+    [HttpPost("confirm-email")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequestDto body)
+    {
+        if (body is null || string.IsNullOrWhiteSpace(body.Email) || string.IsNullOrWhiteSpace(body.Token))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email and token are required."));
+        }
+
+        var user = await _userManager.FindByEmailAsync(body.Email);
+        if (user is null)
+        {
+            _logger.LogWarning("Email confirmation attempted for non-existent email: {Email}", body.Email);
+            return BadRequest(new ApiErrorDto("INVALID_TOKEN", "Invalid or expired verification link."));
+        }
+
+        if (user.EmailConfirmed)
+        {
+            return NoContent();
+        }
+
+        var confirmResult = await _userManager.ConfirmEmailAsync(user, body.Token);
+        if (!confirmResult.Succeeded)
+        {
+            var message = string.Join("; ", confirmResult.Errors.Select(e => e.Description));
+            _logger.LogWarning("Email confirmation failed for user {UserId}. Errors: {Errors}", user.Id, message);
+            return BadRequest(new ApiErrorDto("CONFIRMATION_FAILED", message));
+        }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Completes a password reset using the provided token.
+    /// </summary>
+    /// <response code="204">Password reset successfully.</response>
+    /// <response code="400">Invalid input, token, or user.</response>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ApiErrorDto), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto body)
+    {
+        if (body is null ||
+            string.IsNullOrWhiteSpace(body.Email) ||
+            string.IsNullOrWhiteSpace(body.Token) ||
+            string.IsNullOrWhiteSpace(body.Password) ||
+            string.IsNullOrWhiteSpace(body.Confirm))
+        {
+            return BadRequest(new ApiErrorDto("INVALID_INPUT", "Email, token, and password are required."));
+        }
+
+        if (!string.Equals(body.Password, body.Confirm, StringComparison.Ordinal))
+        {
+            return BadRequest(new ApiErrorDto("PASSWORDS_DO_NOT_MATCH", "Passwords do not match."));
+        }
+
+        var user = await _userManager.FindByEmailAsync(body.Email);
+        if (user is null)
+        {
+            _logger.LogWarning("Password reset attempted for non-existent email: {Email}", body.Email);
+            return BadRequest(new ApiErrorDto("INVALID_TOKEN", "Invalid or expired password reset link."));
+        }
+
+        var resetResult = await _userManager.ResetPasswordAsync(user, body.Token, body.Password);
+        if (!resetResult.Succeeded)
+        {
+            var message = string.Join("; ", resetResult.Errors.Select(e => e.Description));
+            _logger.LogWarning("Password reset failed for user {UserId}. Errors: {Errors}", user.Id, message);
+            return BadRequest(new ApiErrorDto("RESET_FAILED", message));
+        }
+
+        return NoContent();
+    }
+
+    private Task<bool> TrySendVerificationEmailAsync(IdentityUser<Guid> user, string token, CancellationToken cancellationToken)
+    {
+        var actionUrl = BuildFrontendLink(_frontendSettings.VerifyEmailPath, ("email", user.Email ?? string.Empty), ("token", token));
+        return TrySendTemplateAsync(
+            user,
+            $"{AppName} - verify your email",
+            EmailTemplateNames.VerifyEmail,
+            actionUrl,
+            "Verify Email",
+            cancellationToken);
+    }
+
+    private Task<bool> TrySendPasswordResetEmailAsync(IdentityUser<Guid> user, string token, CancellationToken cancellationToken)
+    {
+        var actionUrl = BuildFrontendLink(_frontendSettings.ResetPasswordPath, ("email", user.Email ?? string.Empty), ("token", token));
+        return TrySendTemplateAsync(
+            user,
+            $"{AppName} - reset your password",
+            EmailTemplateNames.PasswordReset,
+            actionUrl,
+            "Reset Password",
+            cancellationToken);
+    }
+
+    private async Task<bool> TrySendTemplateAsync(
+        IdentityUser<Guid> user,
+        string subject,
+        string templateName,
+        string actionUrl,
+        string actionText,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var supportEmail = string.IsNullOrWhiteSpace(_frontendSettings.SupportEmail)
+                ? "support@tenxempires.com"
+                : _frontendSettings.SupportEmail;
+            var tokens = new Dictionary<string, string?>
+            {
+                ["UserEmail"] = user.Email,
+                ["ActionUrl"] = actionUrl,
+                ["ActionText"] = actionText,
+                ["AppName"] = AppName,
+                ["SupportEmail"] = supportEmail,
+                ["Year"] = DateTimeOffset.UtcNow.Year.ToString(CultureInfo.InvariantCulture)
+            };
+
+            await _emailService.SendTemplateAsync(
+                user.Email!,
+                subject,
+                templateName,
+                tokens,
+                cancellationToken);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send {Template} email to user {UserId}.", templateName, user.Id);
+            return false;
+        }
+    }
+
+    private string BuildFrontendLink(string? relativePath, params (string Key, string Value)[] query)
+    {
+        var baseUrl = string.IsNullOrWhiteSpace(_frontendSettings.BaseUrl)
+            ? "http://localhost:5173"
+            : _frontendSettings.BaseUrl.TrimEnd('/');
+
+        var normalizedPath = string.IsNullOrWhiteSpace(relativePath)
+            ? string.Empty
+            : relativePath!.StartsWith("/", StringComparison.Ordinal)
+                ? relativePath
+                : "/" + relativePath;
+
+        var queryString = string.Join("&", query.Select(pair =>
+            $"{WebUtility.UrlEncode(pair.Key)}={WebUtility.UrlEncode(pair.Value)}"));
+
+        return string.IsNullOrEmpty(queryString)
+            ? $"{baseUrl}{normalizedPath}"
+            : $"{baseUrl}{normalizedPath}?{queryString}";
     }
 }

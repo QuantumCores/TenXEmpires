@@ -62,6 +62,20 @@ const router = createBrowserRouter([
     }
   },
   { 
+    path: '/verify-email',
+    lazy: async () => {
+      const { default: VerifyEmail } = await import('../pages/public/VerifyEmail')
+      return { Component: VerifyEmail }
+    }
+  },
+  {
+    path: '/reset-password',
+    lazy: async () => {
+      const { default: ResetPassword } = await import('../pages/public/ResetPassword')
+      return { Component: ResetPassword }
+    }
+  },
+  { 
     path: '/unsupported', 
     lazy: async () => {
       const { default: Unsupported } = await import('../pages/public/Unsupported')
