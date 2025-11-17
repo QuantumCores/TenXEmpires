@@ -636,12 +636,23 @@ namespace TenXEmpires.Server.Infrastructure.Services;
                     }
                 }
 
-                // Resolve attack on city (capture now requires melee unit ending turn on city tile)
+                // Resolve attack on city
                 var dmg = CombatHelper.ResolveAttackOnCity(attacker, city);
+                var cityDefeated = city.Hp <= 0;
 
                 // Attacker marks as acted (never receives counterattack from city)
                 attacker.HasActed = true;
                 attacker.UpdatedAt = DateTimeOffset.UtcNow;
+
+                if (cityDefeated)
+                {
+                    await CityCaptureHelper.CaptureCityAsync(_context, city, attacker.ParticipantId, cancellationToken);
+                    _logger.LogInformation(
+                        "City {CityId} captured by participant {ParticipantId} after attack in game {GameId}",
+                        city.Id,
+                        attacker.ParticipantId,
+                        gameId);
+                }
 
                 await _context.SaveChangesAsync(cancellationToken);
 
