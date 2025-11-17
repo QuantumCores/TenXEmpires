@@ -175,7 +175,8 @@ export const DEFAULT_MANIFEST: ImageManifest = {
     'warrior', // Note: filename has typo (should be "warrior")
   ],
   city: [
-    // City sprites will use fallback
+    'human',
+    'enemy',
   ],
   resources: [
     'wood',

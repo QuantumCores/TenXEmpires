@@ -774,17 +774,18 @@ function renderFeatures(
     const pos = oddrToPixel(city.col, city.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
     const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
     const isPlayerCity = city.participantId === playerParticipant?.id
+    const cityImageKey = isPlayerCity ? 'human' : 'enemy'
 
     ctx.save()
     ctx.translate(screen.x, screen.y)
     ctx.scale(camera.scale, camera.scale)
 
     // Try to use PNG image for city
-    const cityImage = imageLoader.getImage('city', 'city')
+    const cityImage = imageLoader.getImage('city', cityImageKey)
     
     if (cityImage) {
       // Draw PNG image scaled relative to hex size
-      const size = hexMetrics.hexSize * 1.25
+      const size = hexMetrics.hexSize * 1.75
       ctx.drawImage(cityImage, -size / 2, -size / 2, size, size)
     } else {
       // Fallback to drawn sprite
