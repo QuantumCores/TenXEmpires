@@ -613,20 +613,21 @@ public class TurnService : ITurnService
         List<Unit> allUnits,
         Dictionary<string, int> harvestedTotals)
     {
-        var cityCube = HexagonalGrid.ConvertOddrToCube(city.Tile.Col, city.Tile.Row);
-        var underSiege = allUnits.Any(u => u.ParticipantId != city.ParticipantId &&
-            HexagonalGrid.GetCubeDistance(HexagonalGrid.ConvertOddrToCube(u.Tile.Col, u.Tile.Row), cityCube) <= 1);
-
         foreach (var link in city.CityTiles)
         {
             var tile = link.Tile;
             if (tile.ResourceType is null || tile.ResourceAmount <= 0)
                 continue;
 
-            if (underSiege)
+            var blockingUnit = allUnits.FirstOrDefault(u => u.ParticipantId != city.ParticipantId && u.TileId == tile.Id);
+            if (blockingUnit is not null)
             {
-                var enemyOnTile = allUnits.Any(u => u.ParticipantId != city.ParticipantId && u.TileId == tile.Id);
-                if (enemyOnTile) continue;
+                _logger.LogDebug(
+                    "City {CityId} skipped harvesting tile {TileId} due to enemy unit {UnitId} occupying it",
+                    city.Id,
+                    tile.Id,
+                    blockingUnit.Id);
+                continue;
             }
 
             var cr = city.CityResources.FirstOrDefault(r => r.ResourceType == tile.ResourceType);

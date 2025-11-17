@@ -102,4 +102,79 @@ public class TurnServiceEndTurnTests
         // Next participant units (human) have HasActed reset
         (await context.Units.Where(u => u.GameId == 1 && u.ParticipantId == human.Id).AllAsync(u => !u.HasActed)).Should().BeTrue();
     }
+
+    [Fact]
+    public async Task HarvestCityResources_SkipsEnemyOccupiedTiles_EvenIfNotUnderSiege()
+    {
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        await using var context = new TenXDbContext(options);
+
+        var map = new Map { Id = 1, Code = "m", SchemaVersion = 1, Width = 4, Height = 4 };
+        context.Maps.Add(map);
+        var tiles = new List<MapTile>();
+        for (int r = 0; r < 4; r++)
+        {
+            for (int c = 0; c < 4; c++)
+            {
+                tiles.Add(new MapTile { Id = r * 4 + c + 1, MapId = 1, Row = r, Col = c, Terrain = "plains" });
+            }
+        }
+        context.MapTiles.AddRange(tiles);
+
+        var human = new Participant { Id = 10, GameId = 1, Kind = ParticipantKind.Human, UserId = Guid.NewGuid(), DisplayName = "Human" };
+        var ai = new Participant { Id = 11, GameId = 1, Kind = ParticipantKind.Ai, DisplayName = "AI" };
+        context.Participants.AddRange(human, ai);
+        var game = new Game { Id = 1, UserId = human.UserId!.Value, MapId = 1, MapSchemaVersion = 1, TurnNo = 1, Status = GameStatus.Active, ActiveParticipantId = human.Id };
+        context.Games.Add(game);
+
+        var cityTile = tiles.First(t => t.Row == 0 && t.Col == 0);
+        var resourceTile = tiles.First(t => t.Row == 3 && t.Col == 3); // distant tile, not adjacent
+        resourceTile.ResourceType = ResourceTypes.Wood;
+        resourceTile.ResourceAmount = 3;
+
+        var city = new City { Id = 100, GameId = 1, ParticipantId = human.Id, TileId = cityTile.Id, Hp = 80, MaxHp = 100 };
+        context.Cities.Add(city);
+
+        var cityLink = new CityTile { GameId = 1, CityId = city.Id, TileId = resourceTile.Id };
+        context.CityTiles.Add(cityLink);
+        context.CityResources.Add(new CityResource { CityId = city.Id, ResourceType = ResourceTypes.Wood, Amount = 0 });
+
+        var blockingUnit = new Unit
+        {
+            Id = 200,
+            GameId = 1,
+            ParticipantId = ai.Id,
+            TileId = resourceTile.Id,
+            Tile = resourceTile,
+            Hp = 100,
+            TypeId = 1,
+            Type = new UnitDefinition { Id = 1, Code = UnitTypes.Warrior, Attack = 10, Defence = 10, Health = 100 }
+        };
+        context.UnitDefinitions.Add(blockingUnit.Type);
+        context.Units.Add(blockingUnit);
+
+        await context.SaveChangesAsync();
+
+        var turnService = new TurnService(context, Mock.Of<ILogger<TurnService>>());
+        var method = typeof(TurnService).GetMethod("HarvestCityResources", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+
+        var loadedCity = await context.Cities
+            .Include(c => c.CityResources)
+            .Include(c => c.CityTiles)
+                .ThenInclude(ct => ct.Tile)
+            .FirstAsync(c => c.Id == city.Id);
+        var allUnits = await context.Units.Include(u => u.Tile).ToListAsync();
+        var totals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        method!.Invoke(turnService, new object[] { loadedCity, allUnits, totals });
+
+        (await context.CityResources.Where(cr => cr.CityId == city.Id && cr.ResourceType == ResourceTypes.Wood).Select(cr => cr.Amount).FirstAsync())
+            .Should().Be(0, "harvest should be blocked when enemy occupies tile");
+        (await context.MapTiles.FindAsync(resourceTile.Id))!.ResourceAmount.Should().Be(3, "tile stock should remain untouched");
+        totals.ContainsKey(ResourceTypes.Wood).Should().BeFalse();
+    }
 }
