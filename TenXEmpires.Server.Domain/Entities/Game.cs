@@ -46,6 +46,8 @@ public class Game
     
     public ICollection<CityTile> CityTiles { get; set; } = new List<CityTile>();
     
+    public ICollection<GameTileState> GameTileStates { get; set; } = new List<GameTileState>();
+    
     public ICollection<Save> Saves { get; set; } = new List<Save>();
     
     public ICollection<Turn> Turns { get; set; } = new List<Turn>();

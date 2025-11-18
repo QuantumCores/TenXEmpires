@@ -54,7 +54,7 @@ public class GamesControllerAttackTests
             new GameStateGameDto(gameId, 1, 1, false, "active"),
             new GameStateMapDto(1, "code", 1, 8, 6),
             new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null);
+            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null);
         var expected = new ActionStateResponse(state);
 
         _actionServiceMock
@@ -154,7 +154,7 @@ public class GamesControllerAttackTests
             new GameStateGameDto(gameId, 1, 1, false, "active"),
             new GameStateMapDto(1, "code", 1, 8, 6),
             new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null);
+            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null);
         var expected = new ActionStateResponse(state);
 
         _actionServiceMock

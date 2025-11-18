@@ -41,6 +41,16 @@ public class AiTurnSummaryTests
         context.Games.Add(game);
         context.Participants.AddRange(human, ai);
 
+        foreach (var tile in tiles)
+        {
+            context.GameTileStates.Add(new GameTileState
+            {
+                GameId = game.Id,
+                TileId = tile.Id,
+                ResourceAmount = tile.ResourceAmount
+            });
+        }
+
         // AI city with resources for production (stone>=10 -> slinger)
         var aiCityTile = tiles.First(t => t.Row == 1 && t.Col == 1);
         var aiCity = new City { Id = 100, GameId = 1, ParticipantId = ai.Id, TileId = aiCityTile.Id, Hp = 100, MaxHp = 100 };

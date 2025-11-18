@@ -97,6 +97,9 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
     if (!tile) return null
 
     const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+    const tileState = (gameState.gameTiles ?? []).find((t) => t.tileId === tile.id)
+    const resourceType = tileState?.resourceType ?? tile.resourceType
+    const resourceAmount = tileState?.resourceAmount ?? tile.resourceAmount
 
     return (
       <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg">
@@ -106,11 +109,11 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
             <span className="text-slate-600">Terrain:</span>
             <span className="font-medium">{formatLabel(tile.terrain)}</span>
           </div>
-          {tile.resourceType && (
+          {resourceType && (
             <div className="flex justify-between gap-8">
               <span className="text-slate-600">Resource:</span>
               <span className="font-medium">
-                {formatLabel(tile.resourceType)} ({tile.resourceAmount})
+                {formatLabel(resourceType)} ({resourceAmount})
               </span>
             </div>
           )}

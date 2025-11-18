@@ -72,6 +72,16 @@ public class GameSeedingService : IGameSeedingService
             throw new InvalidOperationException($"No tiles found for map {mapId}.");
         }
 
+        // Create per-game tile state (copy template resource amounts)
+        var tileStates = allTiles.Select(t => new GameTileState
+        {
+            GameId = gameId,
+            TileId = t.Id,
+            ResourceAmount = t.ResourceAmount
+        }).ToList();
+        _context.GameTileStates.AddRange(tileStates);
+        await _context.SaveChangesAsync(cancellationToken);
+
         // Determine starting positions using RNG seed
         var random = new Random((int)(rngSeed % int.MaxValue));
         //var startingPositions = DetermineStartingPositions(allTiles, map.Width, map.Height, random);

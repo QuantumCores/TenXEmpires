@@ -469,7 +469,12 @@ public class SaveService : ISaveService
                 $"DELETE FROM app.units WHERE game_id = {gameId}",
                 cancellationToken);
 
-            // 5. Turns (delete turns at or after the restored turn number to avoid duplicate key violations)
+            // 5. Per-game tile states
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM app.game_tile_states WHERE game_id = {gameId}",
+                cancellationToken);
+
+            // 6. Turns (delete turns at or after the restored turn number to avoid duplicate key violations)
             // We restore to save.TurnNo, so delete turns >= save.TurnNo since we'll be recreating them
             await _context.Database.ExecuteSqlInterpolatedAsync(
                 $"DELETE FROM app.turns WHERE game_id = {gameId} AND turn_no >= {save.TurnNo}",
@@ -555,6 +560,37 @@ public class SaveService : ISaveService
                     Amount = crDto.Amount
                 };
                 _context.CityResources.Add(cityResource);
+            }
+
+            // Restore per-game tile resource state
+            if (savedState.GameTiles is { Count: > 0 })
+            {
+                foreach (var tileDto in savedState.GameTiles)
+                {
+                    _context.GameTileStates.Add(new GameTileState
+                    {
+                        GameId = gameId,
+                        TileId = tileDto.TileId,
+                        ResourceAmount = tileDto.ResourceAmount
+                    });
+                }
+            }
+            else
+            {
+                // Fallback for legacy saves without per-tile data: copy from template map
+                var mapTilesForGame = await _context.MapTiles
+                    .Where(t => t.MapId == game.MapId)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var tile in mapTilesForGame)
+                {
+                    _context.GameTileStates.Add(new GameTileState
+                    {
+                        GameId = gameId,
+                        TileId = tile.Id,
+                        ResourceAmount = tile.ResourceAmount
+                    });
+                }
             }
 
             await _context.SaveChangesAsync(cancellationToken);

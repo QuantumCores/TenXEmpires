@@ -62,6 +62,7 @@ public class SaveServiceTests
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null);
 
@@ -681,6 +682,7 @@ public class SaveServiceLoadTests
                 new CityResourceDto(301, "food", 10),
                 new CityResourceDto(301, "production", 5)
             },
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null
         );
@@ -714,6 +716,7 @@ public class SaveServiceLoadTests
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null
         );
@@ -951,6 +954,7 @@ public class SaveServiceLoadTests
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null
         );
@@ -982,6 +986,7 @@ public class SaveServiceLoadTests
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null
         );
@@ -1004,5 +1009,3 @@ public class SaveServiceLoadTests
         gameStateServiceMock.Verify(s => s.BuildGameStateAsync(gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 }
-
-

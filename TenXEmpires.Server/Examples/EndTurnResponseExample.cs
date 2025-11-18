@@ -61,6 +61,12 @@ public class EndTurnResponseExample : IExamplesProvider<EndTurnResponse>
             new CityResourceDto(302, "iron", 1)
         };
 
+        var tileStates = new List<GameTileStateDto>
+        {
+            new GameTileStateDto(3, "wheat", 74),
+            new GameTileStateDto(45, "iron", 18)
+        };
+
         var unitDefinitions = new List<UnitDefinitionDto>
         {
             new UnitDefinitionDto(1, "warrior", false, 20, 10, 0, 0, 2, 100),
@@ -75,6 +81,7 @@ public class EndTurnResponseExample : IExamplesProvider<EndTurnResponse>
             cities,
             cityTiles,
             cityResources,
+            tileStates,
             unitDefinitions,
             TurnSummary: null);
 
@@ -91,4 +98,3 @@ public class EndTurnResponseExample : IExamplesProvider<EndTurnResponse>
         return new EndTurnResponse(state, summaryDoc, AutosaveId: 9001);
     }
 }
-

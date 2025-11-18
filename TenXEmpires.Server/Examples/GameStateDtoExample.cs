@@ -120,6 +120,12 @@ public class GameStateDtoExample : IExamplesProvider<GameStateDto>
             new CityResourceDto(CityId: 302, ResourceType: "gold", Amount: 3)
         };
 
+        var tileStates = new List<GameTileStateDto>
+        {
+            new GameTileStateDto(TileId: 3, ResourceType: "wheat", ResourceAmount: 70),
+            new GameTileStateDto(TileId: 45, ResourceType: "iron", ResourceAmount: 40)
+        };
+
         // Create sample unit definitions (game rules reference)
         var unitDefinitions = new List<UnitDefinitionDto>
         {
@@ -164,6 +170,7 @@ public class GameStateDtoExample : IExamplesProvider<GameStateDto>
             cities,
             cityTiles,
             cityResources,
+            tileStates,
             unitDefinitions,
             TurnSummary: null);
     }

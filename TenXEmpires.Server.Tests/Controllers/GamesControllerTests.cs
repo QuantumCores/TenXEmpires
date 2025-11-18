@@ -554,6 +554,7 @@ public class GamesControllerTests
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null);
     }

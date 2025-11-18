@@ -58,7 +58,7 @@ public class ActionServiceCaptureTests
                 new GameStateGameDto(1, 1, human.Id, false, GameStatus.Active),
                 new GameStateMapDto(1, "m", 1, 3, 3),
                 new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null));
+                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null));
         var idemp = new Mock<IIdempotencyStore>();
         idemp.Setup(_ => _.TryGetAsync<ActionStateResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ActionStateResponse?)null);

@@ -421,6 +421,7 @@ public class GameServiceTests : IDisposable
             new List<CityInStateDto>(),
             new List<CityTileLinkDto>(),
             new List<CityResourceDto>(),
+            new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),
             null);
 
@@ -489,6 +490,7 @@ public class GameServiceTests : IDisposable
                 Array.Empty<CityInStateDto>(),
                 Array.Empty<CityTileLinkDto>(),
                 Array.Empty<CityResourceDto>(),
+                Array.Empty<GameTileStateDto>(),
                 Array.Empty<UnitDefinitionDto>(),
                 null));
 
@@ -520,6 +522,7 @@ public class GameServiceTests : IDisposable
                 Array.Empty<CityInStateDto>(),
                 Array.Empty<CityTileLinkDto>(),
                 Array.Empty<CityResourceDto>(),
+                Array.Empty<GameTileStateDto>(),
                 Array.Empty<UnitDefinitionDto>(),
                 null));
 
@@ -642,6 +645,7 @@ public class GameServiceTests : IDisposable
                 Array.Empty<CityInStateDto>(),
                 Array.Empty<CityTileLinkDto>(),
                 Array.Empty<CityResourceDto>(),
+                Array.Empty<GameTileStateDto>(),
                 Array.Empty<UnitDefinitionDto>(),
                 null));
 

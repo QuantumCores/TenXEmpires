@@ -104,7 +104,7 @@ public class AttackServiceTests : IDisposable
                 new GameStateGameDto(_gameId, 1, _humanPid, false, "active"),
                 new GameStateMapDto(1, "test_4x4", 1, 4, 4),
                 new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null));
+                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null));
 
         _idempotencyStoreMock.Setup(x => x.TryGetAsync<ActionStateResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ActionStateResponse?)null);
@@ -155,7 +155,7 @@ public class AttackServiceTests : IDisposable
                 new GameStateGameDto(_gameId, 1, _humanPid, false, "active"),
                 new GameStateMapDto(1, "test_4x4", 1, 4, 4),
                 new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null));
+                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null));
 
         _idempotencyStoreMock.Setup(x => x.TryGetAsync<ActionStateResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ActionStateResponse?)null);
@@ -202,7 +202,7 @@ public class AttackServiceTests : IDisposable
             new GameStateGameDto(_gameId, 1, _humanPid, false, "active"),
             new GameStateMapDto(1, "test_4x4", 1, 4, 4),
             new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null);
+            new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null);
         var cachedResponse = new ActionStateResponse(cachedState);
 
         _idempotencyStoreMock
@@ -236,7 +236,7 @@ public class AttackServiceTests : IDisposable
                 new GameStateGameDto(_gameId, 1, _humanPid, false, "active"),
                 new GameStateMapDto(1, "test_4x4", 1, 4, 4),
                 new List<ParticipantDto>(), new List<UnitInStateDto>(), new List<CityInStateDto>(),
-                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<UnitDefinitionDto>(), null));
+                new List<CityTileLinkDto>(), new List<CityResourceDto>(), new List<GameTileStateDto>(), new List<UnitDefinitionDto>(), null));
 
         _idempotencyStoreMock
             .Setup(x => x.TryStoreAsync($"attack-unit:{_gameId}:{key}", It.IsAny<ActionStateResponse>(), It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))

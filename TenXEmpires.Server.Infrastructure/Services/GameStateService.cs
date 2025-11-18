@@ -82,6 +82,15 @@ public class GameStateService : IGameStateService
             .Select(cr => CityResourceDto.From(cr))
             .ToListAsync(cancellationToken);
 
+        // Load per-game tile states (mutable resource amounts)
+        var gameTileStates = await _context.GameTileStates
+            .AsNoTracking()
+            .Include(ts => ts.Tile)
+            .Where(ts => ts.GameId == gameId)
+            .OrderBy(ts => ts.TileId)
+            .Select(ts => GameTileStateDto.From(ts))
+            .ToListAsync(cancellationToken);
+
         // Load all unit definitions (for client reference)
         var unitDefinitions = await _context.UnitDefinitions
             .AsNoTracking()
@@ -98,6 +107,7 @@ public class GameStateService : IGameStateService
             cities,
             cityTiles,
             cityResources,
+            gameTileStates,
             unitDefinitions,
             TurnSummary: null); // No turn summary for initial state
 

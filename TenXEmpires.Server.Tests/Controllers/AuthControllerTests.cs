@@ -11,6 +11,8 @@ using TenXEmpires.Server.Domain.DataContracts;
 using TenXEmpires.Server.Domain.Configuration;
 using TenXEmpires.Server.Domain.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting;
 
 namespace TenXEmpires.Server.Tests.Controllers;
 
@@ -21,6 +23,8 @@ public class AuthControllerTests
     private readonly Mock<UserManager<IdentityUser<Guid>>> _userManagerMock;
     private readonly Mock<ITransactionalEmailService> _emailServiceMock;
     private readonly IOptions<FrontendSettings> _frontendOptions;
+    private readonly IOptions<EmailSettings> _emailOptions;
+    private readonly Mock<IWebHostEnvironment> _environmentMock;
     private readonly AuthController _controller;
 
     public AuthControllerTests()
@@ -57,13 +61,26 @@ public class AuthControllerTests
             ResetPasswordPath = "/reset",
             SupportEmail = "support@example.com"
         });
+        _emailOptions = Options.Create(new EmailSettings
+        {
+            Address = "noreply@example.com",
+            Account = "smtp-user",
+            Key = Convert.ToBase64String(Guid.NewGuid().ToByteArray()),
+            Password = "encrypted-password",
+            Host = "smtp.example.com",
+            Port = 587
+        });
+        _environmentMock = new Mock<IWebHostEnvironment>();
+        _environmentMock.SetupGet(e => e.EnvironmentName).Returns(Environments.Production);
 
         _controller = new AuthController(
             _loggerMock.Object, 
             _signInManagerMock.Object, 
             _userManagerMock.Object,
             _emailServiceMock.Object,
-            _frontendOptions)
+            _frontendOptions,
+            _environmentMock.Object,
+            _emailOptions)
         {
             ControllerContext = new ControllerContext
             {

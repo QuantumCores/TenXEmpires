@@ -105,6 +105,12 @@ public class GameCreatedResponseExample : IExamplesProvider<GameCreatedResponse>
             new CityResourceDto(CityId: 302, ResourceType: "production", Amount: 2)
         };
 
+        var tileStates = new List<GameTileStateDto>
+        {
+            new GameTileStateDto(TileId: 3, ResourceType: "wheat", ResourceAmount: 80),
+            new GameTileStateDto(TileId: 45, ResourceType: "iron", ResourceAmount: 50)
+        };
+
         // Create sample unit definitions
         var unitDefinitions = new List<UnitDefinitionDto>
         {
@@ -139,6 +145,7 @@ public class GameCreatedResponseExample : IExamplesProvider<GameCreatedResponse>
             cities,
             cityTiles,
             cityResources,
+            tileStates,
             unitDefinitions,
             TurnSummary: null);
 

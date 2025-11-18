@@ -70,6 +70,17 @@ public class TurnServiceEndTurnTests
         var aiUnit = new Unit { Id = 201, GameId = 1, ParticipantId = ai.Id, TypeId = 1, TileId = aiUnitTile.Id, Hp = 100, HasActed = false, Type = warrior, Tile = aiUnitTile };
         context.Units.Add(aiUnit);
 
+        // Seed per-game tile states mirroring map template amounts
+        foreach (var tile in tiles)
+        {
+            context.GameTileStates.Add(new GameTileState
+            {
+                GameId = game.Id,
+                TileId = tile.Id,
+                ResourceAmount = tile.ResourceAmount
+            });
+        }
+
         await context.SaveChangesAsync();
 
         var gameStateLogger = Mock.Of<ILogger<GameStateService>>();
@@ -91,7 +102,7 @@ public class TurnServiceEndTurnTests
         (await context.Cities.FindAsync(100L))!.Hp.Should().BeGreaterThan(90);
         // Harvested 1 wood and decremented tile stock
         (await context.CityResources.Where(cr => cr.CityId == 100 && cr.ResourceType == ResourceTypes.Wood).Select(cr => cr.Amount).FirstAsync()).Should().Be(1);
-        (await context.MapTiles.FindAsync(cityTile.Id))!.ResourceAmount.Should().Be(4);
+        (await context.GameTileStates.SingleAsync(ts => ts.GameId == game.Id && ts.TileId == cityTile.Id)).ResourceAmount.Should().Be(4);
         // Produced unit (slinger) if spawn available; city tile is occupied by city but we allow city tile spawn; ensure at least one new unit exists
         (await context.Units.Where(u => u.GameId == 1 && u.ParticipantId == 10 && u.Id != aiUnit.Id).CountAsync()).Should().BeGreaterThan(0);
         // Autosave created (ring buffer size 5 - only 1 here)
@@ -156,6 +167,16 @@ public class TurnServiceEndTurnTests
         context.UnitDefinitions.Add(blockingUnit.Type);
         context.Units.Add(blockingUnit);
 
+        foreach (var tile in tiles)
+        {
+            context.GameTileStates.Add(new GameTileState
+            {
+                GameId = game.Id,
+                TileId = tile.Id,
+                ResourceAmount = tile.ResourceAmount
+            });
+        }
+
         await context.SaveChangesAsync();
 
         var turnService = new TurnService(context, Mock.Of<ILogger<TurnService>>());
@@ -169,12 +190,15 @@ public class TurnServiceEndTurnTests
             .FirstAsync(c => c.Id == city.Id);
         var allUnits = await context.Units.Include(u => u.Tile).ToListAsync();
         var totals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var tileStateDict = await context.GameTileStates
+            .Where(ts => ts.GameId == game.Id)
+            .ToDictionaryAsync(ts => ts.TileId);
 
-        method!.Invoke(turnService, new object[] { loadedCity, allUnits, totals });
+        method!.Invoke(turnService, new object[] { loadedCity, allUnits, totals, tileStateDict });
 
         (await context.CityResources.Where(cr => cr.CityId == city.Id && cr.ResourceType == ResourceTypes.Wood).Select(cr => cr.Amount).FirstAsync())
             .Should().Be(0, "harvest should be blocked when enemy occupies tile");
-        (await context.MapTiles.FindAsync(resourceTile.Id))!.ResourceAmount.Should().Be(3, "tile stock should remain untouched");
+        (await context.GameTileStates.SingleAsync(ts => ts.GameId == game.Id && ts.TileId == resourceTile.Id)).ResourceAmount.Should().Be(3, "tile stock should remain untouched");
         totals.ContainsKey(ResourceTypes.Wood).Should().BeFalse();
     }
 }
