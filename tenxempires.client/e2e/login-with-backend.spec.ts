@@ -56,7 +56,7 @@ test.describe('User Login (TC-AUTH-02)', () => {
     const wrongPassword = 'WrongPassword123!'
     let attemptCount = 0
 
-    const loginRoute = async (route: Route) => {
+    const handleLoginRequest = async (route: Route) => {
       attemptCount += 1
       if (attemptCount <= 5) {
         await route.fulfill({
@@ -86,7 +86,10 @@ test.describe('User Login (TC-AUTH-02)', () => {
       await route.fulfill({ status: 204 })
     }
 
-    await page.route('**/api/auth/login', loginRoute)
+    const loginMatchers = ['**/api/auth/login', '**/v1/auth/login']
+    await Promise.all(
+      loginMatchers.map((matcher) => page.route(matcher, handleLoginRequest))
+    )
 
     try {
       // Perform five failed attempts
@@ -118,7 +121,9 @@ test.describe('User Login (TC-AUTH-02)', () => {
       await page.waitForURL('**/game/current', { waitUntil: 'networkidle' })
       await expect(page).toHaveURL(/\/game\/current/)
     } finally {
-      await page.unroute('**/api/auth/login', loginRoute)
+      await Promise.all(
+        loginMatchers.map((matcher) => page.unroute(matcher, handleLoginRequest))
+      )
     }
   })
 })
