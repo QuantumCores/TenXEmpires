@@ -48,8 +48,8 @@ Hooks & Data:
 	
 	
 PROMPT
-
-Now I want us to prepare for the following playwright e2e test. 
+---------------------------------------------------
+Now I want us to prepare for the following playwright e2e test. Or use test-plan_3.md file to select test
 
 1. User opens landing page
 2. User clicks the register button 
@@ -70,6 +70,11 @@ return (
   </header>
 ```
 Later we will create POM classes
+--------------------------------------------------
+
+PROMPT
+--------------------------------------------------
+For created data-testid create dedicated POM classes following POM pattern @playwright-e2e-testing.md
 
 How to run tests
 

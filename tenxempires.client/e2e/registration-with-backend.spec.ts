@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { LandingPage } from './pages/LandingPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { LoginPage } from './pages/LoginPage'
 import { createTestUser, registerUser, loginUser, getCurrentUser } from './helpers/api'
 import { registrationTestData, generateTestEmail } from './fixtures/testData'
 
@@ -11,10 +12,12 @@ import { registrationTestData, generateTestEmail } from './fixtures/testData'
 test.describe('User Registration with Backend', () => {
   let landingPage: LandingPage
   let registerPage: RegisterPage
+  let loginPage: LoginPage
 
   test.beforeEach(async ({ page }) => {
     landingPage = new LandingPage(page)
     registerPage = new RegisterPage(page)
+    loginPage = new LoginPage(page)
   })
 
   test('should successfully register and authenticate user', async ({ request }) => {
@@ -59,17 +62,14 @@ test.describe('User Registration with Backend', () => {
     const testUser = await createTestUser(request)
     expect(testUser.success).toBeTruthy()
 
-    // Navigate to login page (assuming there's a login page)
-    await page.goto('/login')
+    // Navigate to login page
+    await loginPage.goto()
     
-    // Fill login form
-    const emailInput = page.locator('input[type="email"]')
-    const passwordInput = page.locator('input[type="password"]')
-    const loginButton = page.locator('button[type="submit"]')
-
-    await emailInput.fill(testUser.email)
-    await passwordInput.fill(testUser.password)
-    await loginButton.click()
+    // Fill login form using POM helpers
+    await loginPage.fillEmail(testUser.email)
+    await loginPage.fillPassword(testUser.password)
+    await loginPage.setRememberMe(true)
+    await loginPage.submit()
 
     // Wait for navigation or success indicator
     await page.waitForTimeout(1000)
