@@ -1,11 +1,12 @@
-import type { GameStateDto, SelectionState } from '../../types/game'
+import type { GameStateDto, MapTileDto, SelectionState } from '../../types/game'
 
 interface BottomPanelProps {
   gameState: GameStateDto
+  mapTiles: MapTileDto[]
   selection: SelectionState
 }
 
-export function BottomPanel({ gameState, selection }: BottomPanelProps) {
+export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps) {
   if (!selection.kind || !selection.id) {
     return null
   }
@@ -91,6 +92,32 @@ export function BottomPanel({ gameState, selection }: BottomPanelProps) {
     )
   }
 
+  if (selection.kind === 'tile') {
+    const tile = mapTiles.find((t) => t.id === selection.id)
+    if (!tile) return null
+
+    const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
+
+    return (
+      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg">
+        <h3 className="mb-2 font-semibold">Tile</h3>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between gap-8">
+            <span className="text-slate-600">Terrain:</span>
+            <span className="font-medium">{formatLabel(tile.terrain)}</span>
+          </div>
+          {tile.resourceType && (
+            <div className="flex justify-between gap-8">
+              <span className="text-slate-600">Resource:</span>
+              <span className="font-medium">
+                {formatLabel(tile.resourceType)} ({tile.resourceAmount})
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return null
 }
-

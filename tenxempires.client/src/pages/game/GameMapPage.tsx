@@ -185,6 +185,7 @@ export function GameMapPage() {
 
       <BottomPanel
         gameState={gameState}
+        mapTiles={mapTiles}
         selection={selection}
       />
 

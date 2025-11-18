@@ -369,6 +369,7 @@ export function MapCanvasStack({
 
       const clickedTile = pixelToOddr(x, y, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const clickedPos: GridPosition = { row: clickedTile.y, col: clickedTile.x }
+      const clickedMapTile = mapTiles.find((t) => t.row === clickedPos.row && t.col === clickedPos.col)
 
       // Picking priority: Unit > City > Tile
       const clickedUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
@@ -591,6 +592,15 @@ export function MapCanvasStack({
       }
 
       // Otherwise clear selection
+      if (clickedMapTile) {
+        if (selection.kind === 'tile' && selection.id === clickedMapTile.id) {
+          clearSelection()
+        } else {
+          setSelection({ kind: 'tile', id: clickedMapTile.id })
+        }
+        return
+      }
+
       clearSelection()
     },
     [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles]
@@ -1111,6 +1121,12 @@ function renderOverlay(
         targetRow = city.row
         targetCol = city.col
       }
+    } else if (selection.kind === 'tile') {
+      const tile = tileLookup.get(selection.id)
+      if (tile) {
+        targetRow = tile.row
+        targetCol = tile.col
+      }
     }
 
     if (targetRow !== undefined && targetCol !== undefined) {
@@ -1148,7 +1164,7 @@ function renderOverlay(
   }
 
   if (debug) {
-    renderDebug(ctx, gameState, hoverTile, selection, camera, viewport, hexMetrics)
+    renderDebug(ctx, gameState, hoverTile, selection, camera, viewport, hexMetrics, mapTiles)
   }
 }
 
@@ -1159,7 +1175,8 @@ function renderDebug(
   selection: SelectionState,
   camera: CameraState,
   viewport: { width: number; height: number },
-  hexMetrics: ReturnType<typeof calculateOptimalHexSize>
+  hexMetrics: ReturnType<typeof calculateOptimalHexSize>,
+  mapTiles: MapTileDto[]
 ) {
   // Crosshair at center of every tile (light color)
   ctx.save()
@@ -1207,6 +1224,9 @@ function renderDebug(
     } else if (selection.kind === 'city') {
       const city = gameState.cities.find((c) => c.id === selection.id)
       if (city) { row = city.row; col = city.col }
+    } else if (selection.kind === 'tile') {
+      const tile = mapTiles.find((t) => t.id === selection.id)
+      if (tile) { row = tile.row; col = tile.col }
     }
     if (row !== undefined && col !== undefined) {
       const pos = oddrToPixel(col, row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)

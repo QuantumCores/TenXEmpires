@@ -442,14 +442,6 @@ public class TurnService : ITurnService
                 .Where(c => c.GameId == game.Id && c.ParticipantId == activeParticipant.Id)
                 .ToListAsync(cancellationToken);
 
-            var aiHarvested = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
-            {
-                { ResourceTypes.Wood, 0 },
-                { ResourceTypes.Stone, 0 },
-                { ResourceTypes.Wheat, 0 },
-                { ResourceTypes.Iron, 0 }
-            };
-
             // Load enemy units for potential attacks
             var enemyUnits = await _context.Units
                 .Include(u => u.Type)
@@ -570,6 +562,14 @@ public class TurnService : ITurnService
             }
 
             // After unit actions, harvest AI-owned city tiles and try auto production
+            var aiHarvested = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { ResourceTypes.Wood, 0 },
+                { ResourceTypes.Stone, 0 },
+                { ResourceTypes.Wheat, 0 },
+                { ResourceTypes.Iron, 0 }
+            };
+
             var allUnits = new List<Unit>();
             allUnits.AddRange(aiUnits);
             allUnits.AddRange(enemyUnits);

@@ -159,7 +159,7 @@ export interface CameraState {
 }
 
 export interface SelectionState {
-  kind: 'unit' | 'city' | null
+  kind: 'unit' | 'city' | 'tile' | null
   id?: number
 }
 
