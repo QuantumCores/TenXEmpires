@@ -74,7 +74,7 @@ Later we will create POM classes
 
 PROMPT
 --------------------------------------------------
-For created data-testid create dedicated POM classes following POM pattern @playwright-e2e-testing.md
+For created data-testid create dedicated POM classes following POM pattern @playwright-e2e-testing.mdc
 
 How to run tests
 

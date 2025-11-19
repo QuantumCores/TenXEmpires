@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.435314+00:00
-                clientRequestId: 3bf0986c-0460-419c-b487-20a01a49760b
+                occurredAt: 2025-11-19T18:26:39.2156228+00:00
+                clientRequestId: 025e963a-775d-4e3d-a2af-066a4f690592
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.4354816+00:00
-                clientRequestId: 0c43c66b-18a9-48ae-a63f-21dbbc651c89
+                occurredAt: 2025-11-19T18:26:39.2157737+00:00
+                clientRequestId: de1fcdae-0761-45c2-bae5-722b04a6382d
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.435314+00:00
-                clientRequestId: 3bf0986c-0460-419c-b487-20a01a49760b
+                occurredAt: 2025-11-19T18:26:39.2156228+00:00
+                clientRequestId: 025e963a-775d-4e3d-a2af-066a4f690592
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.4354816+00:00
-                clientRequestId: 0c43c66b-18a9-48ae-a63f-21dbbc651c89
+                occurredAt: 2025-11-19T18:26:39.2157737+00:00
+                clientRequestId: de1fcdae-0761-45c2-bae5-722b04a6382d
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.435314+00:00
-                clientRequestId: 3bf0986c-0460-419c-b487-20a01a49760b
+                occurredAt: 2025-11-19T18:26:39.2156228+00:00
+                clientRequestId: 025e963a-775d-4e3d-a2af-066a4f690592
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T20:23:59.4354816+00:00
-                clientRequestId: 0c43c66b-18a9-48ae-a63f-21dbbc651c89
+                occurredAt: 2025-11-19T18:26:39.2157737+00:00
+                clientRequestId: de1fcdae-0761-45c2-bae5-722b04a6382d
                 payload: 
       responses:
         202:

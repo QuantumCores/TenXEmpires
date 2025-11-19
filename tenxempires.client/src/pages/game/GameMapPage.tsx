@@ -124,9 +124,9 @@ export function GameMapPage() {
     const status = !isOnline ? 'offline' : isRateLimited ? 'limited' : 'online'
     return (
       <IdleSessionProvider>
-        <div className="game-map-page relative flex min-h-dvh flex-col">
+        <div className="game-map-page relative flex min-h-dvh flex-col" data-testid="new-game-shell">
           <Banners />
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-1 items-center justify-center" data-testid="start-new-game-status">
             <div className="text-slate-600">Starting new game...</div>
           </div>
           <ModalManager gameId={id || 'new'} status={status} />
@@ -139,7 +139,7 @@ export function GameMapPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center" data-testid="game-loading">
         <div className="text-slate-600">Loading game...</div>
       </div>
     )
@@ -147,7 +147,7 @@ export function GameMapPage() {
 
   if (!gameState || !unitDefs || !mapTiles) {
     return (
-      <div className="flex min-h-dvh items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center" data-testid="game-missing">
         <div className="text-slate-600">Game not found</div>
       </div>
     )
@@ -168,7 +168,7 @@ export function GameMapPage() {
 
   return (
     <IdleSessionProvider>
-    <div className="game-map-page relative">
+    <div className="game-map-page relative" data-testid="game-map-page">
       {/* Map fills entire viewport */}
       <main className="game-map-main">
         <MapCanvasStack
