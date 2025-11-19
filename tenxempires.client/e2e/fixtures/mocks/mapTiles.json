@@ -1,0 +1,16 @@
+{
+  "items": [
+    {"id": 1, "row": 0, "col": 0, "terrain": "tundra", "resourceType": null, "resourceAmount": 0},
+    {"id": 2, "row": 0, "col": 1, "terrain": "tundra", "resourceType": "WHEAT", "resourceAmount": 2},
+    {"id": 3, "row": 0, "col": 2, "terrain": "tundra", "resourceType": null, "resourceAmount": 0},
+    {"id": 4, "row": 1, "col": 0, "terrain": "grassland", "resourceType": null, "resourceAmount": 0},
+    {"id": 5, "row": 1, "col": 1, "terrain": "desert", "resourceType": null, "resourceAmount": 0},
+    {"id": 6, "row": 1, "col": 2, "terrain": "grassland", "resourceType": "WOOD", "resourceAmount": 1},
+    {"id": 7, "row": 2, "col": 0, "terrain": "water", "resourceType": null, "resourceAmount": 0},
+    {"id": 8, "row": 2, "col": 1, "terrain": "water", "resourceType": null, "resourceAmount": 0},
+    {"id": 9, "row": 2, "col": 2, "terrain": "ocean", "resourceType": null, "resourceAmount": 0},
+    {"id": 10, "row": 3, "col": 0, "terrain": "tropical", "resourceType": "STONE", "resourceAmount": 1},
+    {"id": 11, "row": 3, "col": 1, "terrain": "tropical", "resourceType": null, "resourceAmount": 0},
+    {"id": 12, "row": 3, "col": 2, "terrain": "desert", "resourceType": "IRON", "resourceAmount": 1}
+  ]
+}

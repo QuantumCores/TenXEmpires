@@ -49,12 +49,7 @@ Hooks & Data:
 	
 PROMPT
 ---------------------------------------------------
-Now I want us to prepare for the following playwright e2e test. Or use test-plan_3.md file to select test
-
-1. User opens landing page
-2. User clicks the register button 
-3. On the registration page user provides email, password, confirms passwords
-4. User clicks Create Account
+1. Prepare code for the playwright e2e test which I keep in `tenxempires.client\e2e` folder. Read @test-plan_3.md file. I want to impelemnt this test <TEST HERE>
 
 Go through key components related to this scenario and add `data-testid` attributes with values representing given action and/or component. Selectors should be added inside the component not outside e.g. 
 ```
@@ -69,12 +64,10 @@ return (
    ...
   </header>
 ```
-Later we will create POM classes
---------------------------------------------------
 
-PROMPT
---------------------------------------------------
-For created data-testid create dedicated POM classes following POM pattern @playwright-e2e-testing.mdc
+2. For created data-testid create dedicated POM classes following POM pattern @playwright-e2e-testing.mdc
+
+3. Implement test
 
 How to run tests
 

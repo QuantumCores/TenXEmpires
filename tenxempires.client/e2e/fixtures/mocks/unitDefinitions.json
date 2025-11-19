@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "code": "WARRIOR",
+      "isRanged": false,
+      "attack": 10,
+      "defence": 10,
+      "rangeMin": 1,
+      "rangeMax": 1,
+      "movePoints": 2,
+      "health": 20
+    },
+    {
+      "id": 2,
+      "code": "ARCHER",
+      "isRanged": true,
+      "attack": 8,
+      "defence": 5,
+      "rangeMin": 1,
+      "rangeMax": 2,
+      "movePoints": 2,
+      "health": 15
+    }
+  ]
+}

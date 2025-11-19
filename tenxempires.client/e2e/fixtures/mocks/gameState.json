@@ -1,0 +1,101 @@
+{
+  "game": {
+    "id": 999,
+    "turnNo": 1,
+    "activeParticipantId": 1,
+    "turnInProgress": false,
+    "status": "active"
+  },
+  "map": {
+    "id": 10,
+    "code": "test-map-small",
+    "schemaVersion": 1,
+    "width": 3,
+    "height": 4
+  },
+  "participants": [
+    {
+      "id": 1,
+      "gameId": 999,
+      "kind": "human",
+      "userId": "user-1",
+      "displayName": "Test Player",
+      "isEliminated": false
+    },
+    {
+      "id": 2,
+      "gameId": 999,
+      "kind": "ai",
+      "userId": null,
+      "displayName": "AI Opponent",
+      "isEliminated": false
+    }
+  ],
+  "units": [
+    {
+      "id": 100,
+      "participantId": 1,
+      "typeCode": "WARRIOR",
+      "hp": 20,
+      "hasActed": false,
+      "tileId": 1,
+      "row": 0,
+      "col": 0
+    },
+    {
+        "id": 100,
+        "participantId": 1,
+        "typeCode": "SLINGER",
+        "hp": 20,
+        "hasActed": false,
+        "tileId": 1,
+        "row": 0,
+        "col": 2
+    },
+    {
+      "id": 102,
+      "participantId": 2,
+      "typeCode": "SLINGER",
+      "hp": 20,
+      "hasActed": false,
+      "tileId": 11,
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": 102,
+      "participantId": 2,
+      "typeCode": "WARRIOR",
+      "hp": 20,
+      "hasActed": false,
+      "tileId": 11,
+      "row": 3,
+      "col": 1
+    }
+  ],
+  "cities": [
+    {
+      "id": 50,
+      "participantId": 1,
+      "hp": 100,
+      "maxHp": 100,
+      "tileId": 5,
+      "row": 1,
+      "col": 1
+    }
+  ],
+  "cityTiles": [
+    { "cityId": 50, "tileId": 5 },
+    { "cityId": 50, "tileId": 1 },
+    { "cityId": 50, "tileId": 2 },
+    { "cityId": 50, "tileId": 4 },
+    { "cityId": 50, "tileId": 6 },
+    { "cityId": 50, "tileId": 8 }
+  ],
+  "cityResources": [
+    { "cityId": 50, "resourceType": "WHEAT", "amount": 2 },
+    { "cityId": 50, "resourceType": "WOOD", "amount": 1 }
+  ],
+  "unitDefinitions": [],
+  "turnSummary": null
+}
