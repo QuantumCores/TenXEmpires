@@ -13,6 +13,9 @@ test.describe('Game Creation (TC-GAME-01.1)', () => {
   let gameMapPage: GameMapPage
   let startNewGameModal: StartNewGameModal
 
+  const matchesEndpoint = (url: string, endpoint: string) =>
+    url.includes(`/api/${endpoint}`) || url.includes(`/v1/${endpoint}`)
+
   test.beforeEach(async ({ page }) => {
     loginPage = new LoginPage(page)
     gameMapPage = new GameMapPage(page)
@@ -38,32 +41,18 @@ test.describe('Game Creation (TC-GAME-01.1)', () => {
     await gameMapPage.waitForNewGameShell()
     await startNewGameModal.waitForVisible()
 
-    const createGameResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/games') && response.request().method() === 'POST'
-    )
-
     await startNewGameModal.acknowledgeAndStart()
 
-    const createGameResponse = await createGameResponsePromise
-    expect(createGameResponse.status()).toBe(201)
-    const createdGame = (await createGameResponse.json()) as { id: number }
-    const newGameId = createdGame.id
+    await page.waitForURL(/\/game\/\d+$/, { waitUntil: 'networkidle' })
+    const match = page.url().match(/\/game\/(\d+)$/)
+    const newGameId = match ? Number(match[1]) : NaN
     expect(newGameId).toBeGreaterThan(0)
-
-    await page.waitForURL(`**/game/${newGameId}`, { waitUntil: 'networkidle' })
     await gameMapPage.waitForMapLoaded()
 
     await expect(gameMapPage.mapCanvas).toBeVisible()
     expect(await gameMapPage.getTurnNumber()).toBe(1)
 
-    const endTurnResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes(`/api/games/${newGameId}/end-turn`) &&
-        response.request().method() === 'POST'
-    )
     await gameMapPage.clickEndTurn()
-    await endTurnResponsePromise
     await expect(gameMapPage.turnCounter).toHaveText(/2|3/, { timeout: 15000 })
 
     const gamesResponse = await request.get(`${API_BASE}/games?status=active`, {

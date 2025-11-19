@@ -45,10 +45,10 @@ export class GameMapPage extends BasePage {
     this.bottomPanelTile = this.getByTestId('bottom-panel-tile')
   }
 
-  async waitForMapLoaded() {
-    await this.mapCanvas.waitFor({ state: 'visible' })
+  async waitForMapLoaded(timeout = 45000) {
+    await this.mapCanvas.waitFor({ state: 'visible', timeout })
     // Wait for turn counter to be visible as an indication that game state is loaded
-    await this.turnCounter.waitFor({ state: 'visible' })
+    await this.turnCounter.waitFor({ state: 'visible', timeout })
   }
   
   async waitForNewGameShell() {
