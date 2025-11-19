@@ -13,9 +13,6 @@ test.describe('Game Creation (TC-GAME-01.1)', () => {
   let gameMapPage: GameMapPage
   let startNewGameModal: StartNewGameModal
 
-  const matchesEndpoint = (url: string, endpoint: string) =>
-    url.includes(`/api/${endpoint}`) || url.includes(`/v1/${endpoint}`)
-
   test.beforeEach(async ({ page }) => {
     loginPage = new LoginPage(page)
     gameMapPage = new GameMapPage(page)
