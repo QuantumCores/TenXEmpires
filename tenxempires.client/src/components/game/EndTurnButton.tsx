@@ -58,6 +58,7 @@ export function EndTurnButton({ gameId, gameState, disabled, turnNo, status }: E
       onClick={handleEndTurn}
       disabled={disabled || endTurnMutation.isPending}
       aria-label={`End turn ${turnNo}`}
+      data-testid="end-turn-button"
     >
       <div className="h-full w-full rounded-full bg-gradient-to-br from-yellow-200 via-amber-300 to-yellow-400 flex flex-col items-center justify-center p-1 ring-2 ring-amber-600">
         {endTurnMutation.isPending ? (
@@ -83,7 +84,7 @@ export function EndTurnButton({ gameId, gameState, disabled, turnNo, status }: E
           </svg>
         ) : (
           <>
-            <div className="text-4xl font-black text-amber-950 leading-none tracking-tight">
+            <div className="text-4xl font-black text-amber-950 leading-none tracking-tight" data-testid="turn-counter">
               {turnNo}
             </div>
             <div className="text-xs font-bold text-amber-900 uppercase tracking-wide mt-1">

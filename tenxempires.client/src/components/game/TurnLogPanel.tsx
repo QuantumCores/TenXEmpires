@@ -12,7 +12,7 @@ export function TurnLogPanel({ gameId }: TurnLogPanelProps) {
     <div className="absolute left-4 top-4 z-30">
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"
+        className="flex w-28 justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-center shadow hover:bg-slate-50"
         onClick={toggleOpen}
         aria-expanded={isOpen}
         aria-controls="turn-log-content"

@@ -19,7 +19,7 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
     if (!unitDef) return null
 
     return (
-      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg">
+      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg" data-testid="bottom-panel-unit">
         <h3 className="mb-2 font-semibold">{unitDef.code}</h3>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-8">
@@ -66,7 +66,7 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
     const workedTiles = gameState.cityTiles.filter((t) => t.cityId === city.id).length
 
     return (
-      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg">
+      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg" data-testid="bottom-panel-city">
         <h3 className="mb-2 font-semibold">City</h3>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-8">
@@ -99,7 +99,7 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
     const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1)
 
     return (
-      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg">
+      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg" data-testid="bottom-panel-tile">
         <h3 className="mb-2 font-semibold">Tile</h3>
         <div className="space-y-1 text-sm">
           <div className="flex justify-between gap-8">

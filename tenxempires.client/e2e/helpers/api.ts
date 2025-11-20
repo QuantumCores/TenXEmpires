@@ -5,8 +5,9 @@ import { APIRequestContext } from '@playwright/test'
  * Provides methods to interact with the backend API directly
  */
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5019'
-const API_VERSION = 'v1'
+export const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5019'
+export const API_VERSION = 'v1'
+export const API_BASE = `${API_BASE_URL}/${API_VERSION}`
 
 export interface RegisterRequest {
   email: string
@@ -38,7 +39,7 @@ export async function registerUser(
     // Backend requires Confirm field (password confirmation)
     const confirmPassword = confirm ?? password
 
-    const url = `${API_BASE_URL}/${API_VERSION}/auth/register`
+    const url = `${API_BASE}/auth/register`
     const response = await request.post(url, {
       data: { email, password, confirm: confirmPassword },
       headers: {
@@ -68,7 +69,7 @@ export async function loginUser(
   password: string,
   rememberMe = false
 ): Promise<{ success: boolean; cookies?: string[]; error?: ApiError }> {
-  const response = await request.post(`${API_BASE_URL}/${API_VERSION}/auth/login`, {
+  const response = await request.post(`${API_BASE}/auth/login`, {
     data: { email, password, rememberMe },
     headers: {
       'Content-Type': 'application/json',
@@ -89,7 +90,7 @@ export async function loginUser(
  * Logout current user via API
  */
 export async function logoutUser(request: APIRequestContext): Promise<{ success: boolean; error?: ApiError }> {
-  const response = await request.post(`${API_BASE_URL}/${API_VERSION}/auth/logout`)
+  const response = await request.post(`${API_BASE}/auth/logout`)
 
   if (response.ok()) {
     return { success: true }
@@ -103,7 +104,7 @@ export async function logoutUser(request: APIRequestContext): Promise<{ success:
  * Get current user info via API
  */
 export async function getCurrentUser(request: APIRequestContext): Promise<{ success: boolean; user?: { id: string; email: string }; error?: ApiError }> {
-  const response = await request.get(`${API_BASE_URL}/${API_VERSION}/auth/me`)
+  const response = await request.get(`${API_BASE}/auth/me`)
 
   if (response.ok()) {
     const user = await response.json()

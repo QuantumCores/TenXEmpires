@@ -112,7 +112,7 @@ export class LoginPage extends BasePage {
    */
   async getErrorMessage(): Promise<string | null> {
     try {
-      await this.errorAlert.waitFor({ state: 'visible', timeout: 2000 })
+      await this.errorAlert.waitFor({ state: 'visible', timeout: 5000 })
       return (await this.errorAlert.textContent())?.trim() ?? null
     } catch {
       return null
