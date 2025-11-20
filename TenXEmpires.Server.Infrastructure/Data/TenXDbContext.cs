@@ -21,6 +21,7 @@ public class TenXDbContext : DbContext
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<City> Cities => Set<City>();
     public DbSet<CityTile> CityTiles => Set<CityTile>();
+    public DbSet<GameTileState> GameTileStates => Set<GameTileState>();
     public DbSet<CityResource> CityResources => Set<CityResource>();
     public DbSet<Save> Saves => Set<Save>();
     public DbSet<Turn> Turns => Set<Turn>();
@@ -43,6 +44,7 @@ public class TenXDbContext : DbContext
         ConfigureUnit(modelBuilder);
         ConfigureCity(modelBuilder);
         ConfigureCityTile(modelBuilder);
+        ConfigureGameTileState(modelBuilder);
         ConfigureCityResource(modelBuilder);
         ConfigureSave(modelBuilder);
         ConfigureTurn(modelBuilder);
@@ -234,6 +236,29 @@ public class TenXDbContext : DbContext
 
             entity.HasOne(e => e.Tile)
                 .WithMany(t => t.CityTiles)
+                .HasForeignKey(e => e.TileId);
+        });
+    }
+
+    private static void ConfigureGameTileState(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<GameTileState>(entity =>
+        {
+            entity.ToTable("game_tile_states");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.GameId).HasColumnName("game_id");
+            entity.Property(e => e.TileId).HasColumnName("tile_id");
+            entity.Property(e => e.ResourceAmount).HasColumnName("resource_amount");
+
+            entity.HasIndex(e => new { e.GameId, e.TileId }).IsUnique();
+
+            entity.HasOne(e => e.Game)
+                .WithMany(g => g.GameTileStates)
+                .HasForeignKey(e => e.GameId);
+
+            entity.HasOne(e => e.Tile)
+                .WithMany()
                 .HasForeignKey(e => e.TileId);
         });
     }

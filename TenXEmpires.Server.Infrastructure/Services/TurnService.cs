@@ -232,6 +232,10 @@ public class TurnService : ITurnService
                 .Where(c => c.GameId == gameId && c.ParticipantId == game.ActiveParticipantId)
                 .ToListAsync(cancellationToken);
 
+            var tileStates = await _context.GameTileStates
+                .Where(ts => ts.GameId == gameId)
+                .ToDictionaryAsync(ts => ts.TileId, cancellationToken);
+
             foreach (var city in cities)
             {
                 // Determine siege state: enemy unit adjacent (hex distance <= 1)
@@ -249,7 +253,7 @@ public class TurnService : ITurnService
                 city.Hp = Math.Min(city.MaxHp, city.Hp + increment);
                 if (city.Hp != before) regenApplied++;
                 // Harvest from city-owned tiles only and maybe auto-produce
-                HarvestCityResources(city, allUnits, harvestedTotals);
+                HarvestCityResources(city, allUnits, harvestedTotals, tileStates);
 
                 // Auto-produce at most 1 unit/city/turn
                 productionDelayed += TryAutoProduceUnit(game, city, unitDefs, occupiedTileIds, producedUnitCodes);
@@ -442,6 +446,10 @@ public class TurnService : ITurnService
                 .Where(c => c.GameId == game.Id && c.ParticipantId == activeParticipant.Id)
                 .ToListAsync(cancellationToken);
 
+            var aiTileStates = await _context.GameTileStates
+                .Where(ts => ts.GameId == game.Id)
+                .ToDictionaryAsync(ts => ts.TileId, cancellationToken);
+
             // Load enemy units for potential attacks
             var enemyUnits = await _context.Units
                 .Include(u => u.Type)
@@ -575,7 +583,7 @@ public class TurnService : ITurnService
             allUnits.AddRange(enemyUnits);
             foreach (var city in aiCities)
             {
-                HarvestCityResources(city, allUnits, aiHarvested);
+                HarvestCityResources(city, allUnits, aiHarvested, aiTileStates);
                 productionDelayed += TryAutoProduceUnit(game, city, unitDefs, occupiedSet, producedByAi);
             }
 
@@ -611,12 +619,25 @@ public class TurnService : ITurnService
     private void HarvestCityResources(
         City city,
         List<Unit> allUnits,
-        Dictionary<string, int> harvestedTotals)
+        Dictionary<string, int> harvestedTotals,
+        IReadOnlyDictionary<long, GameTileState> tileStates)
     {
         foreach (var link in city.CityTiles)
         {
             var tile = link.Tile;
-            if (tile.ResourceType is null || tile.ResourceAmount <= 0)
+            if (tile.ResourceType is null)
+                continue;
+
+            if (!tileStates.TryGetValue(tile.Id, out var tileState))
+            {
+                _logger.LogWarning(
+                    "Missing tile state for tile {TileId} in city {CityId}; skipping harvest",
+                    tile.Id,
+                    city.Id);
+                continue;
+            }
+
+            if (tileState.ResourceAmount <= 0)
                 continue;
 
             var blockingUnit = allUnits.FirstOrDefault(u => u.ParticipantId != city.ParticipantId && u.TileId == tile.Id);
@@ -639,7 +660,7 @@ public class TurnService : ITurnService
             }
 
             cr.Amount += 1; // produce 1 per tile
-            tile.ResourceAmount -= 1; // consume 1 from tile stock
+            tileState.ResourceAmount -= 1; // consume 1 from per-game tile stock
 
             if (harvestedTotals.ContainsKey(tile.ResourceType))
             {

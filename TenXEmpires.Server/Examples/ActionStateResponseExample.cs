@@ -114,6 +114,13 @@ public class ActionStateResponseExample : IExamplesProvider<ActionStateResponse>
             new CityResourceDto(CityId: 302, ResourceType: "production", Amount: 3)
         };
 
+        // Create sample per-game tile state (remaining resource stock)
+        var tileStates = new List<GameTileStateDto>
+        {
+            new GameTileStateDto(TileId: 3, ResourceType: "wheat", ResourceAmount: 75),
+            new GameTileStateDto(TileId: 45, ResourceType: "iron", ResourceAmount: 42)
+        };
+
         // Create sample unit definitions
         var unitDefinitions = new List<UnitDefinitionDto>
         {
@@ -158,6 +165,7 @@ public class ActionStateResponseExample : IExamplesProvider<ActionStateResponse>
             cities,
             cityTiles,
             cityResources,
+            tileStates,
             unitDefinitions,
             TurnSummary: null);
 

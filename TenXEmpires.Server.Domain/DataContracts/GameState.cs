@@ -16,6 +16,7 @@ public sealed record GameStateDto(
     IReadOnlyList<CityInStateDto> Cities,
     IReadOnlyList<CityTileLinkDto> CityTiles,
     IReadOnlyList<CityResourceDto> CityResources,
+    IReadOnlyList<GameTileStateDto>? GameTiles,
     IReadOnlyList<UnitDefinitionDto> UnitDefinitions,
     JsonDocument? TurnSummary)
 {
@@ -116,6 +117,18 @@ public sealed record CityResourceDto(
 }
 
 /// <summary>
+/// Per-game mutable tile state (e.g., remaining resources).
+/// </summary>
+public sealed record GameTileStateDto(
+    long TileId,
+    string? ResourceType,
+    int ResourceAmount)
+{
+    public static GameTileStateDto From(GameTileState state)
+        => new(state.TileId, state.Tile.ResourceType, state.ResourceAmount);
+}
+
+/// <summary>
 /// Response shape for action endpoints that return only updated state.
 /// </summary>
 public sealed record ActionStateResponse(GameStateDto State);
@@ -124,4 +137,3 @@ public sealed record ActionStateResponse(GameStateDto State);
 /// Response for end-turn: includes state, turn summary and created autosave ID.
 /// </summary>
 public sealed record EndTurnResponse(GameStateDto State, JsonDocument TurnSummary, long AutosaveId);
-

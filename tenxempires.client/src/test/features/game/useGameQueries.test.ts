@@ -210,6 +210,7 @@ describe('useAttackUnit', () => {
       cities: [],
       cityTiles: [],
       cityResources: [],
+      gameTiles: [],
       unitDefinitions: [],
       turnSummary: null,
     }
@@ -447,6 +448,7 @@ describe('useAttackCity', () => {
       cities: [],
       cityTiles: [],
       cityResources: [],
+      gameTiles: [],
       unitDefinitions: [],
       turnSummary: null,
     }

@@ -63,6 +63,12 @@ public class LoadSaveResponseExample : IExamplesProvider<LoadSaveResponse>
             new CityResourceDto(302, "gold", 3)
         };
 
+        var tileStates = new List<GameTileStateDto>
+        {
+            new GameTileStateDto(3, "wheat", 70),
+            new GameTileStateDto(45, "iron", 40)
+        };
+
         var unitDefinitions = new List<UnitDefinitionDto>
         {
             new UnitDefinitionDto(1, "warrior", false, 20, 10, 0, 0, 2, 100),
@@ -78,6 +84,7 @@ public class LoadSaveResponseExample : IExamplesProvider<LoadSaveResponse>
             cities,
             cityTiles,
             cityResources,
+            tileStates,
             unitDefinitions,
             TurnSummary: null);
 

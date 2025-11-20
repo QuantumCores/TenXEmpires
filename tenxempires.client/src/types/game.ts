@@ -12,6 +12,7 @@ export interface GameStateDto {
   cities: CityInStateDto[]
   cityTiles: CityTileLinkDto[]
   cityResources: CityResourceDto[]
+  gameTiles?: GameTileStateDto[]
   unitDefinitions: UnitDefinitionDto[]
   turnSummary?: Record<string, unknown> | null
 }
@@ -71,6 +72,12 @@ export interface CityResourceDto {
   cityId: number
   resourceType: string
   amount: number
+}
+
+export interface GameTileStateDto {
+  tileId: number
+  resourceType: string | null
+  resourceAmount: number
 }
 
 // ============================================================================
