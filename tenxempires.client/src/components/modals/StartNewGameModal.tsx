@@ -140,7 +140,7 @@ export function StartNewGameModal({
   const isBusy = isCreating || isDeleting
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-testid="start-new-game-modal">
       <div className="flex items-center justify-between">
         <h2 id={titleId} className="text-lg font-semibold">
           Start New Game
@@ -151,6 +151,7 @@ export function StartNewGameModal({
           onClick={onRequestClose}
           disabled={isBusy}
           aria-label="Close"
+          data-testid="start-new-game-close"
         >
           ✕
         </button>
@@ -160,6 +161,7 @@ export function StartNewGameModal({
         <div 
           role="alert" 
           className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+          data-testid="start-new-game-error"
         >
           {error}
         </div>
@@ -178,6 +180,7 @@ export function StartNewGameModal({
               className="rounded px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
               onClick={onRequestClose}
               disabled={isBusy}
+              data-testid="start-new-game-cancel-delete"
             >
               Cancel
             </button>
@@ -186,6 +189,7 @@ export function StartNewGameModal({
               className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
               onClick={handleDeleteCurrentGame}
               disabled={isBusy}
+              data-testid="start-new-game-confirm-delete"
             >
               {isDeleting ? 'Deleting...' : 'Delete Current Game'}
             </button>
@@ -209,6 +213,7 @@ export function StartNewGameModal({
               onChange={(e) => setIsAcknowledged(e.target.checked)}
               disabled={isBusy}
               className="mt-0.5"
+              data-testid="start-new-game-ack"
             />
             <span>I understand and want to proceed</span>
           </label>
@@ -220,6 +225,7 @@ export function StartNewGameModal({
                 className="text-sm text-slate-600 underline hover:text-slate-800 disabled:opacity-50"
                 onClick={() => setShowDeleteFlow(true)}
                 disabled={isBusy}
+                data-testid="start-new-game-open-delete"
               >
                 Delete current game instead
               </button>
@@ -231,6 +237,7 @@ export function StartNewGameModal({
                 className="rounded px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                 onClick={onRequestClose}
                 disabled={isBusy}
+                data-testid="start-new-game-cancel"
               >
                 Cancel
               </button>
@@ -239,6 +246,7 @@ export function StartNewGameModal({
                 className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleStartNewGame}
                 disabled={!isAcknowledged || isBusy}
+                data-testid="start-new-game-submit"
               >
                 {isCreating ? 'Creating...' : 'Start New Game'}
               </button>

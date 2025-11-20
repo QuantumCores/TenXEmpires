@@ -620,6 +620,7 @@ export function MapCanvasStack({
     <div
       ref={containerRef}
       className="relative h-full w-full bg-slate-900"
+      data-testid="game-map-canvas"
       onPointerMove={handlePointerMove}
       onClick={handleClick}
       onContextMenu={handleContextMenu}

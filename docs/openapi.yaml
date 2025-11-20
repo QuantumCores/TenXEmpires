@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.239426+00:00
-                clientRequestId: f21ddd86-c584-446b-8a7c-67a4fe0dc0d6
+                occurredAt: 2025-11-20T16:50:24.7274882+00:00
+                clientRequestId: 78023f2e-4b07-48aa-a7d4-fc4127392530
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.2395054+00:00
-                clientRequestId: f038b25c-c043-49da-9dc1-62d62da4bf2f
+                occurredAt: 2025-11-20T16:50:24.7275952+00:00
+                clientRequestId: ef2d3a57-6a51-4c70-9231-a24119b50508
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.239426+00:00
-                clientRequestId: f21ddd86-c584-446b-8a7c-67a4fe0dc0d6
+                occurredAt: 2025-11-20T16:50:24.7274882+00:00
+                clientRequestId: 78023f2e-4b07-48aa-a7d4-fc4127392530
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.2395054+00:00
-                clientRequestId: f038b25c-c043-49da-9dc1-62d62da4bf2f
+                occurredAt: 2025-11-20T16:50:24.7275952+00:00
+                clientRequestId: ef2d3a57-6a51-4c70-9231-a24119b50508
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.239426+00:00
-                clientRequestId: f21ddd86-c584-446b-8a7c-67a4fe0dc0d6
+                occurredAt: 2025-11-20T16:50:24.7274882+00:00
+                clientRequestId: 78023f2e-4b07-48aa-a7d4-fc4127392530
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-18T19:54:51.2395054+00:00
-                clientRequestId: f038b25c-c043-49da-9dc1-62d62da4bf2f
+                occurredAt: 2025-11-20T16:50:24.7275952+00:00
+                clientRequestId: ef2d3a57-6a51-4c70-9231-a24119b50508
                 payload: 
       responses:
         202:
@@ -551,13 +551,6 @@ paths:
                   - cityId: 302
                     resourceType: production
                     amount: 2
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 80
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 50
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -724,13 +717,6 @@ paths:
                 - cityId: 302
                   resourceType: gold
                   amount: 3
-                gameTiles:
-                - tileId: 3
-                  resourceType: wheat
-                  resourceAmount: 70
-                - tileId: 45
-                  resourceType: iron
-                  resourceAmount: 40
                 unitDefinitions:
                 - id: 1
                   code: warrior
@@ -1109,13 +1095,6 @@ paths:
                   - cityId: 302
                     resourceType: production
                     amount: 3
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 75
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 42
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -1314,13 +1293,6 @@ paths:
                   - cityId: 302
                     resourceType: production
                     amount: 3
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 75
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 42
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -1516,13 +1488,6 @@ paths:
                   - cityId: 302
                     resourceType: production
                     amount: 3
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 75
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 42
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -1710,13 +1675,6 @@ paths:
                   - cityId: 302
                     resourceType: iron
                     amount: 1
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 74
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 18
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -2256,13 +2214,6 @@ paths:
                   - cityId: 302
                     resourceType: gold
                     amount: 3
-                  gameTiles:
-                  - tileId: 3
-                    resourceType: wheat
-                    resourceAmount: 70
-                  - tileId: 45
-                    resourceType: iron
-                    resourceAmount: 40
                   unitDefinitions:
                   - id: 1
                     code: warrior
@@ -2741,11 +2692,6 @@ components:
           items:
             $ref: '#/components/schemas/CityResourceDto'
           nullable: true
-        gameTiles:
-          type: array
-          items:
-            $ref: '#/components/schemas/GameTileStateDto'
-          nullable: true
         unitDefinitions:
           type: array
           items:
@@ -2789,19 +2735,6 @@ components:
           type: integer
           format: int32
         height:
-          type: integer
-          format: int32
-      additionalProperties: false
-    GameTileStateDto:
-      type: object
-      properties:
-        tileId:
-          type: integer
-          format: int64
-        resourceType:
-          type: string
-          nullable: true
-        resourceAmount:
           type: integer
           format: int32
       additionalProperties: false
