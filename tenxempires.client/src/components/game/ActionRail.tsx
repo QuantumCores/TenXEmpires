@@ -9,6 +9,9 @@ export function ActionRail() {
   const queryClient = useQueryClient()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
+  const baseButtonClasses =
+    'flex w-28 justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-center shadow hover:bg-slate-50'
+
   const openModal = (modal: string) => {
     setSearchParams({ modal })
   }
@@ -39,7 +42,7 @@ export function ActionRail() {
     <div className="absolute right-4 top-4 flex flex-col gap-2" data-testid="action-rail">
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"
+        className={baseButtonClasses}
         onClick={handleGoHome}
         aria-label="Go to home page"
         data-testid="action-rail-home"
@@ -48,7 +51,7 @@ export function ActionRail() {
       </button>
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"
+        className={baseButtonClasses}
         onClick={() => openModal('saves')}
         aria-label="Open saves"
         data-testid="action-rail-saves"
@@ -57,7 +60,7 @@ export function ActionRail() {
       </button>
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"
+        className={baseButtonClasses}
         onClick={() => openModal('settings')}
         aria-label="Open settings"
         data-testid="action-rail-settings"
@@ -66,7 +69,7 @@ export function ActionRail() {
       </button>
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50"
+        className={baseButtonClasses}
         onClick={() => openModal('help')}
         aria-label="Open help"
         data-testid="action-rail-help"
@@ -75,7 +78,7 @@ export function ActionRail() {
       </button>
       <button
         type="button"
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`${baseButtonClasses} disabled:cursor-not-allowed disabled:opacity-50`}
         onClick={handleLogout}
         disabled={isLoggingOut}
         aria-label="Logout"
