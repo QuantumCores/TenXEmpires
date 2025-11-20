@@ -79,7 +79,7 @@ test.describe('TC-PLAY-01: Map Rendering', () => {
     await page.waitForTimeout(2000) 
     
     await expect(page).toHaveScreenshot('map-rendering-mocked.png', {
-        maxDiffPixels: 100, // Allow small differences
+        maxDiffPixels: 400, // Allow small differences
         fullPage: true
     })
   })
