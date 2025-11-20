@@ -4,7 +4,7 @@ import { AppProviders } from './providers/AppProviders'
 
 function App(): React.JSX.Element {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '(not set)'
-  const showApiBanner = import.meta.env.VITE_SHOW_API_BASE_URL === 'false'
+  const showApiBanner = import.meta.env.VITE_SHOW_API_BASE_URL === 'true'
 
   return (
     <AppProviders>
