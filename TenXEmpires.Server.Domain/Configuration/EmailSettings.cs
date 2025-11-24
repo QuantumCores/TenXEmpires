@@ -34,4 +34,9 @@ public sealed class EmailSettings
     /// SMTP port (defaults to 587 for STARTTLS).
     /// </summary>
     public int Port { get; set; } = 587;
+
+    /// <summary>
+    /// Trace address for sending trace emails.
+    /// </summary>
+    public string TraceAddress { get; set; } = string.Empty;
 }
