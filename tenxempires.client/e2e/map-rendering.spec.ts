@@ -26,7 +26,7 @@ const matchesApiPath = (targetUrl: string | URL, endpoint: string) => {
 }
 
 test.describe('TC-PLAY-01: Map Rendering', () => {
-  test.skip('Map renders correctly with mocked data', async ({ page }) => {
+  test('Map renders correctly with mocked data', async ({ page }) => {
     // 1. Mock API responses for deterministic rendering
     await page.route(
       (url) => matchesApiPath(url, 'auth/me'),
