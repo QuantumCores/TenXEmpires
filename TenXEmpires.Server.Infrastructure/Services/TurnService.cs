@@ -421,10 +421,9 @@ public class TurnService : ITurnService
                 .ToListAsync(cancellationToken);
 
             var enemyCities = await _context.Cities
-                .AsNoTracking()
                 .Include(c => c.Tile)
                 .Where(c => c.GameId == game.Id && c.ParticipantId != activeParticipant.Id)
-                .ToListAsync(cancellationToken);
+                .ToListAsync(cancellationToken); // tracked so HP changes from AI attacks persist
 
             var occupied = await _context.Units
                 .AsNoTracking()
