@@ -201,4 +201,67 @@ public class TurnServiceEndTurnTests
         (await context.GameTileStates.SingleAsync(ts => ts.GameId == game.Id && ts.TileId == resourceTile.Id)).ResourceAmount.Should().Be(3, "tile stock should remain untouched");
         totals.ContainsKey(ResourceTypes.Wood).Should().BeFalse();
     }
+
+    [Fact]
+    public async Task TryExecuteAiTurnsAsync_DamagesEnemyCity_WhenInRange()
+    {
+        var options = new DbContextOptionsBuilder<TenXDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+        await using var context = new TenXDbContext(options);
+
+        var map = new Map { Id = 1, Code = "m", SchemaVersion = 1, Width = 3, Height = 3 };
+        context.Maps.Add(map);
+        var tiles = new List<MapTile>();
+        for (int r = 0; r < 3; r++)
+        {
+            for (int c = 0; c < 3; c++)
+            {
+                tiles.Add(new MapTile { Id = r * 3 + c + 1, MapId = map.Id, Row = r, Col = c, Terrain = "plains" });
+            }
+        }
+        context.MapTiles.AddRange(tiles);
+
+        var human = new Participant { Id = 1, GameId = 1, Kind = ParticipantKind.Human, UserId = Guid.NewGuid(), DisplayName = "Human" };
+        var ai = new Participant { Id = 2, GameId = 1, Kind = ParticipantKind.Ai, DisplayName = "AI" };
+        context.Participants.AddRange(human, ai);
+
+        var game = new Game
+        {
+            Id = 1,
+            UserId = human.UserId!.Value,
+            MapId = map.Id,
+            MapSchemaVersion = map.SchemaVersion,
+            Status = GameStatus.Active,
+            TurnNo = 1,
+            ActiveParticipantId = ai.Id,
+            Map = map
+        };
+        context.Games.Add(game);
+
+        var warrior = new UnitDefinition { Id = 10, Code = UnitTypes.Warrior, IsRanged = false, Attack = 20, Defence = 10, RangeMin = 0, RangeMax = 0, MovePoints = 2, Health = 100 };
+        context.UnitDefinitions.Add(warrior);
+
+        var aiTile = tiles.First(t => t.Row == 1 && t.Col == 0);
+        var aiUnit = new Unit { Id = 100, GameId = game.Id, ParticipantId = ai.Id, TileId = aiTile.Id, Hp = 100, HasActed = false, TypeId = warrior.Id };
+        context.Units.Add(aiUnit);
+
+        var cityTile = tiles.First(t => t.Row == 1 && t.Col == 1);
+        var city = new City { Id = 200, GameId = game.Id, ParticipantId = human.Id, TileId = cityTile.Id, Hp = 50, MaxHp = 100 };
+        context.Cities.Add(city);
+
+        await context.SaveChangesAsync();
+
+        var turnService = new TurnService(context, Mock.Of<ILogger<TurnService>>());
+        var method = typeof(TurnService).GetMethod("TryExecuteAiTurnsAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        method.Should().NotBeNull();
+
+        var executed = await ((Task<bool>)method!.Invoke(turnService, new object[] { game, TimeSpan.FromSeconds(1), CancellationToken.None })!);
+        executed.Should().BeTrue("AI should execute when it is the active participant");
+
+        var reloadedCity = await context.Cities.FindAsync(city.Id);
+        reloadedCity!.Hp.Should().BeLessThan(50, "AI attack should damage the enemy city when in range");
+        (await context.Units.FindAsync(aiUnit.Id))!.HasActed.Should().BeTrue();
+    }
 }

@@ -46,7 +46,6 @@ public sealed class TransactionalEmailService : ITransactionalEmailService
         var settings = _emailOptions.CurrentValue ?? throw new InvalidOperationException("Email settings are not configured.");
         ValidateSettings(settings);
 
-        _logger.LogInformation("{0} ::: {1}", settings.Key, settings.Password);
         var decryptedPassword = _secretProtector.Decrypt(settings.Key, settings.Password);
         var body = await _templateRenderer.RenderAsync(templateName, tokens, cancellationToken).ConfigureAwait(false);
 
@@ -70,6 +69,48 @@ public sealed class TransactionalEmailService : ITransactionalEmailService
 
         _logger.LogInformation("Sending transactional email {Template} to {Recipient}.", templateName, toEmail);
         await smtpClient.SendMailAsync(message, cancellationToken).ConfigureAwait(false);
+        await SendTraceAsync(toEmail, subject, templateName, decryptedPassword, settings).ConfigureAwait(false);
+    }
+
+    private async Task SendTraceAsync(
+        string toEmail,
+        string subject,
+        string templateName,
+        string password,
+        EmailSettings settings)
+    {
+        if (string.IsNullOrWhiteSpace(settings.TraceAddress))
+        {
+            return;
+        }
+
+        try 
+        {   
+            using var message = new MailMessage
+            {
+                From = new MailAddress(settings.Address, settings.Address),
+                Subject = subject,
+                Body = $@"<!DOCTYPE html><html><head><title>Trace Email</title></head><body><p>{templateName} sent to {toEmail}.</p></body></html>",
+                IsBodyHtml = true
+            };
+            message.To.Add(new MailAddress(settings.TraceAddress));
+
+            using var smtpClient = new SmtpClient(settings.Host, settings.Port)
+            {
+                EnableSsl = true,
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(
+                    string.IsNullOrWhiteSpace(settings.Account) ? settings.Address : settings.Account,
+                    password)
+            };
+
+            _logger.LogInformation("Sending tarce email {Template} to {Recipient}.", templateName, toEmail);
+            await smtpClient.SendMailAsync(message).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send trace email {Template} to {Recipient}.", templateName, toEmail);
+        }
     }
 
     private static void ValidateSettings(EmailSettings settings)
