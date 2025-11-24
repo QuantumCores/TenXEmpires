@@ -21,7 +21,6 @@ jobs:
       branch: ${{ github.event.inputs.branch }}
 
   deploy-frontend:
-    needs: deploy-backend
     uses: ./.github/workflows/deploy-frontend.yml
     secrets: inherit
     with:
