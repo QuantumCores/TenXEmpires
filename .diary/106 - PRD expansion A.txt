@@ -1,0 +1,10 @@
+1. Use Wheat as the currency for tile expansion. This simulates "population growth".
+2. Use a simple linear progression to keep values readable: Cost = BaseCost + ((ControlledTilesCount - InitialTilesCount) * 10)
+3. Clicking "Expand" closes the modal and enters "Expansion Mode." Valid adjacent tiles (not owned by enemies) are highlighted. Clicking a highlighted tile deducts resources and claims it immediately. Right-clicking or pressing Escape cancels the mode without spending.
+4. Set the cost to 50 Wood. This gives Wood a primary use case in the early game.
+5. Set the initial cap to 100 for each resource type.
+6. If cap is reached for a resource that resource is not harvestes.
+7. Make building construction instant for the MVP t
+8. Yes, use a flexible JSON column in the DB.
+9. Yes, disable the "End Turn" shortcut while the modal is open. This prevents accidental turn skips while the player is managing their economy.
+10. For the MVP fixed map, allow expansion into any adjacent tile except those currently owned by an enemy city or occupied by enemy units. Since there are no naval units yet, expanding into water is useless but allowed if the player wants to "waste" resources for a buffer zone.

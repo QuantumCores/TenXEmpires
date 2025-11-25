@@ -1,0 +1,30 @@
+Expansion Granularity
+1. Question: Does "expand city controlled tiles" imply increasing the city's overall radius (e.g., from 2 to 3) or selecting specific individual adjacent hexes to add to the territory?
+Recommendation: For the MVP, implement expansion as a uniform radius increase (+1 range) to avoid complex UI for individual tile selection and to simplify the server-side territory model.
+2. Wooden Walls Gameplay Effect
+Question: What specific gameplay attributes or stats does the "Wooden Walls" building confer to the city?
+Recommendation: Define "Wooden Walls" as adding +10 to the City's Defence stat and +50 to its max HP. This integrates clearly with the existing damage formula without requiring new mechanics like damage reduction percentages.
+3. AI Adaptation Strategy
+Question: Should the AI opponent also use these new manual resource spending and expansion mechanics, or should it retain the existing deterministic auto-production/fixed-radius behavior?
+Recommendation: Maintain the existing deterministic auto-behavior for the AI in the MVP. This minimizes risk to the "AI turn ≤ 500 ms" performance target and reduces scope, creating an asymmetric economy that is easier to balance initially.
+4. Action Economy per Turn
+Question: Does performing a city action (spawning, building, expanding) consume the city's "action" for the turn, or can a player perform multiple actions if they have the resources?
+Recommendation: Restrict the city to one "production" action per turn (Spawn Unit OR Build Building OR Expand). This forces strategic prioritization and prevents a single turn from drastically shifting the game state.
+5. Immediate vs. Delayed Spawning
+Question: You mentioned "When user chooses a unit then it is spawn." Does the unit appear and become usable instantly during the current turn?
+Recommendation: Spawn the unit immediately for visual feedback, but apply "summoning sickness" (0 movement points) for the remainder of the current turn to prevent "spawn-and-attack" exploits.
+6. Spawn Location Logic
+Question: With manual spawning, does the user need to select the specific target tile, or will the system continue to use the "nearest free adjacent tile" rule?
+Recommendation: Retain the "nearest free adjacent tile" logic (checking North then clockwise). This avoids adding a complex "select target tile" state to the UI and keeps the interaction streamlined.
+7. Configuration Consistency
+Question: Is there a specific architectural reason to split costs between the Database (units/buildings) and appSettings (expansion), or can these be consolidated?
+Recommendation: Store the expansion cost in the Database alongside unit and building definitions. This ensures a single source of truth for gameplay balance and allows for updates without requiring a server restart/redeployment.
+8. Expansion Cost Scaling
+Question: Should the cost to expand territory remain static, or should it increase with each subsequent expansion to prevent rapid map dominance?
+Recommendation: Implement a progressive cost curve (e.g., Base Cost × 1.5 ^ Current Radius) to make late-game expansion a significant strategic investment rather than a trivial action.
+9. Resource Storage Caps
+Question: Now that resources accumulate for manual spending rather than being consumed automatically, is there a maximum limit (cap) for stored resources?
+Recommendation: Introduce a resource cap (e.g., 100 per type, perhaps increasable later) to prevent infinite hoarding strategies and encourage active participation in the economy.
+10. Interaction Conflict (Unit vs. City)
+Question: Since a unit often occupies the city tile (1UPT), how should the game distinguish between "Select Unit" and "Open City Modal" when the user clicks the city tile?
+Recommendation: Implement a priority system: If a friendly unit is on the city, the first click selects the unit. A second click on the same tile (or a specific "Manage City" button in the unit's context menu) opens the City Modal.

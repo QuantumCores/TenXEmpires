@@ -1,0 +1,10 @@
+1. selecting specific individual adjacent hexes to add to the territory. Server side is ready. City has list of tiles under controll. PRD is not up to date.
+2. Define "Wooden Walls" as adding +10 to the City's Defence.
+3. Maintain the existing deterministic auto-behavior for the AI in the MVP. 
+4. Restrict the city to one "production" action per turn (Spawn Unit OR Build Building OR Expand). 
+5. Spawn the unit immediately for visual feedback. Become usable instantly during the current turn - this is current behavior
+6. Retain the "nearest free adjacent tile" logic (checking North then clockwise). 
+7. Store the expansion cost in the Database alongside unit and building definitions. But not for tiles. 
+8. Cost of tile will grow with number of city controlled tiles.
+9. Yes a resource cap is good idea. We can later introduce granary, storage buildings to increase cap. Makes game more interesting
+10. Implement a priority system: If a friendly unit is on the city, the first click selects the unit. A second click on the same tile opens the City Modal.

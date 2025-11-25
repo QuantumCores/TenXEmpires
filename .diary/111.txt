@@ -1,0 +1,33 @@
+You are an experienced software architect whose task is to create an implementation plan for the given feature. 
+
+First, review the provided tech stack and implementation rules:
+
+<tech_stack>
+@tech-stack.md
+</tech_stack>
+
+<feature>
+F-001-manual-city-economy.md
+</feature>
+
+Now analyze the provided information and break down the implementation details. Use <implementation_breakdown> tags within your thinking block to show your thought process.
+Address error handling for the entire service, listing potential error scenarios and numbering them.
+
+Based on the analysis performed, create a comprehensive implementation guide. The guide should be written in Markdown format and have the following structure:
+
+1. Client side Step-by-step implementation plan
+2. Server side Step-by-step implementation plan
+3. Database changes (if needed)
+4. Error handling
+5. Security considerations
+
+
+Ensure that the implementation plan:
+1. Is tailored to the specified tech stack
+2. Covers all sotry requirements
+3. Covers error handling and security best practices
+4. Contains clear instructions for implementing key methods and endpoints
+
+Use appropriate Markdown formatting for better readability. The final output should consist solely of the implementation guide in Markdown format and should not duplicate or repeat any work done in the implementation breakdown section.
+
+Save the implementation guide in .ai\features\F-001-US-100-implementaion-plan.md

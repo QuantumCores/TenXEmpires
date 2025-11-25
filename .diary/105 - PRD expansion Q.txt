@@ -1,0 +1,39 @@
+1.  **Currency for Tile Expansion**
+    *Question:* You listed Wheat, Wood, Stone, and Iron as resources. Which specific resource is used to pay for expanding to a new tile?
+    *Recommendation:* Use **Wheat** as the currency for tile expansion. This simulates "population growth" or cultural influence spreading to new lands, giving Wheat a clear purpose since Unit spawning uses Iron/Stone and Buildings will likely use Wood.
+
+2.  **Expansion Cost Formula**
+    *Question:* You mentioned the cost grows with the number of controlled tiles and the base cost is in `appSettings`. What should the specific formula be for the MVP?
+    *Recommendation:* Use a simple linear progression to keep values readable: `Cost = BaseCost + (ControlledTilesCount * 10)`. If BaseCost is 20 Wheat, the first tile costs 20, the next 30, etc.
+
+3.  **Expansion UI Flow**
+    *Question:* Since expansion targets specific tiles, how should the UI behave when "Expand" is clicked in the City Modal?
+    *Recommendation:* Clicking "Expand" closes the modal and enters "Expansion Mode." Valid adjacent tiles (not owned by enemies) are highlighted. Clicking a highlighted tile deducts resources and claims it immediately. Right-clicking or pressing Escape cancels the mode without spending.
+
+4.  **Wooden Walls Cost**
+    *Question:* What is the resource cost to build Wooden Walls?
+    *Recommendation:* Set the cost to **50 Wood**. This gives Wood a primary use case in the early game.
+
+5.  **Resource Cap Implementation**
+    *Question:* You agreed to a resource cap. What should the initial storage limit be for each resource type (Wheat, Wood, Stone, Iron)?
+    *Recommendation:* Set the initial cap to **100** for each resource type.
+
+6.  **Resource Overflow Behavior**
+    *Question:* What happens if a city harvests resources that would exceed the cap?
+    *Recommendation:* The excess resources are lost (the value remains at the cap). This encourages players to spend resources rather than hoard them indefinitely.
+
+7.  **Building Construction Duration**
+    *Question:* Is building construction instant (like unit spawning), or does it require multiple turns to complete?
+    *Recommendation:* Make building construction **instant** for the MVP to maintain consistency with the "click-to-spawn" mechanic you defined for units.
+
+8.  **Database Schema for Costs**
+    *Question:* You mentioned adding costs to the database. Should we introduce a generic `Cost` structure (e.g., a JSONB column `{"wood": 50, "iron": 0}`) to the `UnitDefinitions` and new `BuildingDefinitions` tables?
+    *Recommendation:* Yes, use a flexible JSON column (or a dedicated `ResourceCost` value object structure) in the DB. This allows future units/buildings to cost combinations of resources without changing the database schema.
+
+9.  **UI Focus & End Turn**
+    *Question:* If the City Modal is open, should the "End Turn" hotkey (E) be disabled?
+    *Recommendation:* Yes, disable the "End Turn" shortcut while the modal is open. This prevents accidental turn skips while the player is managing their economy.
+
+10. **Terrain Restrictions for Expansion**
+    *Question:* Can a player expand into *any* adjacent tile, or are there restrictions (e.g., water, mountains)?
+    *Recommendation:* For the MVP fixed map, allow expansion into any adjacent tile **except** those currently owned by an enemy city. Since there are no naval units yet, expanding into water is useless but allowed if the player wants to "waste" resources for a buffer zone.

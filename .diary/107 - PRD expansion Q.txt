@@ -1,0 +1,39 @@
+1. **Unit Costs Confirmation**
+   *Question:* In the original PRD, Warriors cost 10 Iron and Slingers cost 10 Stone. Should we keep these specific values for the new manual spawning system?
+   *Recommendation:* Keep them as is (**Warrior: 10 Iron**, **Slinger: 10 Stone**). These values fit comfortably within the new 100 resource cap and differentiate the resource needs.
+
+2. **Starting Resources**
+   *Question:* Since players now must pay for the first unit or expansion, what quantity of resources does the player's city start with at the beginning of a match?
+   *Recommendation:* Start the city with **50 Wheat, 50 Wood, 20 Iron, 20 Stone**. This provides immediate strategic options (e.g., 2 expansions, OR 1 Wall immediately, OR spawning units) without filling the storage cap.
+
+3. **Multiple Expansions per Turn**
+   *Question:* To confirm strictly: Does the "one production action per turn" limit apply to Expansion as well? (i.e., If I have 100 Wheat, can I still only expand to 1 new tile per turn?)
+   *Recommendation:* **Yes**, apply the limit. One action per turn (Spawn OR Build OR Expand) prevents a player from rapidly claiming large territory in a single turn and keeps the pacing consistent.
+
+4. **Enemy Occupation Logic**
+   *Question:* You specified expansion is blocked if a tile is "occupied by enemy units." If I attack and kill that enemy unit with my own unit, effectively clearing the tile, can I then expand into that tile on the *same* turn (assuming I haven't used my city action yet)?
+   *Recommendation:* **Yes**. The validation check should occur at the moment the user clicks the tile in "Expansion Mode." If the tile is empty at that specific moment, it is valid.
+
+5. **Visuals for Walls**
+   *Question:* How should the "Wooden Walls" be visually represented on the map to notify the opponent?
+   *Recommendation:* Update the City SVG to include a **wooden palisade ring** around the city icon. This provides clear, non-textual feedback about the defensive bonus.
+
+6. **AppSetting vs Code Constants**
+   *Question:* For the expansion cost formula `Cost = BaseCost + (Increase * Count)`, you mentioned `appSettings`. Should both the `BaseCost` and the `Increase` multiplier be in settings?
+   *Recommendation:* Put both in `appSettings.json`: `Economy:ExpansionBaseCost` (default 20) and `Economy:ExpansionCostStep` (default 10). This allows easy tuning of the progression curve without recompiling.
+
+7. **"Expansion Mode" Feedback**
+   *Question:* How should the user be notified that they are currently in "Expansion Mode" after clicking the button?
+   *Recommendation:* Display a persistent **Toast/Banner** at the top of the screen ("Select a tile to expand. ESC to cancel") and change the mouse cursor to a distinct "Claim" icon when hovering over valid tiles.
+
+8. **Resource HUD vs Modal**
+   *Question:* Since resources belong to the City, should they *only* be visible when the City Modal is open, or should there be a persistent HUD?
+   *Recommendation:* Keep resources inside the **City Modal** only for the MVP. This reinforces that resources are local to the specific city and reduces UI clutter on the main map.
+
+9. **Save Game Schema**
+   *Question:* The Save Game JSON needs to store this new state. Should we add a `Resources` dictionary and a `Buildings` list to the City object?
+   *Recommendation:* Yes. Add `Resources: { "Wheat": int, "Wood": int, ... }` and `Buildings: ["WoodenWalls"]` to the serialized City model in the database/JSON.
+
+10. **Summary Readiness**
+    *Question:* Do you have any other features to add, or are you ready for the comprehensive summary of all PRD changes?
+    *Recommendation:* If no other features are needed, please ask for the **Final Summary** to proceed with generating the text for the PRD update.

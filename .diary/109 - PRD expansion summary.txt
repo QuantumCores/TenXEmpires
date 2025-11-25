@@ -1,0 +1,75 @@
+<conversation_summary>
+<decisions>
+1.  **Manual City Management**: Human players no longer auto-spawn units. Instead, interaction with a city (click) opens a **City Modal** displaying current resources (Wheat, Wood, Stone, Iron).
+2.  **Interaction Priority**: If a Friendly Unit is on the City tile, the first click selects the Unit. A second click on the tile opens the City Modal.
+3.  **Action Economy**: A city is restricted to **one production action per turn**. The player must choose to either: Spawn a Unit, Build a Building, OR Expand Territory.
+4.  **Resource System**:
+    *   Resources accumulate in the city's storage rather than being used instantly.
+    *   **Storage Cap**: Set to **100** per resource type initially.
+    *   **Overflow**: If the cap is reached, any excess resources harvested that turn are lost.
+5.  **Unit Spawning**:
+    *   Logic: Manual selection from the modal if resources permit.
+    *   Placement: Nearest free adjacent tile (checking North, then clockwise).
+    *   Timing: The unit spawns immediately and is **usable instantly** (can move/attack) in the current turn.
+6.  **Territory Expansion**:
+    *   Currency: **Wheat** is used to pay for expansion (simulating population growth).
+    *   Cost Formula: `Cost = BaseCost + ((ControlledTilesCount - InitialTilesCount) * 10)`.
+    *   Configuration: Base parameters stored in `appSettings`.
+    *   Logic: Valid targets are any adjacent tile *not* owned by an enemy city and *not* occupied by an enemy unit.
+7.  **Expansion UI Flow**: Clicking "Expand" closes the modal and enters **"Expansion Mode"**. Valid tiles are highlighted. Clicking a tile claims it. Right-click or ESC cancels.
+8.  **Buildings**:
+    *   Introduction of **Wooden Walls**.
+    *   Effect: Adds **+10 Defence** to the City.
+    *   Cost: **50 Wood**.
+    *   Construction: Instant.
+9.  **AI Behavior**: The AI remains **asymmetric**; it retains the existing deterministic auto-behavior (auto-spawn/auto-expand) and does not use the new manual resource system.
+10. **Technical Implementation**:
+    *   Costs for Units and Buildings are stored in the Database using a flexible **JSON column**.
+    *   The **End Turn (E)** shortcut is disabled while the City Modal is open.
+</decisions>
+
+<matched_recommendations>
+1.  Use **Wheat** as the currency for tile expansion.
+2.  Use a linear progression formula for expansion costs: `BaseCost + ((ControlledTilesCount - InitialTilesCount) * 10)`.
+3.  Implement "Expansion Mode" where the modal closes and the user selects a specific valid adjacent tile to claim.
+4.  Set the cost of Wooden Walls to **50 Wood**.
+5.  Set the initial resource storage cap to **100** for each type.
+6.  Implement overflow logic where resources exceeding the cap are not harvested.
+7.  Make building construction **instant** for the MVP.
+8.  Use a flexible **JSON column** in the database for defining costs.
+9.  Disable the "End Turn" shortcut while the modal is open to prevent accidental skips.
+10. Allow expansion into any adjacent tile (including water/wastes) as long as it is not owned by an enemy city or occupied by an enemy unit.
+</matched_recommendations>
+
+<prd_planning_summary>
+**a. Main Functional Requirements**
+*   **City Modal UI**: Interface to view resource stocks (Wheat, Wood, Stone, Iron) and execute actions.
+*   **Resource Logic**: Persistent storage per city, capping at 100, and deduction upon action execution.
+*   **Manual Spawning**: Ability to select Warrior (Iron) or Slinger (Stone) for immediate spawn on the map.
+*   **Manual Expansion**: UI state ("Expansion Mode") allowing specific tile selection using Wheat.
+*   **Building System**: Framework for city upgrades, starting with Wooden Walls (Wood) affecting city stats.
+*   **Asymmetric AI**: Logic ensuring AI follows original deterministic rules while Player uses new manual rules.
+
+**b. Key User Stories & Usage Flows**
+*   *Managing Economy*: "As a player, I want to view my city's accumulated resources so I can plan my next purchase."
+*   *Expanding Borders*: "As a player, I want to spend Wheat to claim a specific adjacent tile to reach new resources."
+*   *Defending*: "As a player, I want to spend Wood to build Walls, increasing my city's defence against incoming attacks."
+*   *Strategic Choice*: "As a player, I must choose between spawning a unit, building walls, or expanding territory, as I can only do one per turn."
+
+**c. Success Criteria & Measurement**
+*   **Resource Engagement**: Analytics on how often players hit the resource cap (indicating poor spending flow) vs. spending efficiently.
+*   **Expansion Depth**: Average number of tiles claimed per game by human players vs AI.
+*   **Click Economy**: Ensuring the "Select Unit vs Select City" priority system does not result in mis-clicks.
+
+**d. Unresolved Issues (Implicit)**
+*   **Starting Resources**: The exact amount of resources a player's city starts with (e.g., 50 of each?) was not explicitly defined in the final confirmation, though defaults were discussed.
+*   **Visual Feedback**: Specifics on how "Wooden Walls" appear on the map (e.g., overlay SVG) need final design specification.
+*   **Save Game Schema**: The exact JSON structure for saving the new `Resources` and `Buildings` lists needs to be documented in the technical specs.
+</prd_planning_summary>
+
+<unresolved_issues>
+1.  **Starting Resources**: It needs to be defined how many resources (Wheat, Wood, Stone, Iron) the player's city holds at Turn 1 to allow for immediate actions.
+2.  **Visual Representation**: How "Wooden Walls" will be visualized on the map (e.g., a specific SVG ring or icon update) requires definition for the frontend team.
+3.  **Save Data Structure**: The specific JSON schema changes for the `map.json` or database save slot to accommodate `city.resources` and `city.buildings` need to be formalized.
+</unresolved_issues>
+</conversation_summary>
