@@ -210,6 +210,14 @@ public class TurnService : ITurnService
                 { ResourceTypes.Wheat, 0 },
                 { ResourceTypes.Iron, 0 }
             };
+            var overflowTotals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { ResourceTypes.Wood, 0 },
+                { ResourceTypes.Stone, 0 },
+                { ResourceTypes.Wheat, 0 },
+                { ResourceTypes.Iron, 0 }
+            };
+            var storageCap = _gameSettings?.ResourceStorageCap ?? ResourceTypes.DefaultStorageCap;
             var producedUnitCodes = new List<string>();
             var productionDelayed = 0;
 
@@ -253,7 +261,7 @@ public class TurnService : ITurnService
                 city.Hp = Math.Min(city.MaxHp, city.Hp + increment);
                 if (city.Hp != before) regenApplied++;
                 // Harvest from city-owned tiles only and maybe auto-produce
-                HarvestCityResources(city, allUnits, harvestedTotals, tileStates);
+                HarvestCityResources(city, allUnits, harvestedTotals, overflowTotals, tileStates, storageCap);
 
                 // Auto-produce at most 1 unit/city/turn
                 productionDelayed += TryAutoProduceUnit(game, city, unitDefs, occupiedTileIds, producedUnitCodes);
@@ -272,6 +280,7 @@ public class TurnService : ITurnService
             {
                 regenAppliedCities = regenApplied,
                 harvested = harvestedTotals,
+                overflow = overflowTotals,
                 producedUnits = producedUnitCodes,
                 productionDelayed,
                 aiExecuted = false
@@ -306,6 +315,7 @@ public class TurnService : ITurnService
                 {
                     regenAppliedCities = regenApplied,
                     harvested = harvestedTotals,
+                    overflow = overflowTotals,
                     producedUnits = producedUnitCodes,
                     productionDelayed,
                     aiExecuted = true
@@ -576,13 +586,21 @@ public class TurnService : ITurnService
                 { ResourceTypes.Wheat, 0 },
                 { ResourceTypes.Iron, 0 }
             };
+            var aiOverflow = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                { ResourceTypes.Wood, 0 },
+                { ResourceTypes.Stone, 0 },
+                { ResourceTypes.Wheat, 0 },
+                { ResourceTypes.Iron, 0 }
+            };
+            var storageCap = _gameSettings?.ResourceStorageCap ?? ResourceTypes.DefaultStorageCap;
 
             var allUnits = new List<Unit>();
             allUnits.AddRange(aiUnits);
             allUnits.AddRange(enemyUnits);
             foreach (var city in aiCities)
             {
-                HarvestCityResources(city, allUnits, aiHarvested, aiTileStates);
+                HarvestCityResources(city, allUnits, aiHarvested, aiOverflow, aiTileStates, storageCap);
                 productionDelayed += TryAutoProduceUnit(game, city, unitDefs, occupiedSet, producedByAi);
             }
 
@@ -619,7 +637,9 @@ public class TurnService : ITurnService
         City city,
         List<Unit> allUnits,
         Dictionary<string, int> harvestedTotals,
-        IReadOnlyDictionary<long, GameTileState> tileStates)
+        Dictionary<string, int> overflowTotals,
+        IReadOnlyDictionary<long, GameTileState> tileStates,
+        int storageCap)
     {
         foreach (var link in city.CityTiles)
         {
@@ -658,16 +678,45 @@ public class TurnService : ITurnService
                 _context.CityResources.Add(cr);
             }
 
-            cr.Amount += 1; // produce 1 per tile
-            tileState.ResourceAmount -= 1; // consume 1 from per-game tile stock
+            // Check storage cap before harvesting
+            if (cr.Amount >= storageCap)
+            {
+                // Resource at cap - track overflow, don't consume tile resource
+                if (overflowTotals.ContainsKey(tile.ResourceType))
+                    overflowTotals[tile.ResourceType] += 1;
+                else
+                    overflowTotals[tile.ResourceType] = 1;
 
-            if (harvestedTotals.ContainsKey(tile.ResourceType))
-            {
-                harvestedTotals[tile.ResourceType] += 1;
+                _logger.LogDebug(
+                    "City {CityId} at storage cap for {ResourceType}; skipping harvest from tile {TileId}",
+                    city.Id,
+                    tile.ResourceType,
+                    tile.Id);
+                continue;
             }
+
+            // Calculate how much can be harvested (partial harvest at cap boundary)
+            int potentialHarvest = 1; // Base harvest per tile
+            int availableStorage = storageCap - cr.Amount;
+            int actualHarvest = Math.Min(potentialHarvest, availableStorage);
+            int overflow = potentialHarvest - actualHarvest;
+
+            // Apply harvest
+            cr.Amount += actualHarvest;
+            tileState.ResourceAmount -= 1; // Always consume from tile
+
+            // Track totals
+            if (harvestedTotals.ContainsKey(tile.ResourceType))
+                harvestedTotals[tile.ResourceType] += actualHarvest;
             else
+                harvestedTotals[tile.ResourceType] = actualHarvest;
+
+            if (overflow > 0)
             {
-                harvestedTotals[tile.ResourceType] = 1;
+                if (overflowTotals.ContainsKey(tile.ResourceType))
+                    overflowTotals[tile.ResourceType] += overflow;
+                else
+                    overflowTotals[tile.ResourceType] = overflow;
             }
         }
     }

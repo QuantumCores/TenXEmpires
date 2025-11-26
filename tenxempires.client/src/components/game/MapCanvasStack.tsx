@@ -391,8 +391,9 @@ export function MapCanvasStack({
         
         // If same unit is already selected
         if (selection.kind === 'unit' && selection.id === clickedUnit.id) {
-          // If there's a player city on this tile, open city modal (second click behavior)
+          // If there's a player city on this tile, select city (to highlight tiles) and open modal
           if (clickedCity && clickedCity.participantId === playerParticipant?.id) {
+            setSelection({ kind: 'city', id: clickedCity.id })
             setSelectedCityId(clickedCity.id)
             openModal('city', undefined, 'push')
             return
@@ -482,17 +483,15 @@ export function MapCanvasStack({
           }
         }
         
-        // For player's own cities, open the city modal
+        // For player's own cities
         if (isPlayerCity) {
-          // If city is already selected, open modal directly
+          // If city is already selected, open modal on second click
           if (selection.kind === 'city' && selection.id === clickedCity.id) {
             setSelectedCityId(clickedCity.id)
             openModal('city', undefined, 'push')
           } else {
-            // First click: select city and open modal
+            // First click: select city and highlight tiles (don't open modal yet)
             setSelection({ kind: 'city', id: clickedCity.id })
-            setSelectedCityId(clickedCity.id)
-            openModal('city', undefined, 'push')
           }
         }
         return
@@ -613,8 +612,14 @@ export function MapCanvasStack({
         }
       }
 
-      // Otherwise clear selection
+      // Clicking on empty tile
       if (clickedMapTile) {
+        // If a city is selected, clicking elsewhere clears selection
+        if (selection.kind === 'city') {
+          clearSelection()
+          return
+        }
+        // For tile selection, toggle
         if (selection.kind === 'tile' && selection.id === clickedMapTile.id) {
           clearSelection()
         } else {

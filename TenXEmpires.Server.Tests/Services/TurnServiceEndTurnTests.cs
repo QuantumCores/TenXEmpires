@@ -190,11 +190,13 @@ public class TurnServiceEndTurnTests
             .FirstAsync(c => c.Id == city.Id);
         var allUnits = await context.Units.Include(u => u.Tile).ToListAsync();
         var totals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var overflowTotals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var tileStateDict = await context.GameTileStates
             .Where(ts => ts.GameId == game.Id)
             .ToDictionaryAsync(ts => ts.TileId);
+        var storageCap = ResourceTypes.DefaultStorageCap;
 
-        method!.Invoke(turnService, new object[] { loadedCity, allUnits, totals, tileStateDict });
+        method!.Invoke(turnService, new object[] { loadedCity, allUnits, totals, overflowTotals, tileStateDict, storageCap });
 
         (await context.CityResources.Where(cr => cr.CityId == city.Id && cr.ResourceType == ResourceTypes.Wood).Select(cr => cr.Amount).FirstAsync())
             .Should().Be(0, "harvest should be blocked when enemy occupies tile");

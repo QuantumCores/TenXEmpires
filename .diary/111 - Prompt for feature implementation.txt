@@ -1,6 +1,6 @@
-You are an experienced software architect whose task is to create an implementation plan for the given feature. 
+You are an experienced software architect whose task is to create an implementation plan for the US-101 user story.
 
-First, review the provided tech stack and implementation rules:
+First, review the provided tech stack and feature documentation:
 
 <tech_stack>
 [tech-stack.md](.ai/tech-stack.md) 
@@ -10,7 +10,7 @@ First, review the provided tech stack and implementation rules:
 [F-001-manual-city-economy.md](.ai/features/F-001-manual-city-economy.md) 
 </feature>
 
-Now analyze the provided information and break down the implementation details. Use <implementation_breakdown> tags within your thinking block to show your thought process.
+Now analyze the provided information and break down the `US-101: Resource Harvest and Cap` implementation details. Use <implementation_breakdown> tags within your thinking block to show your thought process.
 Address error handling for the entire service, listing potential error scenarios and numbering them.
 
 Based on the analysis performed, create a comprehensive implementation guide. The guide should be written in Markdown format and have the following structure:
@@ -32,6 +32,11 @@ Ensure that the implementation plan:
 
 Use appropriate Markdown formatting for better readability. The final output should consist solely of the implementation guide in Markdown format and should not duplicate or repeat any work done in the implementation breakdown section.
 
-Save the implementation guide in .ai\features\F-001-US-100-implementaion-plan.md
+Save the implementation guide in .ai\features\F-001-US-101-implementaion-plan.md
 
  Client is in `tenxempires.client` folder. Important classes are in `tenxempires.client\src\components\game\MapCanvasStack.tsx` and `tenxempires.client\src\components\modals`. Server is in `TenXEmpires.Server` folder.
+
+
+ ---------------------
+
+ Read @.ai/features/F-001-manual-city-economy.md and implementation plan for the first user story US-100 @.ai/features/F-001-US-100-implementaion-plan.md . Analyze the files and start the Implementation

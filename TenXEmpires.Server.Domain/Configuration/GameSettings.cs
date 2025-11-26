@@ -29,5 +29,10 @@ public class GameSettings
     /// City healing per turn when under siege.
     /// </summary>
     public int CityRegenUnderSiege { get; set; } = 2;
+
+    /// <summary>
+    /// Maximum resource storage per type per city.
+    /// </summary>
+    public int ResourceStorageCap { get; set; } = 100;
 }
 

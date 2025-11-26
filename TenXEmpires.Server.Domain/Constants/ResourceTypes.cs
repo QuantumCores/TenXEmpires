@@ -16,6 +16,11 @@ public static class ResourceTypes
     public static readonly string[] ValidTypes = { Wood, Stone, Wheat, Iron };
 
     /// <summary>
+    /// Default storage cap per resource type per city.
+    /// </summary>
+    public const int DefaultStorageCap = 100;
+
+    /// <summary>
     /// Initial resource amounts when a city is founded.
     /// </summary>
     public static class InitialAmounts
