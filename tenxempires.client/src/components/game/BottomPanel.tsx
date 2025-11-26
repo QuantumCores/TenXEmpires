@@ -58,38 +58,9 @@ export function BottomPanel({ gameState, mapTiles, selection }: BottomPanelProps
     )
   }
 
+  // City info is now shown in the City Modal, so don't render bottom panel for cities
   if (selection.kind === 'city') {
-    const city = gameState.cities.find((c) => c.id === selection.id)
-    if (!city) return null
-
-    const cityResources = gameState.cityResources.filter((r) => r.cityId === city.id)
-    const workedTiles = gameState.cityTiles.filter((t) => t.cityId === city.id).length
-
-    return (
-      <div className="absolute bottom-4 left-4 rounded-lg border border-slate-300 bg-white p-4 shadow-lg" data-testid="bottom-panel-city">
-        <h3 className="mb-2 font-semibold">City</h3>
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between gap-8">
-            <span className="text-slate-600">HP:</span>
-            <span className="font-medium">{city.hp}/{city.maxHp}</span>
-          </div>
-          <div className="flex justify-between gap-8">
-            <span className="text-slate-600">Tiles:</span>
-            <span className="font-medium">{workedTiles}</span>
-          </div>
-          {cityResources.length > 0 && (
-            <div className="mt-2">
-              <div className="text-xs text-slate-600">Resources:</div>
-              {cityResources.map((r) => (
-                <div key={r.resourceType} className="ml-2 text-xs">
-                  {r.resourceType}: {r.amount}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    )
+    return null
   }
 
   if (selection.kind === 'tile') {

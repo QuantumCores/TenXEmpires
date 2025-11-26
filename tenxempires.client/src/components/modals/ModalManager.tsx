@@ -8,10 +8,12 @@ import { HelpModal } from './HelpModal'
 import { SettingsModal } from './SettingsModal'
 import { ErrorSchemaModal } from './ErrorSchemaModal'
 import { SessionExpiredModal } from './SessionExpiredModal'
+import { CityModal } from './CityModal'
 import { useModalParam } from '../../router/query'
 import { useBackstackCloseBehavior } from '../../router/backstack'
 import { fetchGames } from '../../api/games'
 import { useGameState } from '../../features/game/useGameQueries'
+import { useUiStore } from '../ui/uiStore'
 
 export type ModalKey =
   | 'saves'
@@ -22,6 +24,7 @@ export type ModalKey =
   | 'session-expired'
   | 'error-schema'
   | 'error-ai'
+  | 'city'
 
 type ModalProps = { onRequestClose: () => void }
 
@@ -42,12 +45,11 @@ function PlaceholderModal({ title, onRequestClose }: { title: string } & ModalPr
   )
 }
 
-const ModalComponents: Record<ModalKey, (p: ModalProps) => React.ReactElement> = {
-  'saves': (p) => <PlaceholderModal title="Saves" {...p} />, // Handled separately
+// Modal components that use standard props (no special context needed)
+const ModalComponents: Partial<Record<ModalKey, (p: ModalProps) => React.ReactElement>> = {
   'settings': (p) => <SettingsModal {...p} />,
   'help': (p) => <HelpModal {...p} />,
   'account-delete': (p) => <PlaceholderModal title="Delete Account" {...p} />,
-  'start-new': (p) => <StartNewGameModal {...p} />, // Handled separately
   'session-expired': (p) => <SessionExpiredModal {...p} />,
   'error-schema': (p) => <ErrorSchemaModal {...p} />,
   'error-ai': (p) => <PlaceholderModal title="AI Timeout" {...p} />,
@@ -65,6 +67,10 @@ export function ModalManager({
 
   const [activeGameId, setActiveGameId] = useState<number | null>(null)
   const [hasCheckedActiveGame, setHasCheckedActiveGame] = useState(false)
+  
+  // City modal context
+  const selectedCityId = useUiStore((s) => s.selectedCityId)
+  const setSelectedCityId = useUiStore((s) => s.setSelectedCityId)
 
   // Determine if we're in "new game" context or have an actual game
   const isNewGameContext = gameIdParam === 'new' || gameIdParam === 'undefined'
@@ -145,8 +151,33 @@ export function ModalManager({
     )
   }
 
+  // For city modal, pass game state and city ID
+  if (modalKey === 'city') {
+    if (!gameState || !selectedCityId) {
+      // Can't show city modal without game state and city ID
+      return null
+    }
+
+    const handleClose = () => {
+      setSelectedCityId(undefined)
+      closeModal('replace')
+    }
+
+    return (
+      <ModalContainer onRequestClose={handleClose}>
+        <CityModal
+          onRequestClose={handleClose}
+          gameState={gameState}
+          cityId={selectedCityId}
+        />
+      </ModalContainer>
+    )
+  }
+
   // For other modals, use the standard component map
   const Comp = ModalComponents[modalKey]
+  if (!Comp) return null
+  
   const isBlocking = modalKey === 'session-expired' || modalKey === 'error-schema'
   return (
     <ModalContainer onRequestClose={() => closeModal('replace')} closeOnBackdrop={!isBlocking}>

@@ -15,6 +15,9 @@ interface UiState {
   setSessionLocked: (locked: boolean) => void
   schemaError?: SchemaError
   setSchemaError: (err?: SchemaError) => void
+  // City modal context
+  selectedCityId?: number
+  setSelectedCityId: (cityId?: number) => void
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -25,4 +28,7 @@ export const useUiStore = create<UiState>((set) => ({
   setSessionLocked: (locked) => set({ sessionLocked: locked }),
   schemaError: undefined,
   setSchemaError: (err) => set({ schemaError: err }),
+  // City modal context
+  selectedCityId: undefined,
+  setSelectedCityId: (cityId) => set({ selectedCityId: cityId }),
 }))

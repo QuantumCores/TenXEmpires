@@ -28,6 +28,8 @@ import {
   drawCitySprite,
 } from '../../features/game/spriteCache'
 import { getGlobalImageLoader, DEFAULT_MANIFEST } from '../../features/game/imageLoader'
+import { useModalParam } from '../../router/query'
+import { useUiStore } from '../ui/uiStore'
 
 interface MapCanvasStackProps {
   gameState: GameStateDto
@@ -92,6 +94,10 @@ export function MapCanvasStack({
   const moveUnitMutation = useMoveUnit(gameState.game.id)
   const attackUnitMutation = useAttackUnit(gameState.game.id)
   const attackCityMutation = useAttackCity(gameState.game.id)
+  
+  // City modal hooks
+  const { openModal } = useModalParam()
+  const setSelectedCityId = useUiStore((s) => s.setSelectedCityId)
 
   // Sprite cache for performance
   const spriteCache = useMemo(() => getGlobalSpriteCache(), [])
@@ -383,8 +389,15 @@ export function MapCanvasStack({
         // Check if unit belongs to player
         const isPlayerUnit = clickedUnit.participantId === playerParticipant?.id
         
-        // If same unit, deselect
+        // If same unit is already selected
         if (selection.kind === 'unit' && selection.id === clickedUnit.id) {
+          // If there's a player city on this tile, open city modal (second click behavior)
+          if (clickedCity && clickedCity.participantId === playerParticipant?.id) {
+            setSelectedCityId(clickedCity.id)
+            openModal('city', undefined, 'push')
+            return
+          }
+          // Otherwise, just deselect
           clearSelection()
           return
         }
@@ -469,9 +482,18 @@ export function MapCanvasStack({
           }
         }
         
-        // Only allow selecting player's own cities
+        // For player's own cities, open the city modal
         if (isPlayerCity) {
-          setSelection({ kind: 'city', id: clickedCity.id })
+          // If city is already selected, open modal directly
+          if (selection.kind === 'city' && selection.id === clickedCity.id) {
+            setSelectedCityId(clickedCity.id)
+            openModal('city', undefined, 'push')
+          } else {
+            // First click: select city and open modal
+            setSelection({ kind: 'city', id: clickedCity.id })
+            setSelectedCityId(clickedCity.id)
+            openModal('city', undefined, 'push')
+          }
         }
         return
       }

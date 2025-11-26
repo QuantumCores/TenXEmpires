@@ -19,6 +19,7 @@ function sanitizeModalKey(value: string | null): ModalKey | undefined {
     'session-expired',
     'error-schema',
     'error-ai',
+    'city',
   ]
   return value && (allowed as string[]).includes(value) ? (value as ModalKey) : undefined
 }

@@ -3,11 +3,11 @@ You are an experienced software architect whose task is to create an implementat
 First, review the provided tech stack and implementation rules:
 
 <tech_stack>
-@tech-stack.md
+[tech-stack.md](.ai/tech-stack.md) 
 </tech_stack>
 
 <feature>
-F-001-manual-city-economy.md
+[F-001-manual-city-economy.md](.ai/features/F-001-manual-city-economy.md) 
 </feature>
 
 Now analyze the provided information and break down the implementation details. Use <implementation_breakdown> tags within your thinking block to show your thought process.
@@ -20,7 +20,9 @@ Based on the analysis performed, create a comprehensive implementation guide. Th
 3. Database changes (if needed)
 4. Error handling
 5. Security considerations
-
+6. Backend unit test scenarios 
+7. Frontend unit test scenarios 
+8. e2e test scenarios
 
 Ensure that the implementation plan:
 1. Is tailored to the specified tech stack
@@ -31,3 +33,5 @@ Ensure that the implementation plan:
 Use appropriate Markdown formatting for better readability. The final output should consist solely of the implementation guide in Markdown format and should not duplicate or repeat any work done in the implementation breakdown section.
 
 Save the implementation guide in .ai\features\F-001-US-100-implementaion-plan.md
+
+ Client is in `tenxempires.client` folder. Important classes are in `tenxempires.client\src\components\game\MapCanvasStack.tsx` and `tenxempires.client\src\components\modals`. Server is in `TenXEmpires.Server` folder.
