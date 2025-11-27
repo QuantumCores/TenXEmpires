@@ -200,6 +200,7 @@ public class TenXDbContext : DbContext
             entity.Property(e => e.TileId).HasColumnName("tile_id");
             entity.Property(e => e.Hp).HasColumnName("hp");
             entity.Property(e => e.MaxHp).HasColumnName("max_hp");
+            entity.Property(e => e.HasActedThisTurn).HasColumnName("has_acted_this_turn").HasDefaultValue(false);
 
             entity.HasOne(e => e.Game)
                 .WithMany(g => g.Cities)

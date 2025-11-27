@@ -20,6 +20,10 @@ export const ErrorCodes = {
   NO_ACTIONS_LEFT: 'NO_ACTIONS_LEFT',
   OUT_OF_RANGE: 'OUT_OF_RANGE',
   INVALID_TARGET: 'INVALID_TARGET',
+  CITY_ALREADY_ACTED: 'CITY_ALREADY_ACTED',
+  INSUFFICIENT_RESOURCES: 'INSUFFICIENT_RESOURCES',
+  SPAWN_BLOCKED: 'SPAWN_BLOCKED',
+  INVALID_UNIT: 'INVALID_UNIT',
 
   // AI errors
   AI_TIMEOUT: 'AI_TIMEOUT',
@@ -172,6 +176,10 @@ export function getErrorNotification(error: GameError): {
     ErrorCodes.NO_ACTIONS_LEFT,
     ErrorCodes.OUT_OF_RANGE,
     ErrorCodes.INVALID_TARGET,
+    ErrorCodes.CITY_ALREADY_ACTED,
+    ErrorCodes.INSUFFICIENT_RESOURCES,
+    ErrorCodes.SPAWN_BLOCKED,
+    ErrorCodes.INVALID_UNIT,
   ]
   if (actionErrors.includes(error.code)) {
     return {

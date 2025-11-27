@@ -1,5 +1,6 @@
-import { useId, useMemo } from 'react'
-import type { CityInStateDto, CityResourceDto, GameStateDto } from '../../types/game'
+import { useId, useMemo, useState } from 'react'
+import type { CityInStateDto, GameStateDto } from '../../types/game'
+import { useSpawnUnit } from '../../features/game/useGameQueries'
 
 // ============================================================================
 // Types
@@ -19,6 +20,15 @@ interface ResourceDisplay {
   maxAmount: number
 }
 
+interface UnitOption {
+  code: string
+  label: string
+  icon: string
+  cost: number
+  costResource: string
+  description: string
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -34,12 +44,33 @@ const RESOURCE_CONFIG: Record<string, { label: string; icon: string }> = {
 
 const RESOURCE_ORDER = ['wheat', 'wood', 'iron', 'stone']
 
+const UNIT_OPTIONS: UnitOption[] = [
+  {
+    code: 'warrior',
+    label: 'Warrior',
+    icon: '/images/game/unit/warrior.png',
+    cost: 10,
+    costResource: 'iron',
+    description: 'Melee frontline unit.',
+  },
+  {
+    code: 'slinger',
+    label: 'Slinger',
+    icon: '/images/game/unit/slinger.png',
+    cost: 10,
+    costResource: 'stone',
+    description: 'Ranged skirmisher.',
+  },
+]
+
 // ============================================================================
 // Main Component
 // ============================================================================
 
 export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps) {
   const titleId = useId()
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
+  const spawnMutation = useSpawnUnit(gameState.game.id)
 
   // Find the city data
   const city = useMemo(() => {
@@ -71,6 +102,37 @@ export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps)
   const workedTilesCount = useMemo(() => {
     return gameState.cityTiles.filter((t) => t.cityId === cityId).length
   }, [gameState.cityTiles, cityId])
+
+  const resourceAmounts = useMemo(() => {
+    const map = new Map<string, number>()
+    resources.forEach((r) => map.set(r.type, r.amount))
+    return map
+  }, [resources])
+
+  const cityHasActed = city?.hasActed ?? false
+  const selectedOption = UNIT_OPTIONS.find((o) => o.code === selectedUnit)
+  const hasResourcesForSelection =
+    selectedOption != null &&
+    (resourceAmounts.get(selectedOption.costResource) ?? 0) >= selectedOption.cost
+
+  const isConfirmDisabled =
+    !selectedOption ||
+    !hasResourcesForSelection ||
+    cityHasActed ||
+    spawnMutation.isPending
+
+  const handleConfirm = () => {
+    if (!city || !selectedOption) return
+    spawnMutation.mutate(
+      { cityId: city.id, unitCode: selectedOption.code },
+      {
+        onSuccess: () => {
+          setSelectedUnit(null)
+          onRequestClose()
+        },
+      }
+    )
+  }
 
   if (!city) {
     return (
@@ -125,11 +187,93 @@ export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps)
         <BuildingsList />
       </section>
 
-      {/* Actions placeholder - will be implemented in later stories */}
-      <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-        <p className="text-center text-sm text-slate-500">
-          City actions coming soon...
-        </p>
+      {/* Manual unit production */}
+      <section aria-labelledby="production-heading" className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 id="production-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Production
+            </h3>
+            <p className="text-xs text-slate-500">
+              Spend resources to spawn a unit on the nearest free adjacent tile.
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              cityHasActed ? 'bg-slate-200 text-slate-600' : 'bg-emerald-50 text-emerald-700'
+            }`}
+          >
+            {cityHasActed ? 'Action used this turn' : '1 action per turn'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {UNIT_OPTIONS.map((option) => {
+            const affordable = (resourceAmounts.get(option.costResource) ?? 0) >= option.cost
+            const selected = selectedUnit === option.code
+            const costResource = RESOURCE_CONFIG[option.costResource]
+
+            return (
+              <button
+                key={option.code}
+                type="button"
+                className={`flex flex-col rounded-lg border p-3 text-left transition ${
+                  selected
+                    ? 'border-indigo-400 shadow-[0_0_0_1px_rgba(99,102,241,0.35)]'
+                    : 'border-slate-200 hover:border-slate-300'
+                } ${cityHasActed ? 'cursor-not-allowed opacity-60' : ''}`}
+                onClick={() => setSelectedUnit(option.code)}
+                disabled={cityHasActed}
+              >
+                <div className="flex items-start gap-3">
+                  <img src={option.icon} alt={option.label} className="h-10 w-10 object-contain" loading="lazy" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-semibold text-slate-800">{option.label}</span>
+                    <span className="text-xs text-slate-500">{option.description}</span>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    {costResource && (
+                      <img src={costResource.icon} alt={costResource.label} className="h-5 w-5 object-contain" loading="lazy" />
+                    )}
+                    <span className="font-semibold">{option.cost}</span>
+                    <span className="text-xs uppercase tracking-wide text-slate-500">{option.costResource}</span>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                      affordable ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {affordable ? 'Ready' : 'Need more'}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="mt-3 text-xs text-slate-500">
+          Spawns on the nearest free adjacent tile (1 unit per tile). Errors such as blocked tiles or insufficient resources will be shown as toasts.
+        </div>
+
+        <div className="mt-4 flex items-center justify-end gap-3">
+          {cityHasActed && (
+            <span className="text-xs font-medium text-slate-500">This city has already acted this turn.</span>
+          )}
+          <button
+            type="button"
+            className={`rounded-md px-4 py-2 text-sm font-semibold text-white transition ${
+              isConfirmDisabled
+                ? 'cursor-not-allowed bg-slate-300'
+                : 'bg-indigo-600 hover:bg-indigo-500 shadow-sm'
+            }`}
+            onClick={handleConfirm}
+            disabled={isConfirmDisabled}
+          >
+            {spawnMutation.isPending ? 'Spawning...' : 'Confirm'}
+          </button>
+        </div>
       </section>
 
       {/* Footer */}
@@ -154,7 +298,7 @@ function CityStats({ city, workedTilesCount }: { city: CityInStateDto; workedTil
   const hpPercent = (city.hp / city.maxHp) * 100
 
   return (
-    <div className="grid grid-cols-2 gap-4 rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="grid grid-cols-2 gap-4 rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:grid-cols-4">
       <StatItem label="Health" value={`${city.hp} / ${city.maxHp}`}>
         <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
@@ -168,6 +312,7 @@ function CityStats({ city, workedTilesCount }: { city: CityInStateDto; workedTil
       <StatItem label="Defence" value="10" />
       <StatItem label="Worked Tiles" value={String(workedTilesCount)} />
       <StatItem label="Storage Cap" value={`${STORAGE_CAP} / resource`} />
+      <StatItem label="Action" value={city.hasActed ? 'Used' : 'Ready'} />
     </div>
   )
 }

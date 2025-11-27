@@ -103,7 +103,8 @@ public class GameSeedingService : IGameSeedingService
             ParticipantId = humanParticipantId,
             TileId = humanStartTile.Id,
             Hp = InitialCityHp,
-            MaxHp = InitialCityMaxHp
+            MaxHp = InitialCityMaxHp,
+            HasActedThisTurn = false
         };
 
         var aiCity = new City
@@ -112,7 +113,8 @@ public class GameSeedingService : IGameSeedingService
             ParticipantId = aiParticipantId,
             TileId = aiStartTile.Id,
             Hp = InitialCityHp,
-            MaxHp = InitialCityMaxHp
+            MaxHp = InitialCityMaxHp,
+            HasActedThisTurn = false
         };
 
         _context.Cities.AddRange(humanCity, aiCity);

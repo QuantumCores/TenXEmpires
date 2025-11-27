@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8219858+00:00
-                clientRequestId: a8b73d25-d4fb-4292-bcdd-9384c7fd7de0
+                occurredAt: 2025-11-27T21:46:07.4794446+00:00
+                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8220771+00:00
-                clientRequestId: cdbdb358-c533-4872-86b2-0246dd5385c7
+                occurredAt: 2025-11-27T21:46:07.4795302+00:00
+                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8219858+00:00
-                clientRequestId: a8b73d25-d4fb-4292-bcdd-9384c7fd7de0
+                occurredAt: 2025-11-27T21:46:07.4794446+00:00
+                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8220771+00:00
-                clientRequestId: cdbdb358-c533-4872-86b2-0246dd5385c7
+                occurredAt: 2025-11-27T21:46:07.4795302+00:00
+                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8219858+00:00
-                clientRequestId: a8b73d25-d4fb-4292-bcdd-9384c7fd7de0
+                occurredAt: 2025-11-27T21:46:07.4794446+00:00
+                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-26T20:40:15.8220771+00:00
-                clientRequestId: cdbdb358-c533-4872-86b2-0246dd5385c7
+                occurredAt: 2025-11-27T21:46:07.4795302+00:00
+                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
                 payload: 
       responses:
         202:
@@ -526,6 +526,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 0
+                    hasActed: false
                   - id: 302
                     participantId: 102
                     hp: 100
@@ -533,6 +534,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 6
+                    hasActed: false
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -540,17 +542,29 @@ paths:
                     tileId: 45
                   cityResources:
                   - cityId: 301
-                    resourceType: food
+                    resourceType: wheat
                     amount: 5
                   - cityId: 301
-                    resourceType: production
+                    resourceType: wood
+                    amount: 5
+                  - cityId: 301
+                    resourceType: stone
                     amount: 2
+                  - cityId: 301
+                    resourceType: iron
+                    amount: 0
                   - cityId: 302
-                    resourceType: food
+                    resourceType: wheat
                     amount: 5
                   - cityId: 302
-                    resourceType: production
+                    resourceType: wood
+                    amount: 5
+                  - cityId: 302
+                    resourceType: stone
                     amount: 2
+                  - cityId: 302
+                    resourceType: iron
+                    amount: 0
                   gameTiles:
                   - tileId: 3
                     resourceType: wheat
@@ -685,6 +699,7 @@ paths:
                   tileId: 3
                   row: 0
                   col: 3
+                  hasActed: false
                 - id: 302
                   participantId: 102
                   hp: 85
@@ -692,6 +707,7 @@ paths:
                   tileId: 45
                   row: 5
                   col: 5
+                  hasActed: true
                 cityTiles:
                 - cityId: 301
                   tileId: 3
@@ -707,23 +723,29 @@ paths:
                   tileId: 37
                 cityResources:
                 - cityId: 301
-                  resourceType: food
+                  resourceType: wheat
                   amount: 12
                 - cityId: 301
-                  resourceType: production
-                  amount: 8
+                  resourceType: wood
+                  amount: 18
                 - cityId: 301
-                  resourceType: gold
-                  amount: 5
+                  resourceType: stone
+                  amount: 7
+                - cityId: 301
+                  resourceType: iron
+                  amount: 4
                 - cityId: 302
-                  resourceType: food
+                  resourceType: wheat
                   amount: 8
                 - cityId: 302
-                  resourceType: production
+                  resourceType: wood
                   amount: 6
                 - cityId: 302
-                  resourceType: gold
+                  resourceType: stone
                   amount: 3
+                - cityId: 302
+                  resourceType: iron
+                  amount: 1
                 gameTiles:
                 - tileId: 3
                   resourceType: wheat
@@ -1084,6 +1106,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 0
+                    hasActed: true
                   - id: 302
                     participantId: 102
                     hp: 100
@@ -1091,6 +1114,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 6
+                    hasActed: false
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -1098,16 +1122,16 @@ paths:
                     tileId: 45
                   cityResources:
                   - cityId: 301
-                    resourceType: food
-                    amount: 8
+                    resourceType: iron
+                    amount: 6
                   - cityId: 301
-                    resourceType: production
-                    amount: 4
+                    resourceType: stone
+                    amount: 2
                   - cityId: 302
-                    resourceType: food
+                    resourceType: wheat
                     amount: 7
                   - cityId: 302
-                    resourceType: production
+                    resourceType: wood
                     amount: 3
                   gameTiles:
                   - tileId: 3
@@ -1289,6 +1313,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 0
+                    hasActed: true
                   - id: 302
                     participantId: 102
                     hp: 100
@@ -1296,6 +1321,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 6
+                    hasActed: false
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -1303,16 +1329,16 @@ paths:
                     tileId: 45
                   cityResources:
                   - cityId: 301
-                    resourceType: food
-                    amount: 8
+                    resourceType: iron
+                    amount: 6
                   - cityId: 301
-                    resourceType: production
-                    amount: 4
+                    resourceType: stone
+                    amount: 2
                   - cityId: 302
-                    resourceType: food
+                    resourceType: wheat
                     amount: 7
                   - cityId: 302
-                    resourceType: production
+                    resourceType: wood
                     amount: 3
                   gameTiles:
                   - tileId: 3
@@ -1491,6 +1517,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 0
+                    hasActed: true
                   - id: 302
                     participantId: 102
                     hp: 100
@@ -1498,6 +1525,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 6
+                    hasActed: false
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -1505,16 +1533,16 @@ paths:
                     tileId: 45
                   cityResources:
                   - cityId: 301
-                    resourceType: food
-                    amount: 8
+                    resourceType: iron
+                    amount: 6
                   - cityId: 301
-                    resourceType: production
-                    amount: 4
+                    resourceType: stone
+                    amount: 2
                   - cityId: 302
-                    resourceType: food
+                    resourceType: wheat
                     amount: 7
                   - cityId: 302
-                    resourceType: production
+                    resourceType: wood
                     amount: 3
                   gameTiles:
                   - tileId: 3
@@ -1584,6 +1612,188 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal server error occurred.
+  /v1/games/{id}/actions/city/spawn:
+    post:
+      tags:
+      - v1
+      summary: Spawns a unit from the specified city by spending city resources.
+      operationId: SpawnUnit
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: The spawn command containing city ID and unit code.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/SpawnUnitCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/SpawnUnitCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/SpawnUnitCommand'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStateResponse'
+              example:
+                state:
+                  game:
+                    id: 42
+                    turnNo: 3
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_15x20
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: true
+                    tileId: 13
+                    row: 2
+                    col: 3
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  - id: 203
+                    participantId: 101
+                    typeCode: settler
+                    hp: 50
+                    hasActed: false
+                    tileId: 7
+                    row: 0
+                    col: 2
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                    hasActed: true
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                    hasActed: false
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: iron
+                    amount: 6
+                  - cityId: 301
+                    resourceType: stone
+                    amount: 2
+                  - cityId: 302
+                    resourceType: wheat
+                    amount: 7
+                  - cityId: 302
+                    resourceType: wood
+                    amount: 3
+                  gameTiles:
+                  - tileId: 3
+                    resourceType: wheat
+                    resourceAmount: 75
+                  - tileId: 45
+                    resourceType: iron
+                    resourceAmount: 42
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  - id: 3
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 2
+                    movePoints: 2
+                    health: 80
+                  turnSummary: 
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal Server Error
   /v1/games/{id}/end-turn:
     post:
       tags:
@@ -1673,6 +1883,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 0
+                    hasActed: true
                   - id: 302
                     participantId: 102
                     hp: 100
@@ -1680,6 +1891,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 6
+                    hasActed: false
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -2217,6 +2429,7 @@ paths:
                     tileId: 3
                     row: 0
                     col: 3
+                    hasActed: false
                   - id: 302
                     participantId: 102
                     hp: 85
@@ -2224,6 +2437,7 @@ paths:
                     tileId: 45
                     row: 5
                     col: 5
+                    hasActed: true
                   cityTiles:
                   - cityId: 301
                     tileId: 3
@@ -2239,23 +2453,29 @@ paths:
                     tileId: 37
                   cityResources:
                   - cityId: 301
-                    resourceType: food
+                    resourceType: wheat
                     amount: 12
                   - cityId: 301
-                    resourceType: production
+                    resourceType: wood
                     amount: 8
                   - cityId: 301
-                    resourceType: gold
+                    resourceType: stone
                     amount: 5
+                  - cityId: 301
+                    resourceType: iron
+                    amount: 2
                   - cityId: 302
-                    resourceType: food
+                    resourceType: wheat
                     amount: 8
                   - cityId: 302
-                    resourceType: production
+                    resourceType: wood
                     amount: 6
                   - cityId: 302
-                    resourceType: gold
+                    resourceType: stone
                     amount: 3
+                  - cityId: 302
+                    resourceType: iron
+                    amount: 1
                   gameTiles:
                   - tileId: 3
                     resourceType: wheat
@@ -2517,6 +2737,8 @@ components:
         col:
           type: integer
           format: int32
+        hasActed:
+          type: boolean
       additionalProperties: false
     CityResourceDto:
       type: object
@@ -3047,6 +3269,16 @@ components:
           type: string
           format: date-time
         name:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SpawnUnitCommand:
+      type: object
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        unitCode:
           type: string
           nullable: true
       additionalProperties: false

@@ -6,12 +6,14 @@ import {
   moveUnit,
   attackUnit,
   attackCity,
+  spawnUnit,
   endTurn,
 } from '../../api/games'
 import type {
   MoveUnitCommand,
   AttackUnitCommand,
   AttackCityCommand,
+  SpawnUnitCommand,
   GameStateDto,
   ActionStateResponse,
   EndTurnResponse,
@@ -242,6 +244,46 @@ export function useAttackCity(gameId: number) {
         throw new Error(`City attack failed: ${result.status}`)
       }
       
+      return result.data as ActionStateResponse
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: gameKeys.state(gameId) })
+      const previousState = queryClient.getQueryData<GameStateDto>(gameKeys.state(gameId))
+      return { previousState }
+    },
+    onSuccess: (data: ActionStateResponse) => {
+      if (data?.state) {
+        queryClient.setQueryData(gameKeys.state(gameId), data.state)
+      }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(gameKeys.state(gameId), context.previousState)
+      }
+    },
+  })
+}
+
+export function useSpawnUnit(gameId: number) {
+  const queryClient = useQueryClient()
+  const { handleError } = useGameErrorHandler()
+
+  return useMutation<
+    ActionStateResponse,
+    Error,
+    SpawnUnitCommand,
+    MutationContext
+  >({
+    mutationFn: async (command: SpawnUnitCommand) => {
+      const idempotencyKey = generateIdempotencyKey()
+
+      const result = await spawnUnit(gameId, command, idempotencyKey)
+
+      if (!result.ok || !result.data) {
+        handleError(result)
+        throw new Error(`Spawn failed: ${result.status}`)
+      }
+
       return result.data as ActionStateResponse
     },
     onMutate: async () => {

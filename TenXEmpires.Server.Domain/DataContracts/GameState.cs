@@ -89,10 +89,11 @@ public sealed record CityInStateDto(
     int MaxHp,
     long TileId,
     int Row,
-    int Col)
+    int Col,
+    bool HasActed)
 {
     public static CityInStateDto From(City c)
-        => new(c.Id, c.ParticipantId, c.Hp, c.MaxHp, c.TileId, c.Tile.Row, c.Tile.Col);
+        => new(c.Id, c.ParticipantId, c.Hp, c.MaxHp, c.TileId, c.Tile.Row, c.Tile.Col, c.HasActedThisTurn);
 }
 
 /// <summary>

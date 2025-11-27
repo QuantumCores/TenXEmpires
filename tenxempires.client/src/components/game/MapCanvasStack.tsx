@@ -630,7 +630,7 @@ export function MapCanvasStack({
 
       clearSelection()
     },
-    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles]
+    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles, openModal, setSelectedCityId]
   )
 
   // Handle right-click to cancel

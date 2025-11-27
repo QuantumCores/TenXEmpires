@@ -61,6 +61,7 @@ export interface CityInStateDto {
   tileId: number
   row: number
   col: number
+  hasActed: boolean
 }
 
 export interface CityTileLinkDto {
@@ -135,6 +136,11 @@ export interface AttackUnitCommand {
 export interface AttackCityCommand {
   attackerUnitId: number
   targetCityId: number
+}
+
+export interface SpawnUnitCommand {
+  cityId: number
+  unitCode: string
 }
 
 // Empty command type for end turn action

@@ -6,6 +6,7 @@ import type {
   MoveUnitCommand,
   AttackUnitCommand,
   AttackCityCommand,
+  SpawnUnitCommand,
   EndTurnCommand,
   ActionStateResponse,
   EndTurnResponse,
@@ -67,6 +68,14 @@ export async function attackUnit(gameId: number, command: AttackUnitCommand, ide
 export async function attackCity(gameId: number, command: AttackCityCommand, idempotencyKey: string) {
   return postJson<AttackCityCommand, ActionStateResponse>(
     `${API_BASE}/games/${gameId}/actions/attack-city`,
+    command,
+    { headers: { 'Idempotency-Key': idempotencyKey } }
+  )
+}
+
+export async function spawnUnit(gameId: number, command: SpawnUnitCommand, idempotencyKey: string) {
+  return postJson<SpawnUnitCommand, ActionStateResponse>(
+    `${API_BASE}/games/${gameId}/actions/city/spawn`,
     command,
     { headers: { 'Idempotency-Key': idempotencyKey } }
   )

@@ -262,9 +262,7 @@ public class TurnService : ITurnService
                 if (city.Hp != before) regenApplied++;
                 // Harvest from city-owned tiles only and maybe auto-produce
                 HarvestCityResources(city, allUnits, harvestedTotals, overflowTotals, tileStates, storageCap);
-
-                // Auto-produce at most 1 unit/city/turn
-                productionDelayed += TryAutoProduceUnit(game, city, unitDefs, occupiedTileIds, producedUnitCodes);
+                // Manual production: no auto-produce for the human participant
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -396,6 +394,16 @@ public class TurnService : ITurnService
         {
             unit.HasActed = false;
             unit.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        // Reset city action flags for the next participant
+        var nextCities = await _context.Cities
+            .Where(c => c.GameId == game.Id && c.ParticipantId == nextParticipant.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var city in nextCities)
+        {
+            city.HasActedThisTurn = false;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -728,6 +736,11 @@ public class TurnService : ITurnService
         HashSet<long> occupiedTileIds,
         List<string> producedUnitCodes)
     {
+        if (city.HasActedThisTurn)
+        {
+            return 0;
+        }
+
         string? produceCode = null;
         int costAmount = 0;
         string? costResource = null;
@@ -798,6 +811,7 @@ public class TurnService : ITurnService
             var costCr = city.CityResources.First(r => r.ResourceType == costResource);
             costCr.Amount -= costAmount;
             producedUnitCodes.Add(produceCode);
+            city.HasActedThisTurn = true;
             return 0;
         }
 

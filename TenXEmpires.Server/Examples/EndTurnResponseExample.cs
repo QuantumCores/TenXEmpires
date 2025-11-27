@@ -39,8 +39,8 @@ public class EndTurnResponseExample : IExamplesProvider<EndTurnResponse>
 
         var cities = new List<CityInStateDto>
         {
-            new CityInStateDto(301, 101, 100, 100, 3, 0, 0),
-            new CityInStateDto(302, 102, 100, 100, 45, 5, 6)
+            new CityInStateDto(301, 101, 100, 100, 3, 0, 0, true),
+            new CityInStateDto(302, 102, 100, 100, 45, 5, 6, false)
         };
 
         var cityTiles = new List<CityTileLinkDto>

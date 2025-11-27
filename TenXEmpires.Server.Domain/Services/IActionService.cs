@@ -63,5 +63,20 @@ public interface IActionService
         long targetCityId,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Spawns a new unit from a city by spending stored resources.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="command">The spawn command with city ID and unit code.</param>
+    /// <param name="idempotencyKey">Optional idempotency key for safe retries.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<ActionStateResponse> SpawnUnitAsync(
+        Guid userId,
+        long gameId,
+        SpawnUnitCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

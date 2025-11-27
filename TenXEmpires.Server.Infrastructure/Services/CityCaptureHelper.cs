@@ -21,6 +21,7 @@ internal static class CityCaptureHelper
         // Transfer ownership and set minimal HP to keep city alive
         city.ParticipantId = newOwnerParticipantId;
         if (city.Hp <= 0) city.Hp = 1;
+        city.HasActedThisTurn = true; // block immediate production until next turn reset
 
         // Persist transfer so subsequent queries reflect new ownership
         await context.SaveChangesAsync(cancellationToken);

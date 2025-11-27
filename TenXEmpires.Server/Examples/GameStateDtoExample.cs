@@ -87,7 +87,8 @@ public class GameStateDtoExample : IExamplesProvider<GameStateDto>
                 MaxHp: 100,
                 TileId: 3,
                 Row: 0,
-                Col: 3),
+                Col: 3,
+                HasActed: false),
             new CityInStateDto(
                 Id: 302,
                 ParticipantId: 102,
@@ -95,7 +96,8 @@ public class GameStateDtoExample : IExamplesProvider<GameStateDto>
                 MaxHp: 100,
                 TileId: 45,
                 Row: 5,
-                Col: 5)
+                Col: 5,
+                HasActed: true)
         };
 
         // Create sample city tiles (cities with their controlled territories)
@@ -112,12 +114,14 @@ public class GameStateDtoExample : IExamplesProvider<GameStateDto>
         // Create sample city resources
         var cityResources = new List<CityResourceDto>
         {
-            new CityResourceDto(CityId: 301, ResourceType: "food", Amount: 12),
-            new CityResourceDto(CityId: 301, ResourceType: "production", Amount: 8),
-            new CityResourceDto(CityId: 301, ResourceType: "gold", Amount: 5),
-            new CityResourceDto(CityId: 302, ResourceType: "food", Amount: 8),
-            new CityResourceDto(CityId: 302, ResourceType: "production", Amount: 6),
-            new CityResourceDto(CityId: 302, ResourceType: "gold", Amount: 3)
+            new CityResourceDto(CityId: 301, ResourceType: "wheat", Amount: 12),
+            new CityResourceDto(CityId: 301, ResourceType: "wood", Amount: 18),
+            new CityResourceDto(CityId: 301, ResourceType: "stone", Amount: 7),
+            new CityResourceDto(CityId: 301, ResourceType: "iron", Amount: 4),
+            new CityResourceDto(CityId: 302, ResourceType: "wheat", Amount: 8),
+            new CityResourceDto(CityId: 302, ResourceType: "wood", Amount: 6),
+            new CityResourceDto(CityId: 302, ResourceType: "stone", Amount: 3),
+            new CityResourceDto(CityId: 302, ResourceType: "iron", Amount: 1)
         };
 
         var tileStates = new List<GameTileStateDto>

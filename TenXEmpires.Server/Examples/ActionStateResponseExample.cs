@@ -87,7 +87,8 @@ public class ActionStateResponseExample : IExamplesProvider<ActionStateResponse>
                 MaxHp: 100,
                 TileId: 3,
                 Row: 0,
-                Col: 0),
+                Col: 0,
+                HasActed: true),
             new CityInStateDto(
                 Id: 302,
                 ParticipantId: 102,
@@ -95,7 +96,8 @@ public class ActionStateResponseExample : IExamplesProvider<ActionStateResponse>
                 MaxHp: 100,
                 TileId: 45,
                 Row: 5,
-                Col: 6)
+                Col: 6,
+                HasActed: false)
         };
 
         // Create sample city tiles
@@ -108,10 +110,10 @@ public class ActionStateResponseExample : IExamplesProvider<ActionStateResponse>
         // Create sample city resources
         var cityResources = new List<CityResourceDto>
         {
-            new CityResourceDto(CityId: 301, ResourceType: "food", Amount: 8),
-            new CityResourceDto(CityId: 301, ResourceType: "production", Amount: 4),
-            new CityResourceDto(CityId: 302, ResourceType: "food", Amount: 7),
-            new CityResourceDto(CityId: 302, ResourceType: "production", Amount: 3)
+            new CityResourceDto(CityId: 301, ResourceType: "iron", Amount: 6),
+            new CityResourceDto(CityId: 301, ResourceType: "stone", Amount: 2),
+            new CityResourceDto(CityId: 302, ResourceType: "wheat", Amount: 7),
+            new CityResourceDto(CityId: 302, ResourceType: "wood", Amount: 3)
         };
 
         // Create sample per-game tile state (remaining resource stock)

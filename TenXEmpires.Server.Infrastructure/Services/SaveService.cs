@@ -529,7 +529,8 @@ public class SaveService : ISaveService
                     GameId = gameId,
                     Hp = cityDto.Hp,
                     MaxHp = cityDto.MaxHp,
-                    TileId = tileId
+                    TileId = tileId,
+                    HasActedThisTurn = cityDto.HasActed
                 };
                 _context.Cities.Add(city);
                 await _context.SaveChangesAsync(cancellationToken); // Save to get ID

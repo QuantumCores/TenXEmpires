@@ -39,6 +39,9 @@ public static class CacheKeys
 
     public static string AttackCityIdempotency(long gameId, string idempotencyKey)
         => $"attack-city:{gameId}:{idempotencyKey}";
+
+    public static string SpawnUnitIdempotency(long gameId, string idempotencyKey)
+        => $"spawn-unit:{gameId}:{idempotencyKey}";
     
     /// <summary>
     /// Gets the idempotency cache key for end-turn operations.

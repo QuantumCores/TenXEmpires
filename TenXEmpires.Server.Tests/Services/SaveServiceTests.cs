@@ -670,7 +670,7 @@ public class SaveServiceLoadTests
             },
             new List<CityInStateDto> 
             { 
-                new CityInStateDto(301, 101, 100, 100, 3, 0, 2)
+                new CityInStateDto(301, 101, 100, 100, 3, 0, 2, false)
             },
             new List<CityTileLinkDto> 
             { 
@@ -679,8 +679,8 @@ public class SaveServiceLoadTests
             },
             new List<CityResourceDto> 
             { 
-                new CityResourceDto(301, "food", 10),
-                new CityResourceDto(301, "production", 5)
+                new CityResourceDto(301, "wheat", 10),
+                new CityResourceDto(301, "wood", 5)
             },
             new List<GameTileStateDto>(),
             new List<UnitDefinitionDto>(),

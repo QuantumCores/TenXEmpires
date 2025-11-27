@@ -29,6 +29,11 @@ public sealed record AttackUnitCommand(long AttackerUnitId, long TargetUnitId);
 public sealed record AttackCityCommand(long AttackerUnitId, long TargetCityId);
 
 /// <summary>
+/// Command to spawn a unit from a city using stored resources.
+/// </summary>
+public sealed record SpawnUnitCommand(long CityId, string UnitCode);
+
+/// <summary>
 /// Command to end the active participant's turn in a <see cref="Game"/>.
 /// </summary>
 public sealed record EndTurnCommand;

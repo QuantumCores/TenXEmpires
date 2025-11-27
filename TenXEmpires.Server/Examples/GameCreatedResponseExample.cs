@@ -78,7 +78,8 @@ public class GameCreatedResponseExample : IExamplesProvider<GameCreatedResponse>
                 MaxHp: 100,
                 TileId: 3,
                 Row: 0,
-                Col: 0),
+                Col: 0,
+                HasActed: false),
             new CityInStateDto(
                 Id: 302,
                 ParticipantId: 102,
@@ -86,7 +87,8 @@ public class GameCreatedResponseExample : IExamplesProvider<GameCreatedResponse>
                 MaxHp: 100,
                 TileId: 45,
                 Row: 5,
-                Col: 6)
+                Col: 6,
+                HasActed: false)
         };
 
         // Create sample city tiles
@@ -99,10 +101,14 @@ public class GameCreatedResponseExample : IExamplesProvider<GameCreatedResponse>
         // Create sample city resources
         var cityResources = new List<CityResourceDto>
         {
-            new CityResourceDto(CityId: 301, ResourceType: "food", Amount: 5),
-            new CityResourceDto(CityId: 301, ResourceType: "production", Amount: 2),
-            new CityResourceDto(CityId: 302, ResourceType: "food", Amount: 5),
-            new CityResourceDto(CityId: 302, ResourceType: "production", Amount: 2)
+            new CityResourceDto(CityId: 301, ResourceType: "wheat", Amount: 5),
+            new CityResourceDto(CityId: 301, ResourceType: "wood", Amount: 5),
+            new CityResourceDto(CityId: 301, ResourceType: "stone", Amount: 2),
+            new CityResourceDto(CityId: 301, ResourceType: "iron", Amount: 0),
+            new CityResourceDto(CityId: 302, ResourceType: "wheat", Amount: 5),
+            new CityResourceDto(CityId: 302, ResourceType: "wood", Amount: 5),
+            new CityResourceDto(CityId: 302, ResourceType: "stone", Amount: 2),
+            new CityResourceDto(CityId: 302, ResourceType: "iron", Amount: 0)
         };
 
         var tileStates = new List<GameTileStateDto>

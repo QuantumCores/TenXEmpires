@@ -298,7 +298,10 @@ namespace TenXEmpires.Server.Infrastructure.Services;
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
             
             _logger.LogError(
                 ex,
@@ -699,6 +702,262 @@ namespace TenXEmpires.Server.Infrastructure.Services;
                 attackerUnitId,
                 targetCityId,
                 gameId);
+            throw;
+        }
+    }
+
+    public async Task<ActionStateResponse> SpawnUnitAsync(
+        Guid userId,
+        long gameId,
+        SpawnUnitCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.SpawnUnitIdempotency(gameId, idempotencyKey);
+            var cached = await _idempotencyStore.TryGetAsync<ActionStateResponse>(cachedKey, cancellationToken);
+            if (cached is not null)
+            {
+                _logger.LogInformation(
+                    "Returning cached spawn response for key {IdempotencyKey} (game {GameId}, city {CityId})",
+                    idempotencyKey,
+                    gameId,
+                    command.CityId);
+                return cached;
+            }
+        }
+
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        try
+        {
+            transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable,
+                cancellationToken);
+        }
+        catch (InvalidOperationException) { }
+        catch (NotSupportedException) { }
+
+        try
+        {
+            var game = await _context.Games
+                .Include(g => g.Map)
+                .Include(g => g.ActiveParticipant)
+                .FirstOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+            if (game is null)
+            {
+                throw new UnauthorizedAccessException($"Game {gameId} not found or you don't have access to it.");
+            }
+
+            if (game.ActiveParticipant is null)
+            {
+                throw new InvalidOperationException("No active participant found for this game.");
+            }
+
+            if (game.ActiveParticipant.Kind != ParticipantKind.Human || game.ActiveParticipant.UserId != userId)
+            {
+                throw new InvalidOperationException("NOT_PLAYER_TURN: It is not your turn to act.");
+            }
+
+            if (game.TurnInProgress)
+            {
+                throw new InvalidOperationException("TURN_IN_PROGRESS: A turn action is already in progress. Please wait.");
+            }
+
+            // Guard against concurrent actions
+            game.TurnInProgress = true;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                var normalizedCode = command.UnitCode?.Trim().ToLowerInvariant();
+                if (string.IsNullOrWhiteSpace(normalizedCode) || !UnitTypes.ValidTypes.Contains(normalizedCode))
+                {
+                    throw new ArgumentException("INVALID_UNIT: Unsupported unit type.");
+                }
+
+                var city = await _context.Cities
+                    .Include(c => c.Tile)
+                    .Include(c => c.CityResources)
+                    .FirstOrDefaultAsync(c => c.Id == command.CityId && c.GameId == gameId, cancellationToken);
+
+                if (city is null || city.ParticipantId != game.ActiveParticipantId)
+                {
+                    throw new InvalidOperationException("CITY_NOT_FOUND_OR_OWNED: City not found or not owned by the active participant.");
+                }
+
+                if (city.HasActedThisTurn)
+                {
+                    throw new InvalidOperationException("CITY_ALREADY_ACTED: This city has already acted this turn.");
+                }
+
+                var unitDef = await _context.UnitDefinitions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(ud => ud.Code == normalizedCode, cancellationToken);
+
+                if (unitDef is null)
+                {
+                    throw new ArgumentException($"INVALID_UNIT: Unit definition '{normalizedCode}' not found.");
+                }
+
+                var (costResource, costAmount) = normalizedCode switch
+                {
+                    UnitTypes.Warrior => (ResourceTypes.Iron, 10),
+                    UnitTypes.Slinger => (ResourceTypes.Stone, 10),
+                    _ => throw new ArgumentException("INVALID_UNIT: Unsupported unit type.")
+                };
+
+                var cr = city.CityResources.FirstOrDefault(r => r.ResourceType == costResource);
+                var currentAmount = cr?.Amount ?? 0;
+                if (currentAmount < costAmount)
+                {
+                    throw new InvalidOperationException(
+                        $"INSUFFICIENT_RESOURCES: Requires {costAmount} {costResource}, city has {currentAmount}.");
+                }
+
+                // Load occupancy and map tiles
+                var units = await _context.Units
+                    .Include(u => u.Tile)
+                    .Where(u => u.GameId == gameId)
+                    .ToListAsync(cancellationToken);
+
+                var occupiedTiles = units.Select(u => u.TileId).ToHashSet();
+
+                var mapTiles = await _context.MapTiles
+                    .AsNoTracking()
+                    .Where(t => t.MapId == game.MapId)
+                    .ToDictionaryAsync(t => (t.Row, t.Col), t => t, cancellationToken);
+                var cityTileOwners = await _context.Cities
+                    .AsNoTracking()
+                    .Where(c => c.GameId == gameId)
+                    .ToDictionaryAsync(c => c.TileId, c => c.Id, cancellationToken);
+
+                bool IsTileAvailable(MapTile tile)
+                {
+                    if (TerrainTypes.IsWater(tile.Terrain))
+                    {
+                        return false;
+                    }
+
+                    if (occupiedTiles.Contains(tile.Id))
+                    {
+                        return false;
+                    }
+
+                    if (cityTileOwners.TryGetValue(tile.Id, out var ownerCityId) && ownerCityId != city.Id)
+                    {
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                MapTile? spawnTile = null;
+
+                // Prefer spawning on the city tile if free
+                if (mapTiles.TryGetValue((city.Tile.Row, city.Tile.Col), out var cityTile) && IsTileAvailable(cityTile))
+                {
+                    spawnTile = cityTile;
+                }
+
+                if (spawnTile is null)
+                {
+                    var centerCube = HexagonalGrid.ConvertOddrToCube(city.Tile.Col, city.Tile.Row);
+                    foreach (var dir in HexagonalGrid.CubeDirections)
+                    {
+                        var neighborCube = centerCube + dir;
+                        var neighborSq = HexagonalGrid.ConvertCubeToOddr(neighborCube);
+
+                        if (neighborSq.Y < 0 || neighborSq.Y >= game.Map.Height ||
+                            neighborSq.X < 0 || neighborSq.X >= game.Map.Width)
+                        {
+                            continue;
+                        }
+
+                        if (!mapTiles.TryGetValue((neighborSq.Y, neighborSq.X), out var neighborTile))
+                        {
+                            continue;
+                        }
+
+                        if (IsTileAvailable(neighborTile))
+                        {
+                            spawnTile = neighborTile;
+                            break;
+                        }
+                    }
+                }
+
+                if (spawnTile is null)
+                {
+                    throw new InvalidOperationException("SPAWN_BLOCKED: No free adjacent tile to place the unit.");
+                }
+
+                var newUnit = new Unit
+                {
+                    GameId = gameId,
+                    ParticipantId = city.ParticipantId,
+                    TypeId = unitDef.Id,
+                    TileId = spawnTile.Id,
+                    Hp = unitDef.Health,
+                    HasActed = false,
+                    UpdatedAt = DateTimeOffset.UtcNow
+                };
+
+                _context.Units.Add(newUnit);
+                if (cr is null)
+                {
+                    cr = new CityResource { CityId = city.Id, ResourceType = costResource, Amount = 0 };
+                    city.CityResources.Add(cr);
+                    _context.CityResources.Add(cr);
+                }
+                cr.Amount -= costAmount;
+                city.HasActedThisTurn = true;
+
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation(
+                    "Spawned {UnitCode} from city {CityId} on tile {TileId} in game {GameId}",
+                    normalizedCode,
+                    city.Id,
+                    spawnTile.Id,
+                    gameId);
+
+                // Clear guard
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync(cancellationToken);
+                }
+
+                var gameState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+                var response = new ActionStateResponse(gameState);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    var cacheKey = CacheKeys.SpawnUnitIdempotency(gameId, idempotencyKey);
+                    await _idempotencyStore.TryStoreAsync(cacheKey, response, TimeSpan.FromHours(1), cancellationToken);
+                }
+
+                return response;
+            }
+            catch
+            {
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            _logger.LogError(ex, "Failed to spawn unit in game {GameId} from city {CityId}", gameId, command.CityId);
             throw;
         }
     }

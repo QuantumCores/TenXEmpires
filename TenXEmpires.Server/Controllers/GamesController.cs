@@ -1054,6 +1054,101 @@ public class GamesController : ControllerBase
     }
 
     /// <summary>
+    /// Spawns a unit from the specified city by spending city resources.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">The spawn command containing city ID and unit code.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated game state after spawning.</returns>
+    [HttpPost("{id:long}/actions/city/spawn", Name = "SpawnUnit")]
+    [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ActionStateResponse>> SpawnUnit(
+        long id,
+        [FromBody] SpawnUnitCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Invalid request body for SpawnUnit on game {GameId}", id);
+                return BadRequest(new
+                {
+                    code = "INVALID_INPUT",
+                    message = "One or more validation errors occurred.",
+                    errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList()
+                });
+            }
+
+            var userId = User.GetUserId();
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].FirstOrDefault()
+                ?? Request.Headers["Idempotency-Key"].FirstOrDefault();
+
+            _logger.LogDebug("User {UserId} spawning unit in game {GameId} (city {CityId}, code {UnitCode})",
+                userId, id, command.CityId, command.UnitCode);
+
+            var response = await _actionService.SpawnUnitAsync(userId, id, command, idempotencyKey, cancellationToken);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("NOT_PLAYER_TURN"))
+        {
+            _logger.LogWarning(ex, "Not player's turn for game {GameId}", id);
+            return Conflict(new { code = "NOT_PLAYER_TURN", message = "It is not your turn to act." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("TURN_IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(ex, "Turn in progress for game {GameId}", id);
+            return Conflict(new { code = "TURN_IN_PROGRESS", message = "Another action is in progress. Please wait." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("CITY_ALREADY_ACTED"))
+        {
+            _logger.LogWarning(ex, "City already acted in game {GameId}", id);
+            return Conflict(new { code = "CITY_ALREADY_ACTED", message = "This city has already acted this turn." });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("CITY_NOT_FOUND_OR_OWNED"))
+        {
+            _logger.LogWarning(ex, "City not found or not owned in game {GameId}", id);
+            return NotFound(new { code = "CITY_NOT_FOUND_OR_OWNED", message = ex.Message });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("INSUFFICIENT_RESOURCES"))
+        {
+            _logger.LogWarning(ex, "Insufficient resources for spawn in game {GameId}", id);
+            return Conflict(new { code = "INSUFFICIENT_RESOURCES", message = ex.Message });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("SPAWN_BLOCKED"))
+        {
+            _logger.LogWarning(ex, "Spawn blocked for city in game {GameId}", id);
+            return Conflict(new { code = "SPAWN_BLOCKED", message = ex.Message });
+        }
+        catch (ArgumentException ex) when (ex.Message.Contains("INVALID_UNIT"))
+        {
+            _logger.LogWarning(ex, "Invalid unit code for spawn in game {GameId}", id);
+            return BadRequest(new { code = "INVALID_UNIT", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Unauthorized access attempt for game {GameId}", id);
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to spawn unit in game {GameId}", id);
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { code = "INTERNAL_ERROR", message = "An error occurred while processing the spawn request." });
+        }
+    }
+
+    /// <summary>
     /// Ends the active participant's turn, commits the turn, creates an autosave, and advances to the next participant.
     /// </summary>
     /// <param name="id">The game ID.</param>

@@ -39,8 +39,8 @@ public class LoadSaveResponseExample : IExamplesProvider<LoadSaveResponse>
 
         var cities = new List<CityInStateDto>
         {
-            new CityInStateDto(301, 101, 100, 100, 3, 0, 3),
-            new CityInStateDto(302, 102, 85, 100, 45, 5, 5)
+            new CityInStateDto(301, 101, 100, 100, 3, 0, 3, false),
+            new CityInStateDto(302, 102, 85, 100, 45, 5, 5, true)
         };
 
         var cityTiles = new List<CityTileLinkDto>
@@ -55,12 +55,14 @@ public class LoadSaveResponseExample : IExamplesProvider<LoadSaveResponse>
 
         var cityResources = new List<CityResourceDto>
         {
-            new CityResourceDto(301, "food", 12),
-            new CityResourceDto(301, "production", 8),
-            new CityResourceDto(301, "gold", 5),
-            new CityResourceDto(302, "food", 8),
-            new CityResourceDto(302, "production", 6),
-            new CityResourceDto(302, "gold", 3)
+            new CityResourceDto(301, "wheat", 12),
+            new CityResourceDto(301, "wood", 8),
+            new CityResourceDto(301, "stone", 5),
+            new CityResourceDto(301, "iron", 2),
+            new CityResourceDto(302, "wheat", 8),
+            new CityResourceDto(302, "wood", 6),
+            new CityResourceDto(302, "stone", 3),
+            new CityResourceDto(302, "iron", 1)
         };
 
         var tileStates = new List<GameTileStateDto>

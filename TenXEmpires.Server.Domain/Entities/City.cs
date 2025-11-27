@@ -22,6 +22,11 @@ public class City
     /// Maximum health points
     /// </summary>
     public int MaxHp { get; set; }
+
+    /// <summary>
+    /// Indicates whether the city has already performed a production action this turn.
+    /// </summary>
+    public bool HasActedThisTurn { get; set; }
     
     // Navigation properties
     public Game Game { get; set; } = null!;
