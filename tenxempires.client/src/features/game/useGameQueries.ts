@@ -7,6 +7,7 @@ import {
   attackUnit,
   attackCity,
   spawnUnit,
+  expandTerritory,
   endTurn,
 } from '../../api/games'
 import type {
@@ -14,6 +15,7 @@ import type {
   AttackUnitCommand,
   AttackCityCommand,
   SpawnUnitCommand,
+  ExpandTerritoryCommand,
   GameStateDto,
   ActionStateResponse,
   EndTurnResponse,
@@ -282,6 +284,46 @@ export function useSpawnUnit(gameId: number) {
       if (!result.ok || !result.data) {
         handleError(result)
         throw new Error(`Spawn failed: ${result.status}`)
+      }
+
+      return result.data as ActionStateResponse
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: gameKeys.state(gameId) })
+      const previousState = queryClient.getQueryData<GameStateDto>(gameKeys.state(gameId))
+      return { previousState }
+    },
+    onSuccess: (data: ActionStateResponse) => {
+      if (data?.state) {
+        queryClient.setQueryData(gameKeys.state(gameId), data.state)
+      }
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(gameKeys.state(gameId), context.previousState)
+      }
+    },
+  })
+}
+
+export function useExpandTerritory(gameId: number) {
+  const queryClient = useQueryClient()
+  const { handleError } = useGameErrorHandler()
+
+  return useMutation<
+    ActionStateResponse,
+    Error,
+    ExpandTerritoryCommand,
+    MutationContext
+  >({
+    mutationFn: async (command: ExpandTerritoryCommand) => {
+      const idempotencyKey = generateIdempotencyKey()
+
+      const result = await expandTerritory(gameId, command, idempotencyKey)
+
+      if (!result.ok || !result.data) {
+        handleError(result)
+        throw new Error(`Expand territory failed: ${result.status}`)
       }
 
       return result.data as ActionStateResponse

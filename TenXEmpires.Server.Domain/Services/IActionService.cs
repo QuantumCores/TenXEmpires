@@ -78,5 +78,21 @@ public interface IActionService
         SpawnUnitCommand command,
         string? idempotencyKey,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Expands a city's territory to an adjacent tile by spending wheat.
+    /// </summary>
+    /// <param name="userId">The authenticated user's ID.</param>
+    /// <param name="gameId">The game ID.</param>
+    /// <param name="command">The expand command with city ID and target tile ID.</param>
+    /// <param name="idempotencyKey">Optional idempotency key for safe retries.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated game state after expansion.</returns>
+    Task<ActionStateResponse> ExpandTerritoryAsync(
+        Guid userId,
+        long gameId,
+        ExpandTerritoryCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default);
 }
 

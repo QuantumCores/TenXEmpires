@@ -17,7 +17,7 @@ import {
 import { findPath, getReachableTiles, getAttackableTiles } from '../../features/game/pathfinding'
 import { useGameMapStore } from '../../features/game/useGameMapStore'
 import { computeZoomUpdate } from '../../features/game/zoom'
-import { useMoveUnit, useAttackUnit, useAttackCity } from '../../features/game/useGameQueries'
+import { useMoveUnit, useAttackUnit, useAttackCity, useExpandTerritory } from '../../features/game/useGameQueries'
 import {
   getGlobalSpriteCache,
   generateTileSprite,
@@ -88,12 +88,13 @@ export function MapCanvasStack({
     )
   }, [dimensions.width, dimensions.height, gameState.map.width, gameState.map.height])
 
-  const { setSelection, clearSelection, setCamera } = useGameMapStore()
+  const { setSelection, clearSelection, setCamera, expansionMode, exitExpansionMode } = useGameMapStore()
   const debug = useGameMapStore((s) => s.debug)
   const invertScrollZoom = useGameMapStore((s) => s.invertZoom)
   const moveUnitMutation = useMoveUnit(gameState.game.id)
   const attackUnitMutation = useAttackUnit(gameState.game.id)
   const attackCityMutation = useAttackCity(gameState.game.id)
+  const expandTerritoryMutation = useExpandTerritory(gameState.game.id)
   
   // City modal hooks
   const { openModal } = useModalParam()
@@ -136,6 +137,29 @@ export function MapCanvasStack({
     observer.observe(container)
     return () => observer.disconnect()
   }, [])
+
+  // Handle ESC to cancel expansion mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && expansionMode.active) {
+        // Stop event propagation to prevent ModalContainer from immediately closing the modal we're about to open
+        e.preventDefault()
+        e.stopPropagation()
+        
+        // Save cityId before clearing expansion mode
+        const cityIdToReopen = expansionMode.cityId
+        exitExpansionMode()
+        
+        if (cityIdToReopen) {
+           setSelectedCityId(cityIdToReopen)
+           openModal('city', undefined, 'push')
+        }
+      }
+    }
+    // Use capture phase to handle ESC before other handlers
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [expansionMode, exitExpansionMode, setSelectedCityId, openModal])
 
   // Setup canvases with DPR sizing
   useEffect(() => {
@@ -343,9 +367,10 @@ export function MapCanvasStack({
       dimensions,
       debug,
       hexMetrics,
-      imageLoader
+      imageLoader,
+      expansionMode
     )
-  }, [selection, gameState, mapTiles, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics, imageLoader, imagesLoaded])
+  }, [selection, gameState, mapTiles, tileLookup, preview, hoverTile, camera, dimensions, debug, hexMetrics, imageLoader, imagesLoaded, expansionMode])
 
   // Handle pointer move
   const handlePointerMove = useCallback(
@@ -376,6 +401,29 @@ export function MapCanvasStack({
       const clickedTile = pixelToOddr(x, y, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
       const clickedPos: GridPosition = { row: clickedTile.y, col: clickedTile.x }
       const clickedMapTile = mapTiles.find((t) => t.row === clickedPos.row && t.col === clickedPos.col)
+
+      // Expansion Mode Click
+      if (expansionMode.active && expansionMode.cityId && expansionMode.validTileIds && clickedMapTile) {
+        const isValid = expansionMode.validTileIds.includes(clickedMapTile.id)
+        if (isValid) {
+          expandTerritoryMutation.mutate(
+             { cityId: expansionMode.cityId, targetTileId: clickedMapTile.id },
+             {
+               onSuccess: () => {
+                 exitExpansionMode()
+                 // Optionally re-open modal? No, city has acted, so modal might not be useful immediately
+                 // But typically users might want to see result.
+                 // Spec says: "after action, reflect city action flag".
+                 // US says: "Clicking a valid tile deducts Wheat and claims the tile immediately. ... Expansion counts as the city's single action for the turn."
+                 // It doesn't explicitly say to reopen modal. Usually closing overlay is enough.
+               }
+             }
+          )
+        } else {
+          // Invalid tile click in expansion mode - maybe toast?
+        }
+        return // Consume click
+      }
 
       // Picking priority: Unit > City > Tile
       const clickedUnit = gameState.units.find((u) => u.row === clickedPos.row && u.col === clickedPos.col)
@@ -630,17 +678,27 @@ export function MapCanvasStack({
 
       clearSelection()
     },
-    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles, openModal, setSelectedCityId]
+    [gameState, unitDefs, selection, preview, camera, dimensions, setSelection, clearSelection, moveUnitMutation, attackUnitMutation, attackCityMutation, hexMetrics, mapTiles, openModal, setSelectedCityId, expansionMode.active, expansionMode.cityId, expansionMode.validTileIds, expandTerritoryMutation, exitExpansionMode]
   )
 
   // Handle right-click to cancel
   const handleContextMenu = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       e.preventDefault()
+      
+      if (expansionMode.active) {
+        exitExpansionMode()
+        if (expansionMode.cityId) {
+           setSelectedCityId(expansionMode.cityId)
+           openModal('city', undefined, 'push')
+        }
+        return
+      }
+
       clearSelection()
       setPreview({ kind: null })
     },
-    [clearSelection, setPreview]
+    [clearSelection, setPreview, expansionMode.active, expansionMode.cityId, exitExpansionMode, setSelectedCityId, openModal]
   )
 
   return (
@@ -1013,10 +1071,45 @@ function renderOverlay(
   viewport: { width: number; height: number },
   debug: boolean,
   hexMetrics: ReturnType<typeof calculateOptimalHexSize>,
-  imageLoader: ReturnType<typeof getGlobalImageLoader>
+  imageLoader: ReturnType<typeof getGlobalImageLoader>,
+  expansionMode: { active: boolean; validTileIds?: number[] }
 ) {
   ctx.clearRect(0, 0, viewport.width, viewport.height)
   const playerParticipant = gameState.participants.find((p) => p.kind === 'human')
+
+  // Draw expansion mode highlights
+  if (expansionMode.active && expansionMode.validTileIds) {
+    const validSet = new Set(expansionMode.validTileIds)
+    mapTiles.forEach(tile => {
+      if (validSet.has(tile.id)) {
+        const pos = oddrToPixel(tile.col, tile.row, hexMetrics.hexWidth, hexMetrics.hexVertSpacing)
+        const screen = toScreenCoords(pos.x, pos.y, camera, viewport)
+
+        ctx.save()
+        ctx.translate(screen.x, screen.y)
+        ctx.scale(camera.scale, camera.scale)
+
+        drawHexPath(ctx, 0, 0, hexMetrics.hexSize)
+        // Strong blue border
+        ctx.strokeStyle = '#3b82f6' // blue-500
+        ctx.lineWidth = 4
+        ctx.stroke()
+        
+        // Subtle blue fill
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'
+        ctx.fill()
+
+        ctx.restore()
+      } else {
+         // Dim other tiles? Optional.
+      }
+    })
+    // If in expansion mode, maybe skip drawing other overlays to reduce noise?
+    // But we still want resource icons probably.
+    // Let's continue drawing others but maybe under or over.
+    // Current order: Clear -> Expansion -> Resources -> Reachable/Attackable -> CityTiles -> Path -> Selection -> Target -> Debug
+    // Expansion highlights should be prominent.
+  }
 
   // Draw resource icons below selection overlays
   const iconSize = hexMetrics.hexSize * 1.1

@@ -961,4 +961,216 @@ namespace TenXEmpires.Server.Infrastructure.Services;
             throw;
         }
     }
+
+    public async Task<ActionStateResponse> ExpandTerritoryAsync(
+        Guid userId,
+        long gameId,
+        ExpandTerritoryCommand command,
+        string? idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var cachedKey = CacheKeys.SpawnUnitIdempotency(gameId, idempotencyKey); // Reusing prefix pattern but should be unique for expand or general action
+            // Ideally CacheKeys should have ExpandTerritoryIdempotency or generic ActionIdempotency
+            // For now using a unique suffix in the key composition if possible or just string interpolation
+             var actualKey = $"game:{gameId}:expand:{idempotencyKey}";
+            var cached = await _idempotencyStore.TryGetAsync<ActionStateResponse>(actualKey, cancellationToken);
+            if (cached is not null)
+            {
+                return cached;
+            }
+        }
+
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? transaction = null;
+        try
+        {
+            transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable,
+                cancellationToken);
+        }
+        catch (InvalidOperationException) { }
+        catch (NotSupportedException) { }
+
+        try
+        {
+            var game = await _context.Games
+                .Include(g => g.Map)
+                .Include(g => g.ActiveParticipant)
+                .FirstOrDefaultAsync(g => g.Id == gameId && g.UserId == userId, cancellationToken);
+
+            if (game is null) throw new UnauthorizedAccessException($"Game {gameId} not found or access denied.");
+            if (game.ActiveParticipant is null) throw new InvalidOperationException("No active participant.");
+            if (game.ActiveParticipant.Kind != ParticipantKind.Human || game.ActiveParticipant.UserId != userId)
+                throw new InvalidOperationException("NOT_PLAYER_TURN: Not your turn.");
+            if (game.TurnInProgress)
+                throw new InvalidOperationException("TURN_IN_PROGRESS: Action in progress.");
+
+            game.TurnInProgress = true;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            try
+            {
+                // Load city
+                var city = await _context.Cities
+                    .Include(c => c.CityResources)
+                    .Include(c => c.Tile)
+                    .FirstOrDefaultAsync(c => c.Id == command.CityId && c.GameId == gameId, cancellationToken);
+
+                if (city is null || city.ParticipantId != game.ActiveParticipantId)
+                    throw new InvalidOperationException("CITY_NOT_OWNED: City not owned by player.");
+
+                if (city.HasActedThisTurn)
+                    throw new InvalidOperationException("CITY_ALREADY_ACTED: City has already acted.");
+
+                // Load target tile
+                var targetTile = await _context.MapTiles
+                    .FirstOrDefaultAsync(t => t.Id == command.TargetTileId && t.MapId == game.MapId, cancellationToken);
+
+                if (targetTile is null)
+                    throw new ArgumentException("INVALID_TILE: Target tile not found.");
+
+                if (TerrainTypes.IsWater(targetTile.Terrain))
+                    throw new InvalidOperationException("INVALID_TERRAIN: Cannot expand into water.");
+
+                // Validate adjacency
+                // Need all city tiles to check adjacency
+                var cityTiles = await _context.CityTiles
+                    .Include(ct => ct.Tile)
+                    .Where(ct => ct.CityId == city.Id)
+                    .ToListAsync(cancellationToken);
+
+                var cityTileIds = cityTiles.Select(ct => ct.TileId).ToHashSet();
+                if (cityTileIds.Contains(targetTile.Id))
+                    throw new InvalidOperationException("TILE_ALREADY_OWNED: Tile already part of city.");
+
+                var targetCube = HexagonalGrid.ConvertOddrToCube(targetTile.Col, targetTile.Row);
+                bool isAdjacent = false;
+                foreach (var ct in cityTiles)
+                {
+                    var ctCube = HexagonalGrid.ConvertOddrToCube(ct.Tile.Col, ct.Tile.Row);
+                    if (HexagonalGrid.GetCubeDistance(ctCube, targetCube) == 1)
+                    {
+                        isAdjacent = true;
+                        break;
+                    }
+                }
+
+                if (!isAdjacent)
+                    throw new InvalidOperationException("TILE_NOT_ADJACENT: Target tile not adjacent to territory.");
+
+                // Validate distance from city center (max 2 hex)
+                const int MaxExpansionDistance = 2;
+                var cityCenterCube = HexagonalGrid.ConvertOddrToCube(city.Tile.Col, city.Tile.Row);
+                var distanceFromCenter = HexagonalGrid.GetCubeDistance(cityCenterCube, targetCube);
+                if (distanceFromCenter > MaxExpansionDistance)
+                    throw new InvalidOperationException($"TILE_TOO_FAR: Target tile must be within {MaxExpansionDistance} hexes of city center.");
+
+                // Check ownership by other cities
+                var otherOwner = await _context.CityTiles
+                    .Where(ct => ct.TileId == targetTile.Id)
+                    .Select(ct => ct.City.ParticipantId)
+                    .FirstOrDefaultAsync(cancellationToken);
+                
+                if (otherOwner != 0) // 0 is default if not found? No, FirstOrDefault returns 0 for long/int default?
+                                     // Actually Select returns distinct values.
+                                     // Let's check if any CityTile exists for this tile.
+                {
+                     var existingOwner = await _context.CityTiles
+                        .Include(ct => ct.City)
+                        .FirstOrDefaultAsync(ct => ct.TileId == targetTile.Id, cancellationToken);
+                     
+                     if (existingOwner != null)
+                     {
+                         if (existingOwner.City.ParticipantId != city.ParticipantId)
+                             throw new InvalidOperationException("TILE_OWNED_BY_ENEMY: Tile owned by enemy.");
+                         // Else it's ours, caught by previous check or valid?
+                         // We already checked cityTileIds. If it belongs to another city of SAME player?
+                         // The spec says "NOT owned by an enemy city".
+                         // Implies we can steal from our own other cities? Or merge?
+                         // For now assume strict "not owned by anyone else".
+                         // Actually if it is owned by another city of same player, it is effectively "already owned" in broader sense
+                         // but US says "NOT owned by an enemy city".
+                         // Let's stick to implementation plan: "If owned by enemy city -> reject".
+                         // If owned by same player's other city, technically allowed?
+                         // But standard Civ logic usually prevents overlapping city tiles.
+                         // Let's assume any ownership blocks expansion for simplicity unless specified.
+                         throw new InvalidOperationException("TILE_ALREADY_OWNED: Tile already owned.");
+                     }
+                }
+
+                // Check enemy unit occupation
+                var enemyUnit = await _context.Units
+                    .AnyAsync(u => u.GameId == gameId && u.TileId == targetTile.Id && u.ParticipantId != city.ParticipantId, cancellationToken);
+                if (enemyUnit)
+                    throw new InvalidOperationException("TILE_OCCUPIED_BY_ENEMY: Tile occupied by enemy unit.");
+
+                // Calculate cost
+                // Formula: BaseCost + ((ControlledTilesCount - InitialTilesCount) * 10)
+                // We need config values. Hardcoding for now as per PRD defaults if not injected
+                int baseCost = 20; // Should inject GameSettings
+                int costPerTile = 10;
+                int initialTiles = 7;
+                
+                int currentTileCount = cityTiles.Count;
+                int extraTiles = Math.Max(0, currentTileCount - initialTiles);
+                int cost = baseCost + (extraTiles * costPerTile);
+
+                var wheat = city.CityResources.FirstOrDefault(r => r.ResourceType == ResourceTypes.Wheat);
+                if ((wheat?.Amount ?? 0) < cost)
+                    throw new InvalidOperationException($"INSUFFICIENT_RESOURCES: Need {cost} Wheat.");
+
+                // Execute
+                if (wheat == null)
+                {
+                    // Should not happen if cost > 0
+                    wheat = new CityResource { CityId = city.Id, ResourceType = ResourceTypes.Wheat, Amount = 0 };
+                    city.CityResources.Add(wheat);
+                    _context.CityResources.Add(wheat);
+                }
+                wheat.Amount -= cost;
+                
+                var newCityTile = new CityTile
+                {
+                    GameId = gameId,
+                    CityId = city.Id,
+                    TileId = targetTile.Id
+                };
+                _context.CityTiles.Add(newCityTile);
+                
+                city.HasActedThisTurn = true;
+                
+                await _context.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("City {CityId} expanded to tile {TileId} cost {Cost}", city.Id, targetTile.Id, cost);
+
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+                if (transaction != null) await transaction.CommitAsync(cancellationToken);
+
+                var gameState = await _gameStateService.BuildGameStateAsync(gameId, cancellationToken);
+                var response = new ActionStateResponse(gameState);
+
+                if (!string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                     var actualKey = $"game:{gameId}:expand:{idempotencyKey}";
+                    await _idempotencyStore.TryStoreAsync(actualKey, response, TimeSpan.FromHours(1), cancellationToken);
+                }
+
+                return response;
+            }
+            catch
+            {
+                game.TurnInProgress = false;
+                await _context.SaveChangesAsync(cancellationToken);
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            if (transaction != null) await transaction.RollbackAsync(cancellationToken);
+            _logger.LogError(ex, "Expand territory failed");
+            throw;
+        }
+    }
 }

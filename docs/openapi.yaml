@@ -23,16 +23,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4794446+00:00
-                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
+                occurredAt: 2025-11-28T07:19:00.6437235+00:00
+                clientRequestId: b57dc90c-b5b6-44b7-b405-e8f8e0c78c26
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4795302+00:00
-                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
+                occurredAt: 2025-11-28T07:19:00.6438095+00:00
+                clientRequestId: 62e84077-5c6c-4402-a5f0-9890d1cbce00
                 payload: 
           text/json; version=1.0:
             schema:
@@ -42,16 +42,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4794446+00:00
-                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
+                occurredAt: 2025-11-28T07:19:00.6437235+00:00
+                clientRequestId: b57dc90c-b5b6-44b7-b405-e8f8e0c78c26
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4795302+00:00
-                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
+                occurredAt: 2025-11-28T07:19:00.6438095+00:00
+                clientRequestId: 62e84077-5c6c-4402-a5f0-9890d1cbce00
                 payload: 
           application/*+json; version=1.0:
             schema:
@@ -61,16 +61,16 @@ paths:
               - eventType: turn_end
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4794446+00:00
-                clientRequestId: cc037bcd-5396-4270-9d17-16df3b4fd7e9
+                occurredAt: 2025-11-28T07:19:00.6437235+00:00
+                clientRequestId: b57dc90c-b5b6-44b7-b405-e8f8e0c78c26
                 payload:
                   fps: 58
                   latencyMs: 120
               - eventType: autosave
                 gameId: 42
                 turnNo: 5
-                occurredAt: 2025-11-27T21:46:07.4795302+00:00
-                clientRequestId: c814df6f-a20b-4cc4-836f-b60eab0af53a
+                occurredAt: 2025-11-28T07:19:00.6438095+00:00
+                clientRequestId: 62e84077-5c6c-4402-a5f0-9890d1cbce00
                 payload: 
       responses:
         202:
@@ -1794,6 +1794,194 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         500:
           description: Internal Server Error
+  /v1/games/{id}/actions/city/expand:
+    post:
+      tags:
+      - v1
+      summary: Expands a city's territory to an adjacent tile by spending wheat.
+      operationId: ExpandTerritory
+      parameters:
+      - name: id
+        in: path
+        description: The game ID.
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        description: The expand command containing city ID and target tile ID.
+        content:
+          application/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ExpandTerritoryCommand'
+          text/json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ExpandTerritoryCommand'
+          application/*+json; version=1.0:
+            schema:
+              $ref: '#/components/schemas/ExpandTerritoryCommand'
+      responses:
+        200:
+          description: Territory expanded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStateResponse'
+              example:
+                state:
+                  game:
+                    id: 42
+                    turnNo: 3
+                    activeParticipantId: 101
+                    turnInProgress: false
+                    status: active
+                  map:
+                    id: 1
+                    code: standard_15x20
+                    schemaVersion: 1
+                    width: 8
+                    height: 6
+                  participants:
+                  - id: 101
+                    gameId: 42
+                    kind: human
+                    userId: a0000000-0000-0000-0000-000000000001
+                    displayName: Commander Alex
+                    isEliminated: false
+                  - id: 102
+                    gameId: 42
+                    kind: ai
+                    userId: 
+                    displayName: Genghis Khan
+                    isEliminated: false
+                  units:
+                  - id: 201
+                    participantId: 101
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: true
+                    tileId: 13
+                    row: 2
+                    col: 3
+                  - id: 202
+                    participantId: 102
+                    typeCode: warrior
+                    hp: 100
+                    hasActed: false
+                    tileId: 43
+                    row: 5
+                    col: 7
+                  - id: 203
+                    participantId: 101
+                    typeCode: settler
+                    hp: 50
+                    hasActed: false
+                    tileId: 7
+                    row: 0
+                    col: 2
+                  cities:
+                  - id: 301
+                    participantId: 101
+                    hp: 100
+                    maxHp: 100
+                    tileId: 3
+                    row: 0
+                    col: 0
+                    hasActed: true
+                  - id: 302
+                    participantId: 102
+                    hp: 100
+                    maxHp: 100
+                    tileId: 45
+                    row: 5
+                    col: 6
+                    hasActed: false
+                  cityTiles:
+                  - cityId: 301
+                    tileId: 3
+                  - cityId: 302
+                    tileId: 45
+                  cityResources:
+                  - cityId: 301
+                    resourceType: iron
+                    amount: 6
+                  - cityId: 301
+                    resourceType: stone
+                    amount: 2
+                  - cityId: 302
+                    resourceType: wheat
+                    amount: 7
+                  - cityId: 302
+                    resourceType: wood
+                    amount: 3
+                  gameTiles:
+                  - tileId: 3
+                    resourceType: wheat
+                    resourceAmount: 75
+                  - tileId: 45
+                    resourceType: iron
+                    resourceAmount: 42
+                  unitDefinitions:
+                  - id: 1
+                    code: warrior
+                    isRanged: false
+                    attack: 20
+                    defence: 10
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 100
+                  - id: 2
+                    code: settler
+                    isRanged: false
+                    attack: 0
+                    defence: 5
+                    rangeMin: 0
+                    rangeMax: 0
+                    movePoints: 2
+                    health: 50
+                  - id: 3
+                    code: archer
+                    isRanged: true
+                    attack: 15
+                    defence: 8
+                    rangeMin: 2
+                    rangeMax: 2
+                    movePoints: 2
+                    health: 80
+                  turnSummary: 
+        400:
+          description: Bad Request - Invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        401:
+          description: Unauthorized - Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        404:
+          description: Not Found - Game or city not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        409:
+          description: Conflict - Various action conflicts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        422:
+          description: Unprocessable Entity - Invalid tile target.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        500:
+          description: Internal server error occurred.
   /v1/games/{id}/end-turn:
     post:
       tags:
@@ -2806,6 +2994,16 @@ components:
         turnSummary:
           nullable: true
         autosaveId:
+          type: integer
+          format: int64
+      additionalProperties: false
+    ExpandTerritoryCommand:
+      type: object
+      properties:
+        cityId:
+          type: integer
+          format: int64
+        targetTileId:
           type: integer
           format: int64
       additionalProperties: false

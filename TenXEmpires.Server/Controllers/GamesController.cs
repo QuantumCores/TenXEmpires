@@ -1149,6 +1149,68 @@ public class GamesController : ControllerBase
     }
 
     /// <summary>
+    /// Expands a city's territory to an adjacent tile by spending wheat.
+    /// </summary>
+    /// <param name="id">The game ID.</param>
+    /// <param name="command">The expand command containing city ID and target tile ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The updated game state after expansion.</returns>
+    /// <response code="200">Territory expanded successfully.</response>
+    /// <response code="400">Bad Request - Invalid input.</response>
+    /// <response code="401">Unauthorized - Not authenticated.</response>
+    /// <response code="404">Not Found - Game or city not found.</response>
+    /// <response code="409">Conflict - Various action conflicts.</response>
+    /// <response code="422">Unprocessable Entity - Invalid tile target.</response>
+    /// <response code="500">Internal server error occurred.</response>
+    [HttpPost("{id:long}/actions/city/expand", Name = "ExpandTerritory")]
+    [ProducesResponseType(typeof(ActionStateResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ActionStateResponse>> ExpandTerritory(
+        long id,
+        [FromBody] ExpandTerritoryCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var userId = User.GetUserId();
+            var idempotencyKey = Request.Headers[TenxHeaders.IdempotencyKey].ToString();
+            
+            var result = await _actionService.ExpandTerritoryAsync(
+                userId,
+                id,
+                command,
+                string.IsNullOrEmpty(idempotencyKey) ? null : idempotencyKey,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { code = "UNAUTHORIZED", message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Map known error codes
+            var code = ex.Message.Contains(":") ? ex.Message.Split(':')[0] : "CONFLICT";
+            return Conflict(new { code, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { code = "INVALID_INPUT", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to expand territory in game {GameId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { code = "INTERNAL_ERROR", message = "An error occurred." });
+        }
+    }
+
+    /// <summary>
     /// Ends the active participant's turn, commits the turn, creates an autosave, and advances to the next participant.
     /// </summary>
     /// <param name="id">The game ID.</param>

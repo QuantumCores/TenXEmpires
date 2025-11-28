@@ -1,6 +1,8 @@
 import { useId, useMemo, useState } from 'react'
 import type { CityInStateDto, GameStateDto } from '../../types/game'
-import { useSpawnUnit } from '../../features/game/useGameQueries'
+import { useSpawnUnit, useMapTiles } from '../../features/game/useGameQueries'
+import { useGameMapStore } from '../../features/game/useGameMapStore'
+import { calculateExpansionCost, getValidExpansionTiles } from '../../features/game/expansionUtils'
 
 // ============================================================================
 // Types
@@ -71,6 +73,9 @@ export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps)
   const titleId = useId()
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
   const spawnMutation = useSpawnUnit(gameState.game.id)
+  
+  const { data: mapTiles } = useMapTiles(gameState.map.code)
+  const { enterExpansionMode } = useGameMapStore()
 
   // Find the city data
   const city = useMemo(() => {
@@ -114,6 +119,24 @@ export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps)
   const hasResourcesForSelection =
     selectedOption != null &&
     (resourceAmounts.get(selectedOption.costResource) ?? 0) >= selectedOption.cost
+
+  // Expansion logic
+  const wheatAmount = resourceAmounts.get('wheat') ?? 0
+  const expansionCost = calculateExpansionCost(workedTilesCount)
+  const canExpand = !cityHasActed && wheatAmount >= expansionCost && !!mapTiles
+
+  const handleExpand = () => {
+    if (!city || !mapTiles) return
+    
+    const validTiles = getValidExpansionTiles(city.id, gameState, mapTiles)
+    // If no valid tiles, maybe show toast? For now just enter mode (MapCanvasStack will handle click validity)
+    // But ideally we shouldn't enter mode if nowhere to expand?
+    // Actually we should check if validTiles.length > 0
+    // But let's allow it, maybe overlay just shows nothing?
+    
+    enterExpansionMode(city.id, validTiles)
+    onRequestClose()
+  }
 
   const isConfirmDisabled =
     !selectedOption ||
@@ -185,6 +208,37 @@ export function CityModal({ onRequestClose, gameState, cityId }: CityModalProps)
           Buildings
         </h3>
         <BuildingsList />
+      </section>
+
+      {/* Territory Section */}
+      <section aria-labelledby="territory-heading" className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 id="territory-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Territory
+            </h3>
+            <p className="text-xs text-slate-500">
+              Current Size: <span className="font-semibold text-slate-700">{workedTilesCount} tiles</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+              canExpand
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'cursor-not-allowed bg-slate-200 text-slate-500'
+            }`}
+            onClick={handleExpand}
+            disabled={!canExpand}
+          >
+            <img src="/images/game/resources/wheat.png" alt="Wheat" className="h-4 w-4 object-contain" />
+            <span>Expand ({expansionCost} Wheat)</span>
+          </button>
+        </div>
+        {cityHasActed && <p className="mt-1 text-[10px] text-amber-600">City already acted this turn.</p>}
+        {wheatAmount < expansionCost && !cityHasActed && (
+          <p className="mt-1 text-[10px] text-red-500">Need {expansionCost - wheatAmount} more Wheat.</p>
+        )}
       </section>
 
       {/* Manual unit production */}

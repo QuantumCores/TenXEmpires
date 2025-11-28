@@ -52,6 +52,15 @@ interface GameMapState {
   addBanner: (banner: Banner) => void
   removeBanner: (id: string) => void
   clearBanners: () => void
+
+  // Expansion Mode
+  expansionMode: {
+    active: boolean
+    cityId?: number
+    validTileIds?: number[]
+  }
+  enterExpansionMode: (cityId: number, validTileIds: number[]) => void
+  exitExpansionMode: () => void
 }
 
 // ============================================================================
@@ -127,6 +136,13 @@ export const useGameMapStore = create<GameMapState>()(
       banners: state.banners.filter((b) => b.id !== id),
     })),
   clearBanners: () => set({ banners: [] }),
+
+  // Expansion Mode
+  expansionMode: { active: false },
+  enterExpansionMode: (cityId, validTileIds) =>
+    set({ expansionMode: { active: true, cityId, validTileIds } }),
+  exitExpansionMode: () =>
+    set({ expansionMode: { active: false, cityId: undefined, validTileIds: undefined } }),
     }),
     {
       name: 'ui-settings',

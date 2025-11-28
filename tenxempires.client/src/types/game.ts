@@ -143,6 +143,11 @@ export interface SpawnUnitCommand {
   unitCode: string
 }
 
+export interface ExpandTerritoryCommand {
+  cityId: number
+  targetTileId: number
+}
+
 // Empty command type for end turn action
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface EndTurnCommand {}

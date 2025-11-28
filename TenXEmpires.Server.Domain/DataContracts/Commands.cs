@@ -34,6 +34,11 @@ public sealed record AttackCityCommand(long AttackerUnitId, long TargetCityId);
 public sealed record SpawnUnitCommand(long CityId, string UnitCode);
 
 /// <summary>
+/// Command to expand a city's territory to an adjacent tile.
+/// </summary>
+public sealed record ExpandTerritoryCommand(long CityId, long TargetTileId);
+
+/// <summary>
 /// Command to end the active participant's turn in a <see cref="Game"/>.
 /// </summary>
 public sealed record EndTurnCommand;
